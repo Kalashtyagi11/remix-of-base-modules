@@ -71,10 +71,16 @@ export type ScheduleGenerationMode = 'INITIAL' | 'REGENERATE' | 'CATCH_UP' | 'AR
 
 export interface BnPaymentScheduleRow {
   id: string;
+  bn_award_id: string;
   entitlement_id: string;
   claim_id: string;
   ssn: string;
   claim_number: string | null;
+
+  // Legacy required columns (mirrors of the modern fields)
+  schedule_period: string;
+  gross_amount: number;
+
 
   // Schedule definition
   sequence_number: number;
