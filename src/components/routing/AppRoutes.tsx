@@ -2059,6 +2059,8 @@ export const AppRoutes = () => {
       <Route path="/admin/numbering" element={<NumberingAdmin />} />
       <Route path="/admin/fiscal-calendar" element={<FiscalCalendarAdmin />} />
       <Route path="/audit/configuration-health" element={<AuditConfigurationHealth />} />
+      <Route path="/audit/reference-masters" element={<AuditReferenceMasters />} />
+
 
       <Route path="/admin/numbering-rules" element={<Navigate to="/admin/numbering" replace />} />
       <Route path="/admin/web-users" element={<WebUsers />} />
