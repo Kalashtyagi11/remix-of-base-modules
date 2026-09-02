@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw, Stethoscope } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from 'lucide-react';
 import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
 
@@ -46,8 +46,7 @@ export default function AuditConfigurationHealth() {
   return (
     <PageShell
       title="Configuration Health"
-      description="Live fiscal calendar and master-data diagnostics for Internal Audit"
-      icon={Stethoscope}
+      subtitle="Live fiscal calendar and master-data diagnostics for Internal Audit"
       actions={
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
           {isFetching ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
