@@ -68,6 +68,9 @@ const emptyAction = {
 };
 
 export default function RiskRegister() {
+  // Fiscal year on a risk record is master-backed (core_fiscal_year).
+  const { data: fiscalYears = [] } = useFiscalYears();
+
   const { data: departments = [] } = useQuery({
     queryKey: ['v_ia_departments_active'],
     queryFn: async () => {
