@@ -9,6 +9,7 @@ import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
 import { useIaReferenceConfigurationHealth } from '@/hooks/audit/useIaReferenceValues';
 import { useIaNumberingHealth } from '@/hooks/audit/useIaNumberingHealth';
+import { useIaOrgIntegrityHealth } from '@/hooks/audit/useIaOrgIntegrityHealth';
 
 
 const severityBadge = (check: FiscalHealthCheck) => {
@@ -37,6 +38,7 @@ export default function AuditConfigurationHealth() {
   const { data: checks = [], isLoading, isFetching, refetch } = useFiscalConfigurationHealth();
   const { data: refChecks = [], isLoading: refLoading } = useIaReferenceConfigurationHealth();
   const { data: numChecks = [], isLoading: numLoading } = useIaNumberingHealth();
+  const { data: orgChecks = [], isLoading: orgLoading } = useIaOrgIntegrityHealth();
 
 
 
