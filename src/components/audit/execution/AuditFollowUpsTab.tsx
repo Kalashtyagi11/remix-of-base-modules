@@ -50,7 +50,7 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
 
   const [mode, setMode] = useState<'schedule' | 'outcome' | 'view' | null>(null);
   const [active, setActive] = useState<any>(null);
-  const [scheduleForm, setScheduleForm] = useState({ action_id: '', scheduled_date: '', follow_up_type: 'Action Verification', notes: '', fiscal_year: '' });
+  const [scheduleForm, setScheduleForm] = useState({ action_id: '', scheduled_date: '', follow_up_type: '', notes: '', fiscal_year: '' });
   const [outcomeForm, setOutcomeForm] = useState({ outcome: '', notes: '' });
 
   const findingTitle = (id?: string | null) =>
@@ -67,7 +67,7 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
   const close = () => { setMode(null); setActive(null); };
 
   const openSchedule = () => {
-    setScheduleForm({ action_id: '', scheduled_date: '', follow_up_type: 'Action Verification', notes: '', fiscal_year: '' });
+    setScheduleForm({ action_id: '', scheduled_date: '', follow_up_type: '', notes: '', fiscal_year: '' });
     setActive(null);
     setMode('schedule');
   };

@@ -122,7 +122,7 @@ export function AuditOverviewTab({
             <InfoRow label="Audit Title" value={audit?.engagement_name} highlight />
             <InfoRow label="Audit Code" value={audit?.engagement_code} />
             <InfoRow label="Source" value={sourceLabel} />
-            <InfoRow label="Type" value={audit?.engagement_type || 'Planned Audit'} />
+            <InfoRow label="Type" value={audit?.engagement_type || '—'} />
             <InfoRow label="Status" value={<StatusBadge status={audit?.status} />} />
             <InfoRow label="Approval" value={
               audit?.approved_by && audit?.approved_at 

@@ -43,7 +43,7 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
     engagement_name: '',
     department_id: '',
     function_id: '',
-    engagement_type: 'Planned Audit',
+    engagement_type: '', // Stage 2B: governed IA reference master supplies values; no hardcoded default
     engagement_risk_rating: '',
     risk_override: false,
     risk_override_reason: '',
