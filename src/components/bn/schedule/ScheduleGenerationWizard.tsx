@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import {
   generateScheduleRows,
+  resolveAwardIdForEntitlement,
   type ScheduleFrequency,
   type GenerateScheduleParams,
   type BnPaymentScheduleRow,
@@ -61,6 +62,9 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
   const [loading, setLoading] = useState(false);
   const [selectedEnt, setSelectedEnt] = useState<EntitlementOption | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [awardId, setAwardId] = useState<string | null>(null);
+  const [awardError, setAwardError] = useState<string | null>(null);
+  const [resolvingAward, setResolvingAward] = useState(false);
 
   // Generation params
   const [frequency, setFrequency] = useState<ScheduleFrequency>('WEEKLY');
@@ -74,6 +78,7 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
     if (!selectedEnt || !startDate) return [];
     return generateScheduleRows({
       entitlementId: selectedEnt.id,
+      awardId: awardId ?? '',
       claimId: '',
       ssn: selectedEnt.ssn,
       claimNumber: selectedEnt.claim_number,
@@ -91,7 +96,7 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
       // refuse a write. The saved rows carry the real actor (see handleGenerate).
       performedBy: userCode ?? '',
     });
-  }, [selectedEnt, frequency, startDate, endDate, maxPeriods, userCode]);
+  }, [selectedEnt, awardId, frequency, startDate, endDate, maxPeriods, userCode]);
 
   const totalAmount = previewRows.reduce((s, r) => s + r.amount, 0);
 
@@ -130,8 +135,17 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
     setLoading(false);
   };
 
-  const selectEntitlement = (ent: EntitlementOption) => {
+  const selectEntitlement = async (ent: EntitlementOption) => {
     setSelectedEnt(ent);
+    setAwardId(null);
+    setAwardError(null);
+    setResolvingAward(true);
+    try {
+      setAwardId(await resolveAwardIdForEntitlement(ent.id));
+    } catch (err: any) {
+      setAwardError(err?.message || 'No Award could be resolved for this entitlement.');
+    }
+    setResolvingAward(false);
     setFrequency(ent.payment_frequency as ScheduleFrequency);
     setStartDate(new Date(ent.effective_from));
     setEndDate(ent.effective_to ? new Date(ent.effective_to) : undefined);
@@ -140,6 +154,10 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
 
   const handleGenerate = async () => {
     if (!selectedEnt || !previewRows.length) return;
+    if (!awardId) {
+      toast.error(awardError || 'No active Award exists for this entitlement — approve the Award before generating a payment schedule.');
+      return;
+    }
     setGenerating(true);
     try {
       // Get claim_id from entitlement
