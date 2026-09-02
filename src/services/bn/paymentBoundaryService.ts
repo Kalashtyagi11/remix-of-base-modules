@@ -248,7 +248,7 @@ export async function createInstructionsFromDueSchedule(
     .from('bn_payment_schedule')
     .select('id, schedule_period, due_date, net_amount, gross_amount, bn_payment_instruction_id')
     .eq('bn_award_id', awardId)
-    .eq('status', 'PENDING')
+    .in('status', ['PENDING', 'PROJECTED', 'DUE', 'ARREARS'])
     .is('bn_payment_instruction_id', null);
 
   const ids: string[] = [];
