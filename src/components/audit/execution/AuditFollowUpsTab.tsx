@@ -170,11 +170,13 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
 
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Follow-Up Type</Label>
-                <Select value={scheduleForm.follow_up_type} onValueChange={v => setScheduleForm(f => ({ ...f, follow_up_type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{FOLLOW_UP_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
+                <IaReferenceSelect
+                  type="FOLLOW_UP_TYPE"
+                  value={scheduleForm.follow_up_type}
+                  onChange={v => setScheduleForm(f => ({ ...f, follow_up_type: v }))}
+                />
               </div>
+
               <div><Label>Fiscal Year</Label><Input value={scheduleForm.fiscal_year} onChange={e => setScheduleForm(f => ({ ...f, fiscal_year: e.target.value }))} placeholder="Defaults to scheduled year" /></div>
             </div>
             <div><Label>Notes</Label><Textarea rows={2} value={scheduleForm.notes} onChange={e => setScheduleForm(f => ({ ...f, notes: e.target.value }))} className="text-sm" /></div>
