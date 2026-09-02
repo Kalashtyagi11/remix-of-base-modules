@@ -24,12 +24,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
+import { ACTIVITY_STATES, FINDING_STATES } from '@/config/auditWorkflowVocabulary';
 
-const ACTIVITY_STATUSES = ['Planned', 'In Progress', 'Completed', 'Deferred', 'Cancelled'];
+const ACTIVITY_STATUSES = [...ACTIVITY_STATES];
 const ACTIVITY_TYPES = ['Document Review', 'Walkthrough', 'Testing', 'Interview', 'Observation', 'Data Analysis', 'Sampling', 'Reconciliation', 'Inspection', 'Other'];
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
-const FINDING_STATUSES = ['Open', 'In Progress', 'Resolved', 'Closed'];
+// Stage 2E (DEF-E2E-012): findings use the governed lifecycle vocabulary.
+const FINDING_STATUSES = [...FINDING_STATES];
 
 const emptyActivityForm = {
   name: '', title: '', description: '', status: 'Planned', activity_type: '',
