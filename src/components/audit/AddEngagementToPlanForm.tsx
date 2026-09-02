@@ -91,11 +91,9 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
     }));
   };
 
-  const generateCode = () => {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    return `ENG-${dateStr}-${String(Math.floor(1000 + Math.random() * 9000))}`;
-  };
+  // Stage 2C (DEF-E2E-009): engagement_code is allocated server-side by the central
+  // numbering engine. No client-side generation.
+
 
   const handleOverrideRequest = () => {
     setOverrideReason('');
@@ -135,7 +133,7 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
     if (!form.engagement_name.trim()) return;
     onSave({
       engagement_name: form.engagement_name,
-      engagement_code: generateCode(),
+      // engagement_code intentionally omitted: allocated server-side (Stage 2C).
       annual_plan_id: planId,
       department_id: form.department_id || null,
       function_id: form.function_id || null,

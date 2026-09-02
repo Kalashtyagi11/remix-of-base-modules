@@ -75334,7 +75334,7 @@ export type Database = {
           department_audit_id: string | null
           department_id: string | null
           dependencies: string | null
-          engagement_code: string | null
+          engagement_code: string
           engagement_name: string
           engagement_risk_rating: string | null
           engagement_type: string | null
@@ -75412,7 +75412,7 @@ export type Database = {
           department_audit_id?: string | null
           department_id?: string | null
           dependencies?: string | null
-          engagement_code?: string | null
+          engagement_code: string
           engagement_name: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null
@@ -75490,7 +75490,7 @@ export type Database = {
           department_audit_id?: string | null
           department_id?: string | null
           dependencies?: string | null
-          engagement_code?: string | null
+          engagement_code?: string
           engagement_name?: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null

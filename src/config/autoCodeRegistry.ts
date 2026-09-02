@@ -128,6 +128,15 @@ export const AUTO_CODE_REGISTRY: Record<string, AutoCodeEntity> = {
     target: { table: "lg_fee_waiver_policy", column: "policy_code" },
     allowOverride: false,
   },
+  IA_ENGAGEMENT: {
+    key: "IA_ENGAGEMENT",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "ENGAGEMENT",
+    label: "Internal Audit Engagement",
+    pattern: "IA-ENG-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_audit_engagements", column: "engagement_code" },
+    allowOverride: false,
+  },
 };
 
 /**
