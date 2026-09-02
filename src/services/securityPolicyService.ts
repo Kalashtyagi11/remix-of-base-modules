@@ -248,13 +248,34 @@ export async function getClientIP(): Promise<string> {
 
   ipFetchPromise = (async () => {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
-      clearTimeout(timeout);
-      const data = await res.json();
-      cachedIP = data.ip || 'unknown';
-      return cachedIP!;
+      // Try multiple providers — a single blocked/unreachable endpoint must not
+      // make the IP undeterminable (which downstream treats as a security event).
+      const providers: Array<{ url: string; pick: (d: any) => string | undefined }> = [
+        { url: 'https://api.ipify.org?format=json', pick: (d) => d?.ip },
+        { url: 'https://ipapi.co/json/', pick: (d) => d?.ip },
+        { url: 'https://api.bigdatacloud.net/data/client-ip', pick: (d) => d?.ipString },
+      ];
+
+      for (const provider of providers) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 3000);
+          const res = await fetch(provider.url, { signal: controller.signal });
+          clearTimeout(timeout);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const ip = provider.pick(data);
+          if (ip) {
+            cachedIP = ip;
+            return cachedIP;
+          }
+        } catch {
+          // try the next provider
+        }
+      }
+
+      cachedIP = 'unknown';
+      return 'unknown';
     } catch {
       cachedIP = 'unknown';
       return 'unknown';
