@@ -28,15 +28,39 @@ function addMonths(iso: string, months: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Statuses from which an award may still be created. The orchestrator flips a
+ * claim to AWARD_SETUP (and operations may push it further to PAYMENT_QUEUE /
+ * IN_PAYMENT) before anyone notices the award row is missing, so a strict
+ * `status === 'APPROVED'` guard would refuse every repair.
+ */
+const AWARDABLE_STATUSES = ['APPROVED', 'AWARD_SETUP', 'PAYMENT_QUEUE', 'IN_PAYMENT'];
+
+const PERIODIC_CATEGORIES = new Set([
+  'LONG_TERM', 'PENSION', 'SURVIVOR', 'INVALIDITY', 'NON_CONTRIBUTORY',
+]);
+
+export interface CreateAwardOptions {
+  /**
+   * Skip the product-shape test. Used by the post-approval orchestrator, which
+   * has already decided this claim is periodic and routed it to AWARD_SETUP.
+   */
+  force?: boolean;
+  /** Recorded on the award for traceability. */
+  source?: string;
+}
+
 export async function createAwardOnApproval(
   claimId: string,
   performedBy: string,
+  options: CreateAwardOptions = {},
 ): Promise<AwardCreationResult> {
   // Idempotency check
   const { data: existing } = await db
     .from('bn_award')
     .select('id, award_number')
     .eq('bn_claim_id', claimId)
+    .limit(1)
     .maybeSingle();
   if (existing) {
     return {
@@ -54,7 +78,10 @@ export async function createAwardOnApproval(
     .eq('id', claimId)
     .single();
   if (claimErr || !claim) return { created: false, reason: 'CLAIM_NOT_FOUND' };
-  if (claim.status !== 'APPROVED') return { created: false, reason: 'CLAIM_NOT_APPROVED' };
+  if (!AWARDABLE_STATUSES.includes(String(claim.status))) {
+    return { created: false, reason: `CLAIM_NOT_APPROVED:${claim.status}` };
+  }
+
 
   // Resolve product version with servicing config
   let pv: any = null;
