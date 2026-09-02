@@ -527,15 +527,15 @@ async function nextLegacyChequeNumber(): Promise<string> {
   const { data } = await db
     .from('cl_cheques')
     .select('cheque_number')
-    .like('cheque_number', '9_______')
+    .like('cheque_number', '9000____')
     .order('cheque_number', { ascending: false })
-    .limit(200);
+    .limit(500);
   const last = (data || [])
     .map((r: any) => String(r.cheque_number || ''))
-    .filter((n: string) => /^9\d{7}$/.test(n))
+    .filter((n: string) => /^9000\d{4}$/.test(n))
     .map(Number)
     .reduce((a: number, b: number) => Math.max(a, b), 0);
-  const next = last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
+  const next = last >= 90000001 && last < 90009999 ? last + 1 : 90000001;
   return String(next);
 }
 
