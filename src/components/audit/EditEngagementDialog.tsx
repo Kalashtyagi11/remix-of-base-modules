@@ -7,7 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, ShieldCheck, Info, Save, Calendar, Lock } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Info, Save, Calendar, Lock, AlertCircle } from 'lucide-react';
+import {
+  type IaValidationIssue,
+  type IaTabDescriptor,
+  errorCountsByTab,
+  fieldErrorMap,
+  fieldAnchorId,
+  focusFirstInvalidField,
+  getFirstInvalidTab,
+  issuesForTab,
+  summariseIssues,
+} from '@/lib/audit/tabValidation';
 import { useIADepartments, useIADepartmentFunctions, useIAActiveAuditors } from '@/hooks/useAuditData';
 import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
@@ -59,6 +70,39 @@ const DELIVERABLE_OPTIONS = [
   'Board / Committee Summary',
   'Other',
 ];
+
+/**
+ * IA-UX-VAL-001 — tab-aware validation contract for this dialog.
+ * The dialog edits ONE engagement record split across four tabs (classification B),
+ * so Save legitimately validates the whole record — but it must route the user to
+ * the owning tab instead of surfacing a hidden-tab message in a toast.
+ */
+const ENGAGEMENT_TABS: IaTabDescriptor[] = [
+  { id: 'identity', label: 'Identity & Coverage' },
+  { id: 'planning', label: 'Planning Narrative' },
+  { id: 'team', label: 'Team & Ownership' },
+  { id: 'schedule', label: 'Schedule & Resources' },
+];
+const ENGAGEMENT_TAB_ORDER = ENGAGEMENT_TABS.map(t => t.id);
+
+const FIELD_TAB_MAP: Record<string, string> = {
+  engagement_name: 'identity',
+  department_id: 'identity',
+  function_id: 'identity',
+  coverage_category: 'identity',
+  inclusion_reason_codes: 'identity',
+  inclusion_reason_notes: 'identity',
+  expected_deliverable_codes: 'planning',
+  expected_deliverable_notes: 'planning',
+  objectives: 'planning',
+  scope: 'planning',
+  lead_auditor_id: 'team',
+  reviewer_id: 'team',
+  estimated_days: 'schedule',
+  planned_start_date: 'schedule',
+  planned_end_date: 'schedule',
+};
+
 
 const RISK_SOURCE_LABELS: Record<string, string> = {
   risk_assessment_function: 'Function Risk Assessment',
@@ -152,6 +196,9 @@ export function EditEngagementDialog({
   const [overrideReason, setOverrideReason] = useState('');
   const [quarterOverride, setQuarterOverride] = useState(false);
   const [monthOverride, setMonthOverride] = useState(false);
+  // IA-UX-VAL-001: controlled tabs so validation can route the user to the owning tab.
+  const [activeTab, setActiveTab] = useState<string>('identity');
+  const [issues, setIssues] = useState<IaValidationIssue[]>([]);
 
   const [form, setForm] = useState({
     engagement_name: '',
@@ -305,6 +352,8 @@ export function EditEngagementDialog({
   const updateField = (field: string, value: any) => {
     setForm(f => ({ ...f, [field]: value }));
     setDirty(true);
+    // Clear the inline error for this field as soon as the user acts on it.
+    setIssues(prev => (prev.some(i => i.field === field) ? prev.filter(i => i.field !== field) : prev));
   };
 
   const toggleAuditor = (id: string) => {
@@ -351,27 +400,58 @@ export function EditEngagementDialog({
     onClose();
   };
 
-  const validate = (): string[] => {
-    const errors: string[] = [];
-    if (!form.engagement_name.trim()) errors.push('Audit title is required');
-    if (!form.department_id) errors.push('Department is required');
-    if (!form.function_id) errors.push('Business function is required');
-    if (!form.lead_auditor_id) errors.push('Lead auditor is required');
-    if (!form.estimated_days) errors.push('Estimated days is required');
-    if (form.planned_start_date && form.planned_end_date && form.planned_start_date > form.planned_end_date) {
-      errors.push('Planned start date must be before end date');
-    }
-    // New validations
-    if (form.inclusion_reason_codes.length === 0) errors.push('At least one inclusion reason is required');
+  /**
+   * IA-UX-VAL-001: structured, tab-owned validation. Business rules are unchanged —
+   * only their presentation and routing. Conditional rules stay with the tab that
+   * owns the triggering field.
+   */
+  const buildIssues = (): IaValidationIssue[] => {
+    const out: IaValidationIssue[] = [];
+    const add = (field: string, message: string) =>
+      out.push({ field, tabId: FIELD_TAB_MAP[field] ?? 'identity', message, severity: 'error', blockingAction: 'save' });
+
+    if (!form.engagement_name.trim()) add('engagement_name', 'Audit title is required');
+    if (!form.department_id) add('department_id', 'Department is required');
+    if (!form.function_id) add('function_id', 'Business function is required');
+    if (form.inclusion_reason_codes.length === 0) add('inclusion_reason_codes', 'At least one inclusion reason is required');
     if (form.inclusion_reason_codes.includes('Other') && !form.inclusion_reason_notes.trim()) {
-      errors.push('Inclusion notes are required when "Other" is selected');
+      add('inclusion_reason_notes', 'Inclusion notes are required when "Other" is selected');
     }
-    if (form.expected_deliverable_codes.length === 0) errors.push('At least one expected deliverable is required');
+    if (form.expected_deliverable_codes.length === 0) add('expected_deliverable_codes', 'At least one expected deliverable is required');
     if (form.expected_deliverable_codes.includes('Other') && !form.expected_deliverable_notes.trim()) {
-      errors.push('Deliverable notes are required when "Other" is selected');
+      add('expected_deliverable_notes', 'Deliverable notes are required when "Other" is selected');
     }
-    return errors;
+    if (!form.lead_auditor_id) add('lead_auditor_id', 'Lead auditor is required');
+    if (!form.estimated_days) add('estimated_days', 'Estimated days is required');
+    if (form.planned_start_date && form.planned_end_date && form.planned_start_date > form.planned_end_date) {
+      add('planned_end_date', 'Planned start date must be before end date');
+    }
+    return out;
   };
+
+  const tabErrorCounts = errorCountsByTab(issues);
+  const fieldErrors = fieldErrorMap(issues);
+  const issueSummary = summariseIssues(issues, ENGAGEMENT_TABS);
+
+  /** Inline, field-level error anchored for scroll/focus routing. */
+  const FieldSlot = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <div id={fieldAnchorId(field)} className="scroll-mt-24">
+      {children}
+      {fieldErrors[field] && (
+        <p role="alert" className="mt-1 flex items-center gap-1 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {fieldErrors[field]}
+        </p>
+      )}
+    </div>
+  );
+
+  /** Activate the owning tab, then scroll + focus the offending control. */
+  const routeToIssue = (tabId: string, list: IaValidationIssue[]) => {
+    setActiveTab(tabId);
+    focusFirstInvalidField(list, tabId);
+  };
+
 
   // Stage 2C (DEF-E2E-009): engagement_code is allocated server-side by the central
   // numbering engine and is immutable after allocation.
@@ -394,11 +474,22 @@ export function EditEngagementDialog({
   }, [planFiscalYear, form.planned_start_date]);
 
   const handleSubmit = () => {
-    const errors = validate();
-    if (errors.length > 0) {
-      toast({ title: 'Validation Errors', description: errors[0], variant: 'destructive' });
+    const found = buildIssues();
+    setIssues(found);
+    if (found.length > 0) {
+      // Never surface a hidden-tab error first: if the tab the user is working on
+      // has a problem, keep them there; otherwise take them to the first failing tab.
+      const onActiveTab = issuesForTab(found, activeTab).length > 0;
+      const targetTab = onActiveTab ? activeTab : (getFirstInvalidTab(found, ENGAGEMENT_TAB_ORDER) ?? activeTab);
+      routeToIssue(targetTab, found);
+      toast({
+        title: 'Some details need attention',
+        description: summariseIssues(found, ENGAGEMENT_TABS),
+        variant: 'destructive',
+      });
       return;
     }
+
 
     // Build inclusion_rationale text from codes for backward compat
     const inclusionText = form.inclusion_reason_codes.join('; ') + (form.inclusion_reason_notes ? ` — ${form.inclusion_reason_notes}` : '');
@@ -493,21 +584,59 @@ export function EditEngagementDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="identity" className="mt-3">
+        {/* IA-UX-VAL-001: form-level summary — every item deep-links to its section. */}
+        {issues.length > 0 && (
+          <div role="alert" className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+            <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {issueSummary}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {issues.map((issue, i) => (
+                <li key={`${issue.field}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => routeToIssue(issue.tabId, issues)}
+                    className="text-left text-xs text-destructive underline underline-offset-2 hover:no-underline"
+                  >
+                    {ENGAGEMENT_TABS.find(t => t.id === issue.tabId)?.label}: {issue.message}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
           <TabsList className="flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="identity" className="text-sm font-medium px-4 py-2">Identity & Coverage</TabsTrigger>
-            <TabsTrigger value="planning" className="text-sm font-medium px-4 py-2">Planning Narrative</TabsTrigger>
-            <TabsTrigger value="team" className="text-sm font-medium px-4 py-2">Team & Ownership</TabsTrigger>
-            <TabsTrigger value="schedule" className="text-sm font-medium px-4 py-2">Schedule & Resources</TabsTrigger>
+            {ENGAGEMENT_TABS.map(tab => {
+              const count = tabErrorCounts[tab.id] ?? 0;
+              return (
+                <TabsTrigger key={tab.id} value={tab.id} className="text-sm font-medium px-4 py-2">
+                  <span className="flex items-center gap-1.5">
+                    {tab.label}
+                    {count > 0 && (
+                      <span
+                        className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
+                        aria-label={`${count} ${count === 1 ? 'issue' : 'issues'} in ${tab.label}`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {/* ===== Identity & Coverage ===== */}
           <TabsContent value="identity" className="space-y-5 mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="engagement_name">
                 <Label>Audit Title <span className="text-destructive">*</span></Label>
                 <Input value={form.engagement_name} onChange={e => updateField('engagement_name', e.target.value)} placeholder="e.g. IT Security Audit" />
-              </div>
+              </FieldSlot>
+
               <div>
                 <Label>Audit Type</Label>
                 <IaReferenceSelect
@@ -519,20 +648,20 @@ export function EditEngagementDialog({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="department_id">
                 <Label>Department <span className="text-destructive">*</span></Label>
                 <Select value={form.department_id} onValueChange={v => { updateField('department_id', v); updateField('function_id', ''); updateField('primary_auditee_contact_id', ''); updateField('secondary_auditee_contact_ids', []); }}>
                   <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                   <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
-              <div>
+              </FieldSlot>
+              <FieldSlot field="function_id">
                 <Label>Business Function <span className="text-destructive">*</span></Label>
                 <Select value={form.function_id} onValueChange={v => updateField('function_id', v)} disabled={!form.department_id}>
                   <SelectTrigger><SelectValue placeholder={form.department_id ? 'Select function' : 'Select department first'} /></SelectTrigger>
                   <SelectContent>{deptFunctions.map((fn: any) => <SelectItem key={fn.id} value={fn.id}>{fn.function_name}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
+              </FieldSlot>
             </div>
 
             {/* Risk */}
@@ -600,17 +729,19 @@ export function EditEngagementDialog({
             </div>
 
             {/* Structured Inclusion Rationale */}
-            <MultiSelectChips
-              label="Inclusion Rationale"
-              required
-              options={INCLUSION_REASONS}
-              selected={form.inclusion_reason_codes}
-              onChange={v => { updateField('inclusion_reason_codes', v); setDirty(true); }}
-              maxSelections={2}
-              helperText="Why is this audit included in the annual plan?"
-            />
+            <FieldSlot field="inclusion_reason_codes">
+              <MultiSelectChips
+                label="Inclusion Rationale"
+                required
+                options={INCLUSION_REASONS}
+                selected={form.inclusion_reason_codes}
+                onChange={v => { updateField('inclusion_reason_codes', v); setDirty(true); }}
+                maxSelections={2}
+                helperText="Why is this audit included in the annual plan?"
+              />
+            </FieldSlot>
             {(form.inclusion_reason_codes.includes('Other') || form.inclusion_reason_notes) && (
-              <div>
+              <FieldSlot field="inclusion_reason_notes">
                 <Label>
                   Additional Inclusion Notes
                   {form.inclusion_reason_codes.includes('Other') && <span className="text-destructive"> *</span>}
@@ -621,7 +752,7 @@ export function EditEngagementDialog({
                   placeholder="Provide additional context for the inclusion rationale..."
                   rows={2}
                 />
-              </div>
+              </FieldSlot>
             )}
 
             <div className="grid grid-cols-2 gap-4">
@@ -658,16 +789,18 @@ export function EditEngagementDialog({
             </div>
 
             {/* Structured Expected Deliverables */}
-            <MultiSelectChips
-              label="Expected Deliverables"
-              required
-              options={DELIVERABLE_OPTIONS}
-              selected={form.expected_deliverable_codes}
-              onChange={v => { updateField('expected_deliverable_codes', v); setDirty(true); }}
-              helperText="What outputs will this engagement produce?"
-            />
+            <FieldSlot field="expected_deliverable_codes">
+              <MultiSelectChips
+                label="Expected Deliverables"
+                required
+                options={DELIVERABLE_OPTIONS}
+                selected={form.expected_deliverable_codes}
+                onChange={v => { updateField('expected_deliverable_codes', v); setDirty(true); }}
+                helperText="What outputs will this engagement produce?"
+              />
+            </FieldSlot>
             {(form.expected_deliverable_codes.includes('Other') || form.expected_deliverable_notes) && (
-              <div>
+              <FieldSlot field="expected_deliverable_notes">
                 <Label>
                   Additional Deliverables Notes
                   {form.expected_deliverable_codes.includes('Other') && <span className="text-destructive"> *</span>}
@@ -678,7 +811,7 @@ export function EditEngagementDialog({
                   placeholder="Describe any additional or custom deliverables..."
                   rows={2}
                 />
-              </div>
+              </FieldSlot>
             )}
 
             <div className="space-y-1.5">
@@ -690,7 +823,7 @@ export function EditEngagementDialog({
           {/* ===== Team & Ownership ===== */}
           <TabsContent value="team" className="space-y-5 mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="lead_auditor_id">
                 <Label>Lead Auditor <span className="text-destructive">*</span></Label>
                 <Select value={form.lead_auditor_id || '__none__'} onValueChange={v => updateField('lead_auditor_id', v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select lead auditor" /></SelectTrigger>
@@ -708,7 +841,7 @@ export function EditEngagementDialog({
                     )}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldSlot>
               <div>
                 <Label>Reviewer</Label>
                 <Select value={form.reviewer_id || '__none__'} onValueChange={v => updateField('reviewer_id', v === '__none__' ? '' : v)}>
@@ -760,20 +893,20 @@ export function EditEngagementDialog({
                 <Label>Planned Start Date</Label>
                 <Input type="date" value={form.planned_start_date} onChange={e => handleStartDateChange(e.target.value)} />
               </div>
-              <div>
+              <FieldSlot field="planned_end_date">
                 <Label>Planned End Date</Label>
                 <Input type="date" value={form.planned_end_date} onChange={e => handleEndDateChange(e.target.value)} />
-              </div>
+              </FieldSlot>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div>
+              <FieldSlot field="estimated_days">
                 <Label>Estimated Days <span className="text-destructive">*</span></Label>
                 <Input type="number" value={form.estimated_days} onChange={e => handleEstimatedDaysChange(e.target.value)} placeholder="e.g. 15" />
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {form.planned_start_date && form.planned_end_date ? 'Auto-calculated from date range (editable)' : 'Total working days'}
                 </p>
-              </div>
+              </FieldSlot>
               <div>
                 <Label>Estimated Hours</Label>
                 <Input type="number" value={form.estimated_hours} onChange={e => updateField('estimated_hours', e.target.value)} placeholder="e.g. 120" />
