@@ -574,10 +574,14 @@ export function EditEngagementDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Coverage Category</Label>
-                <Select value={form.coverage_category} onValueChange={v => updateField('coverage_category', v)}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>{COVERAGE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
+                <IaReferenceSelect
+                  type="COVERAGE_CATEGORY"
+                  value={form.coverage_category}
+                  onChange={v => updateField('coverage_category', v)}
+                  placeholder="Select category"
+                  allowClear
+                />
+
               </div>
               <div>
                 <Label>Status</Label>
