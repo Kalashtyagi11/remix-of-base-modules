@@ -4,11 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, FileText, Users, ChevronRight, ChevronLeft, Check, BarChart3 } from 'lucide-react';
+import { Loader2, Calendar, FileText, Users, ChevronRight, ChevronLeft, Check, BarChart3, AlertTriangle } from 'lucide-react';
 import { calculateCapacity, type CapacityConfig } from '@/lib/audit/capacityPlanner';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
+import { useFiscalYears, usePlanningEligibleFiscalYears } from '@/hooks/useFiscalYears';
+import { formatDisplayDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
+
 
 interface AnnualPlanFormProps {
   plan?: any;
