@@ -123986,6 +123986,16 @@ export type Database = {
         }
         Returns: string
       }
+      _core_fiscal_audit: {
+        Args: {
+          _action: string
+          _before: Json
+          _row: Database["public"]["Tables"]["core_fiscal_year"]["Row"]
+          _uid: string
+        }
+        Returns: undefined
+      }
+      _core_fiscal_require_admin: { Args: never; Returns: string }
       _evaluate_comm_hub_send_decision_core: {
         Args: { p_payload: Json }
         Returns: Json
@@ -129821,10 +129831,45 @@ export type Database = {
         }
         Returns: Json
       }
+      core_current_organization_id: { Args: never; Returns: string }
       core_fiscal_calendar_epoch: { Args: never; Returns: string }
       core_fiscal_quarter_of: {
         Args: { p_date: string; p_fiscal_year_id: string }
         Returns: string
+      }
+      core_fiscal_year_create: {
+        Args: {
+          p_code: string
+          p_display_name?: string
+          p_end_date?: string
+          p_is_active?: boolean
+          p_notes?: string
+          p_planning_open?: boolean
+          p_start_date?: string
+          p_status?: string
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       core_fiscal_year_for_date: {
         Args: { p_date: string; p_organization_id?: string }
@@ -129833,6 +129878,91 @@ export type Database = {
       core_fiscal_year_planning_eligible: {
         Args: { p_fiscal_year_id: string }
         Returns: boolean
+      }
+      core_fiscal_year_set_active: {
+        Args: { p_id: string; p_is_active: boolean }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      core_fiscal_year_set_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      core_fiscal_year_update: {
+        Args: {
+          p_code?: string
+          p_display_name?: string
+          p_end_date?: string
+          p_id: string
+          p_is_active?: boolean
+          p_notes?: string
+          p_planning_open?: boolean
+          p_start_date?: string
+          p_status?: string
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       core_generate_number: {
         Args: {
@@ -129889,6 +130019,10 @@ export type Database = {
       core_map_ledger_fund_to_liability: {
         Args: { p_fund: string }
         Returns: string
+      }
+      core_master_data_actor_can: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       core_preview_next_number: {
         Args: {
