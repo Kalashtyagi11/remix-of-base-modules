@@ -352,6 +352,8 @@ export function EditEngagementDialog({
   const updateField = (field: string, value: any) => {
     setForm(f => ({ ...f, [field]: value }));
     setDirty(true);
+    // Clear the inline error for this field as soon as the user acts on it.
+    setIssues(prev => (prev.some(i => i.field === field) ? prev.filter(i => i.field !== field) : prev));
   };
 
   const toggleAuditor = (id: string) => {
