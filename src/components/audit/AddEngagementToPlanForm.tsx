@@ -322,17 +322,14 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Coverage Category</Label>
-          <Select value={form.coverage_category} onValueChange={v => setForm(f => ({ ...f, coverage_category: v }))}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Compliance">Compliance</SelectItem>
-              <SelectItem value="Financial">Financial</SelectItem>
-              <SelectItem value="Operational">Operational</SelectItem>
-              <SelectItem value="IT">IT</SelectItem>
-              <SelectItem value="Governance">Governance</SelectItem>
-              <SelectItem value="Special">Special</SelectItem>
-            </SelectContent>
-          </Select>
+          <IaReferenceSelect
+            type="COVERAGE_CATEGORY"
+            value={form.coverage_category}
+            onChange={v => setForm(f => ({ ...f, coverage_category: v }))}
+            placeholder="Select category"
+            allowClear
+          />
+
         </div>
         <div>
           <Label>Inclusion Rationale</Label>
