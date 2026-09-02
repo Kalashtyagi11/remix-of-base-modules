@@ -121,11 +121,16 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
       setCurrentStep(0);
       return;
     }
-    if (!formData.fiscalYear.trim()) {
-      toast({ title: 'Validation Error', description: 'Fiscal year is required.', variant: 'destructive' });
+    if (!isLegacyPlan && !formData.fiscalYearId) {
+      toast({
+        title: 'Fiscal Year Required',
+        description: 'Select a fiscal year from the enterprise fiscal calendar.',
+        variant: 'destructive',
+      });
       setCurrentStep(0);
       return;
     }
+
     setIsSaving(true);
     try {
       const payload = mapToDbPayload('Draft');
