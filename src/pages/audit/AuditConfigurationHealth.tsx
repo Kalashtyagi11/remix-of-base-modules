@@ -161,7 +161,47 @@ export default function AuditConfigurationHealth() {
           </p>
         </CardContent>
       </Card>
+
+      <Card className="mt-4">
+        <CardHeader><CardTitle className="text-base">Authoritative numbering checks (Stage 2C)</CardTitle></CardHeader>
+        <CardContent>
+          {numLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Check</TableHead>
+                  <TableHead className="w-28">Result</TableHead>
+                  <TableHead className="w-24">Records</TableHead>
+                  <TableHead>Detail</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {numChecks.map(c => (
+                  <TableRow key={c.check_code}>
+                    <TableCell>
+                      <div className="font-medium text-sm">{c.title}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{c.check_code}</div>
+                    </TableCell>
+                    <TableCell>
+                      {c.status === 'PASS'
+                        ? <Badge className="bg-emerald-100 text-emerald-800">PASS</Badge>
+                        : c.status === 'HISTORICAL'
+                          ? <Badge variant="outline">HISTORICAL</Badge>
+                          : <Badge variant={c.severity === 'CRITICAL' ? 'destructive' : 'secondary'}>{c.severity}</Badge>}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.affected_count}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.detail}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </PageShell>
+
   );
 }
 
