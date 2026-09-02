@@ -82,13 +82,32 @@ export async function createAwardFromApprovedClaim(
 
 // ─── 2) Schedule creation from award ────────────────────────────────
 
+const FREQ_MAP: Record<string, 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY' | 'ONE_TIME'> = {
+  WEEKLY: 'WEEKLY',
+  weekly: 'WEEKLY',
+  FORTNIGHTLY: 'FORTNIGHTLY',
+  fortnightly: 'FORTNIGHTLY',
+  BIWEEKLY: 'FORTNIGHTLY',
+  MONTHLY: 'MONTHLY',
+  monthly: 'MONTHLY',
+  ONE_TIME: 'ONE_TIME',
+  one_off: 'ONE_TIME',
+  ONE_OFF: 'ONE_TIME',
+  LUMP_SUM: 'ONE_TIME',
+};
+
+function normaliseFrequency(value: string | null | undefined): 'WEEKLY' | 'FORTNIGHTLY' | 'MONTHLY' | 'ONE_TIME' {
+  if (!value) return 'ONE_TIME';
+  return FREQ_MAP[value] ?? FREQ_MAP[String(value).toUpperCase()] ?? 'ONE_TIME';
+}
+
 export async function createScheduleFromAward(
   awardId: string,
   performedBy: string,
 ): Promise<{ scheduleIds: string[] }> {
   const { data: award } = await db
     .from('bn_award')
-    .select('id, award_type, base_amount, currency, start_date, frequency')
+    .select('id, bn_claim_id, ssn, award_type, base_amount, currency, start_date, end_date, frequency')
     .eq('id', awardId)
     .maybeSingle();
   if (!award) return { scheduleIds: [] };
@@ -101,27 +120,116 @@ export async function createScheduleFromAward(
     .limit(1);
   if (existing?.length) return { scheduleIds: existing.map((r: any) => r.id) };
 
-  const period = award.start_date ?? new Date().toISOString().slice(0, 10);
-  const dueDate = period;
+  // Pull the claim + entitlement context so schedule rows carry the columns
+  // Payment Schedule Management renders (claim number, frequency, period, amount).
+  const { data: claim } = award.bn_claim_id
+    ? await db
+        .from('bn_claim')
+        .select('id, claim_number, ssn')
+        .eq('id', award.bn_claim_id)
+        .maybeSingle()
+    : { data: null };
+
+  const { data: entitlement } = award.bn_claim_id
+    ? await db
+        .from('bn_entitlement')
+        .select(
+          'id, claim_number, payment_frequency, weekly_rate, monthly_rate, total_entitlement, lump_sum_amount, effective_from, effective_to, status',
+        )
+        .eq('claim_id', award.bn_claim_id)
+        .order('entered_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  const frequency = normaliseFrequency(entitlement?.payment_frequency ?? award.frequency);
+  const startDate: string =
+    entitlement?.effective_from ?? award.start_date ?? new Date().toISOString().slice(0, 10);
+  const ssn = award.ssn ?? claim?.ssn ?? null;
+  const claimNumber = claim?.claim_number ?? entitlement?.claim_number ?? null;
+  const currency = award.currency || 'XCD';
+
+  const weeklyRate = Number(entitlement?.weekly_rate ?? 0);
+  const monthlyRate =
+    entitlement?.monthly_rate != null ? Number(entitlement.monthly_rate) : null;
+  const totalEntitlement = Number(
+    entitlement?.total_entitlement ?? entitlement?.lump_sum_amount ?? award.base_amount ?? 0,
+  );
+
+  const { generateScheduleRows } = await import('@/services/bn/scheduleService');
+
+  let rows: any[];
+
+  const canGenerateRun =
+    frequency !== 'ONE_TIME' && (weeklyRate > 0 || (monthlyRate ?? 0) > 0) && totalEntitlement > 0;
+
+  if (canGenerateRun) {
+    rows = generateScheduleRows({
+      entitlementId: entitlement?.id ?? null,
+      awardId,
+      claimId: award.bn_claim_id ?? null,
+      ssn,
+      claimNumber,
+      frequency,
+      startDate,
+      endDate: entitlement?.effective_to ?? award.end_date ?? null,
+      weeklyRate,
+      monthlyRate,
+      totalEntitlement,
+      currency,
+      mode: 'INITIAL',
+      performedBy,
+    } as any);
+  } else {
+    // Fall back to a single fully-populated row rather than a bare placeholder.
+    const amount = Number(award.base_amount ?? totalEntitlement ?? 0);
+    rows = [
+      {
+        bn_award_id: awardId,
+        entitlement_id: entitlement?.id ?? null,
+        claim_id: award.bn_claim_id ?? null,
+        ssn,
+        claim_number: claimNumber,
+        schedule_period: startDate,
+        period_start: startDate,
+        period_end: startDate,
+        due_date: startDate,
+        sequence_number: 1,
+        frequency,
+        gross_amount: amount,
+        net_amount: amount,
+        deductions: 0,
+        amount,
+        currency,
+        rate_weekly: weeklyRate || null,
+        rate_monthly: monthlyRate,
+        rate_applied: amount,
+        status: 'PROJECTED',
+        generation_mode: 'INITIAL',
+        entered_by: performedBy,
+      },
+    ];
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const payload = rows.map((r: any) => ({
+    ...r,
+    net_amount: r.net_amount ?? r.gross_amount ?? r.amount ?? 0,
+    deductions: r.deductions ?? 0,
+    status: r.due_date && r.due_date <= today ? 'DUE' : (r.status ?? 'PROJECTED'),
+    entered_by: performedBy,
+    modified_by: performedBy,
+  }));
 
   const { data: inserted, error } = await db
     .from('bn_payment_schedule')
-    .insert({
-      bn_award_id: awardId,
-      schedule_period: period,
-      due_date: dueDate,
-      gross_amount: award.base_amount ?? 0,
-      net_amount: award.base_amount ?? 0,
-      deductions: 0,
-      status: 'PENDING',
-      entered_by: performedBy,
-      modified_by: performedBy,
-    })
+    .insert(payload)
     .select('id');
 
   if (error) return { scheduleIds: [] };
   return { scheduleIds: (inserted ?? []).map((r: any) => r.id) };
 }
+
 
 // ─── 3) Instruction creation from due schedule rows ─────────────────
 
