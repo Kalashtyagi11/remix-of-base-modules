@@ -13,8 +13,11 @@ import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
 import { useFiscalYears } from '@/hooks/useFiscalYears';
 import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
 
-const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
+// Stage 2B (DEF-E2E-007/008): engagement type and coverage category are served
+// exclusively by the governed IA reference master — no hardcoded arrays here.
+
 
 interface AddEngagementToPlanFormProps {
   planId: string;
@@ -168,11 +171,13 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
         </div>
         <div>
           <Label>Engagement Type</Label>
-          <Select value={form.engagement_type} onValueChange={v => setForm(f => ({ ...f, engagement_type: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{ENGAGEMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-          </Select>
+          <IaReferenceSelect
+            type="AUDIT_TYPE"
+            value={form.engagement_type}
+            onChange={v => setForm(f => ({ ...f, engagement_type: v }))}
+          />
         </div>
+
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -322,17 +327,14 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Coverage Category</Label>
-          <Select value={form.coverage_category} onValueChange={v => setForm(f => ({ ...f, coverage_category: v }))}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Compliance">Compliance</SelectItem>
-              <SelectItem value="Financial">Financial</SelectItem>
-              <SelectItem value="Operational">Operational</SelectItem>
-              <SelectItem value="IT">IT</SelectItem>
-              <SelectItem value="Governance">Governance</SelectItem>
-              <SelectItem value="Special">Special</SelectItem>
-            </SelectContent>
-          </Select>
+          <IaReferenceSelect
+            type="COVERAGE_CATEGORY"
+            value={form.coverage_category}
+            onChange={v => setForm(f => ({ ...f, coverage_category: v }))}
+            placeholder="Select category"
+            allowClear
+          />
+
         </div>
         <div>
           <Label>Inclusion Rationale</Label>

@@ -22,11 +22,14 @@ import { formatDepartmentLabel } from '@/lib/audit/departmentLabel';
 import { useToast } from '@/hooks/use-toast';
 import { useHasPermission } from '@/hooks/useNavigationMenu';
 import { Progress } from '@/components/ui/progress';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
+
 
 const STATUSES = ['Planned', 'In Progress', 'Findings Raised', 'Management Response', 'Closed'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
 const PLAN_STATUS_OPTIONS = ['All Plans', 'Approved', 'Draft', 'Active', 'Superseded', 'Archived'];
-const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad Hoc', 'Supplementary', 'Follow-up'];
+// Stage 2B (DEF-E2E-007): audit types come from the governed IA reference master.
+
 
 const generateEngagementCode = () => {
   const now = new Date();
@@ -323,11 +326,13 @@ export default function AuditEngagements() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Audit Type</Label>
-              <Select value={form.engagement_type} onValueChange={v => setForm(f => ({ ...f, engagement_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ENGAGEMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              <IaReferenceSelect
+                type="AUDIT_TYPE"
+                value={form.engagement_type}
+                onChange={v => setForm(f => ({ ...f, engagement_type: v }))}
+              />
             </div>
+
             <div><Label>Annual Plan <span className="text-muted-foreground text-xs">(optional)</span></Label>
               <Select value={form.annual_plan_id} onValueChange={v => setForm(f => ({ ...f, annual_plan_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Link to annual plan" /></SelectTrigger>

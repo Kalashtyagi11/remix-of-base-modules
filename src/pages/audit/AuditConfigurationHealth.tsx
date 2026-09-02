@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from 'lucide-react';
 import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
+import { useIaReferenceConfigurationHealth } from '@/hooks/audit/useIaReferenceValues';
+
 
 const severityBadge = (check: FiscalHealthCheck) => {
   if (check.status === 'PASS') {
@@ -32,6 +34,8 @@ const severityBadge = (check: FiscalHealthCheck) => {
  */
 export default function AuditConfigurationHealth() {
   const { data: checks = [], isLoading, isFetching, refetch } = useFiscalConfigurationHealth();
+  const { data: refChecks = [], isLoading: refLoading } = useIaReferenceConfigurationHealth();
+
 
   const counts = useMemo(() => {
     const failing = checks.filter(c => c.status === 'FAIL');
@@ -116,6 +120,45 @@ export default function AuditConfigurationHealth() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="mt-4">
+        <CardHeader><CardTitle className="text-base">Reference master checks (Stage 2B)</CardTitle></CardHeader>
+        <CardContent>
+          {refLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Check</TableHead>
+                  <TableHead className="w-28">Severity</TableHead>
+                  <TableHead className="w-24">Records</TableHead>
+                  <TableHead>Detail</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {refChecks.map(c => (
+                  <TableRow key={c.check_code}>
+                    <TableCell className="font-mono text-[11px]">{c.check_code}</TableCell>
+                    <TableCell>
+                      {c.affected_count === 0
+                        ? <Badge className="bg-emerald-100 text-emerald-800">PASS</Badge>
+                        : <Badge variant={c.severity === 'HIGH' ? 'destructive' : 'secondary'}>{c.severity}</Badge>}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.affected_count}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.detail}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-3">
+            Counts include Phase-E closed-plan history, which is intentionally preserved unchanged.
+            Historical residue is reported, never silently rewritten.
+          </p>
+        </CardContent>
+      </Card>
     </PageShell>
   );
 }
+

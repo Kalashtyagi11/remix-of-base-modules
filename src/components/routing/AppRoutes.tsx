@@ -65,6 +65,8 @@ const PublicCatalogValidation = lazy(() => import('@/pages/admin/PublicCatalogVa
 const NumberingAdmin = lazy(() => import('@/pages/admin/NumberingAdmin'));
 const FiscalCalendarAdmin = lazy(() => import('@/pages/admin/FiscalCalendarAdmin'));
 const AuditConfigurationHealth = lazy(() => import('@/pages/audit/AuditConfigurationHealth'));
+const AuditReferenceMasters = lazy(() => import('@/pages/audit/AuditReferenceMasters'));
+
 
 const AuditLogAdmin = lazy(() => import('@/pages/admin/AuditLogAdmin'));
 const DepartmentsAdmin = lazy(() => import('@/pages/admin/DepartmentsAdmin'));
@@ -2057,6 +2059,8 @@ export const AppRoutes = () => {
       <Route path="/admin/numbering" element={<NumberingAdmin />} />
       <Route path="/admin/fiscal-calendar" element={<FiscalCalendarAdmin />} />
       <Route path="/audit/configuration-health" element={<AuditConfigurationHealth />} />
+      <Route path="/audit/reference-masters" element={<AuditReferenceMasters />} />
+
 
       <Route path="/admin/numbering-rules" element={<Navigate to="/admin/numbering" replace />} />
       <Route path="/admin/web-users" element={<WebUsers />} />
