@@ -1,0 +1,47 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: var(--font-sans); fill: hsl(var(--foreground)); }
+    .lbl { font-size: 14px; font-weight: 480; }
+    .sm { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .bx { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .wire { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+    </marker>
+  </defs>
+
+  <text class="sm" x="0" y="14">path that created today's rows</text>
+  <rect class="bx" x="0" y="26" width="120" height="46" rx="8"/>
+  <text class="lbl" x="60" y="54" text-anchor="middle">Award setup</text>
+  <line class="wire" x1="120" y1="49" x2="166" y2="49" marker-end="url(#a)"/>
+  <rect x="170" y="26" width="200" height="46" rx="8" fill="hsl(var(--accent))" stroke="hsl(var(--muted-foreground))"/>
+  <text class="lbl" x="270" y="46" text-anchor="middle" style="fill:hsl(var(--accent-foreground))">createScheduleFromAward</text>
+  <text class="sm" x="270" y="63" text-anchor="middle" style="fill:hsl(var(--accent-foreground))">writes 6 columns only</text>
+  <line class="wire" x1="370" y1="49" x2="416" y2="49" marker-end="url(#a)"/>
+  <rect class="bx" x="420" y="26" width="220" height="46" rx="8" fill="hsl(var(--muted))"/>
+  <text class="sm" x="530" y="45" text-anchor="middle">claim #, frequency, period,</text>
+  <text class="sm" x="530" y="62" text-anchor="middle">amount left empty → grid blank</text>
+
+  <line x1="0" y1="102" x2="640" y2="102" stroke="hsl(var(--border))"/>
+
+  <text class="sm" x="0" y="130">path that fills the grid correctly</text>
+  <rect class="bx" x="0" y="142" width="120" height="46" rx="8"/>
+  <text class="lbl" x="60" y="170" text-anchor="middle">Entitlement</text>
+  <line class="wire" x1="120" y1="165" x2="166" y2="165" marker-end="url(#a)"/>
+  <rect class="bx" x="170" y="142" width="200" height="46" rx="8"/>
+  <text class="lbl" x="270" y="162" text-anchor="middle">generateScheduleRows</text>
+  <text class="sm" x="270" y="179" text-anchor="middle">full context per row</text>
+  <line class="wire" x1="370" y1="165" x2="416" y2="165" marker-end="url(#a)"/>
+  <rect class="bx" x="420" y="142" width="220" height="46" rx="8"/>
+  <text class="sm" x="530" y="161" text-anchor="middle">PROJECTED rows, all columns</text>
+  <text class="sm" x="530" y="178" text-anchor="middle">filters + actions work</text>
+
+  <circle cx="12" cy="238" r="9" fill="hsl(var(--accent))"/>
+  <text x="12" y="242" text-anchor="middle" font-size="11" style="fill:hsl(var(--accent-foreground))">1</text>
+  <text class="sm" x="30" y="242">Fix: the award path must write the same full row shape as the generator.</text>
+  <circle cx="12" cy="266" r="9" fill="hsl(var(--accent))"/>
+  <text x="12" y="270" text-anchor="middle" font-size="11" style="fill:hsl(var(--accent-foreground))">2</text>
+  <text class="sm" x="30" y="270">Then repair the 16 existing rows in place.</text>
+</svg>
