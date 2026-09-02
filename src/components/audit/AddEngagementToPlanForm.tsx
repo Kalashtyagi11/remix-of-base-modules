@@ -11,6 +11,8 @@ import { AlertTriangle, ShieldCheck, Info } from 'lucide-react';
 import { useIADepartments, useIADepartmentFunctions, useIAActiveAuditors } from '@/hooks/useAuditData';
 import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
+import { useFiscalYears } from '@/hooks/useFiscalYears';
+import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
 
 const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
 
@@ -30,6 +32,8 @@ const RISK_SOURCE_LABELS: Record<string, string> = {
 export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagementToPlanFormProps) {
   const { data: departments = [] } = useIADepartments();
   const { data: auditors = [] } = useIAActiveAuditors();
+  // Quarter is derived from the enterprise fiscal calendar, never chosen by hand.
+  const { data: fiscalYears = [] } = useFiscalYears();
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
   const [form, setForm] = useState({
@@ -117,6 +121,13 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
     }
   };
 
+  const derivedQuarter = React.useMemo(() => {
+    const fy = fiscalYears.find(
+      f => form.planned_start_date >= f.start_date && form.planned_start_date <= f.end_date,
+    );
+    return deriveFiscalQuarter(fy, form.planned_start_date);
+  }, [fiscalYears, form.planned_start_date]);
+
   const handleSubmit = () => {
     if (!form.engagement_name.trim()) return;
     onSave({
@@ -133,7 +144,7 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
       supportive_auditor_ids: form.supportive_auditor_ids,
       scope: form.scope,
       status: 'Planned',
-      quarter: form.quarter || null,
+      quarter: derivedQuarter || null,
       estimated_hours: form.estimated_hours ? Number(form.estimated_hours) : null,
       inclusion_rationale: form.inclusion_rationale || null,
       coverage_category: form.coverage_category || null,
@@ -292,15 +303,15 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Quarter</Label>
-          <Select value={form.quarter} onValueChange={v => setForm(f => ({ ...f, quarter: v }))}>
-            <SelectTrigger><SelectValue placeholder="Select quarter" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Q1">Q1</SelectItem>
-              <SelectItem value="Q2">Q2</SelectItem>
-              <SelectItem value="Q3">Q3</SelectItem>
-              <SelectItem value="Q4">Q4</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="h-10 flex items-center gap-2">
+            {derivedQuarter ? (
+              <Badge variant="secondary">{derivedQuarter}</Badge>
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                Derived from the planned start date within the fiscal year
+              </span>
+            )}
+          </div>
         </div>
         <div>
           <Label>Estimated Hours</Label>

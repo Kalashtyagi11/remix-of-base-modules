@@ -4,11 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Calendar, FileText, Users, ChevronRight, ChevronLeft, Check, BarChart3 } from 'lucide-react';
+import { Loader2, Calendar, FileText, Users, ChevronRight, ChevronLeft, Check, BarChart3, AlertTriangle } from 'lucide-react';
 import { calculateCapacity, type CapacityConfig } from '@/lib/audit/capacityPlanner';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
+import { useFiscalYears, usePlanningEligibleFiscalYears } from '@/hooks/useFiscalYears';
+import { formatDisplayDate } from '@/lib/dateFormat';
 import { cn } from '@/lib/utils';
+
 
 interface AnnualPlanFormProps {
   plan?: any;
@@ -32,9 +35,25 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Fiscal Year is enterprise master data (core_fiscal_year). It is never free
+  // text and never derived from the browser clock.
+  const { data: allFiscalYears = [], isLoading: fiscalYearsLoading } = useFiscalYears();
+  const { data: planningEligible = [] } = usePlanningEligibleFiscalYears();
+
+  // A plan created before the master existed keeps its historical text label.
+  const isLegacyPlan = Boolean(plan && !plan.fiscal_year_id);
+
+  // When editing, the plan's own (possibly now-closed) year must remain visible.
+  const currentFiscalYear = plan?.fiscal_year_id
+    ? allFiscalYears.find(fy => fy.id === plan.fiscal_year_id)
+    : undefined;
+  const eligibleFiscalYears = currentFiscalYear && !planningEligible.some(fy => fy.id === currentFiscalYear.id)
+    ? [currentFiscalYear, ...planningEligible]
+    : planningEligible;
+
   const [formData, setFormData] = useState({
-    fiscalYear: plan?.fiscal_year || `${currentYear}-${currentYear + 1}`,
-    title: plan?.title || `Annual Internal Audit Plan ${currentYear}-${currentYear + 1}`,
+    fiscalYearId: plan?.fiscal_year_id || '',
+    title: plan?.title || `Annual Internal Audit Plan ${currentYear}`,
     executiveSummary: plan?.executive_summary || '',
     objective: plan?.objective || '',
     scope: plan?.scope || '',
@@ -54,10 +73,17 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
 
   const set = (key: string, value: string) => setFormData(prev => ({ ...prev, [key]: value }));
 
+
   const mapToDbPayload = (status: string) => {
+    const selectedFiscalYear = allFiscalYears.find(fy => fy.id === formData.fiscalYearId);
     const payload: any = {
-      fiscal_year: formData.fiscalYear,
+      // fiscal_year is a display snapshot only; fiscal_year_id is authoritative.
+      // Legacy plans keep their historical label untouched.
+      ...(isLegacyPlan
+        ? {}
+        : { fiscal_year_id: formData.fiscalYearId || null, fiscal_year: selectedFiscalYear?.display_name || null }),
       title: formData.title,
+
       objective: formData.objective,
       scope: formData.scope,
       audit_scope: formData.auditScope,
@@ -94,11 +120,16 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
       setCurrentStep(0);
       return;
     }
-    if (!formData.fiscalYear.trim()) {
-      toast({ title: 'Validation Error', description: 'Fiscal year is required.', variant: 'destructive' });
+    if (!isLegacyPlan && !formData.fiscalYearId) {
+      toast({
+        title: 'Fiscal Year Required',
+        description: 'Select a fiscal year from the enterprise fiscal calendar.',
+        variant: 'destructive',
+      });
       setCurrentStep(0);
       return;
     }
+
     setIsSaving(true);
     try {
       const payload = mapToDbPayload('Draft');
@@ -178,20 +209,39 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs">Fiscal Year <span className="text-destructive">*</span></Label>
-                <Select value={formData.fiscalYear} onValueChange={v => set('fiscalYear', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={formData.fiscalYearId} onValueChange={v => set('fiscalYearId', v)} disabled={isLegacyPlan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={fiscalYearsLoading ? 'Loading fiscal years…' : 'Select a fiscal year'} />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={`${currentYear - 1}-${currentYear}`}>{currentYear - 1}-{currentYear}</SelectItem>
-                    <SelectItem value={`${currentYear}-${currentYear + 1}`}>{currentYear}-{currentYear + 1}</SelectItem>
-                    <SelectItem value={`${currentYear + 1}-${currentYear + 2}`}>{currentYear + 1}-{currentYear + 2}</SelectItem>
+                    {eligibleFiscalYears.map(fy => (
+                      <SelectItem key={fy.id} value={fy.id}>
+                        {fy.display_name} · {formatDisplayDate(fy.start_date)} – {formatDisplayDate(fy.end_date)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                {!fiscalYearsLoading && eligibleFiscalYears.length === 0 && (
+                  <p className="text-xs text-destructive flex items-start gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                    No fiscal year is open for planning. A central administrator must configure one under
+                    System Administration → Fiscal Calendar before a plan can be created.
+                  </p>
+                )}
+                {isLegacyPlan && (
+                  <p className="text-xs text-muted-foreground flex items-start gap-1">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-px shrink-0" />
+                    Legacy plan recorded as “{plan?.fiscal_year}” before the fiscal calendar master existed.
+                    The historical value is preserved and cannot be rewritten here.
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Plan Title <span className="text-destructive">*</span></Label>
                 <Input value={formData.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Annual Internal Audit Plan 2026-2027" />
               </div>
             </div>
+
             <div className="space-y-1.5">
               <Label className="text-xs">Board / Committee Name</Label>
               <Input value={formData.boardCommitteeName} onChange={e => set('boardCommitteeName', e.target.value)} placeholder="e.g. Audit & Risk Committee" />

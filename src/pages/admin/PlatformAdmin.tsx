@@ -66,7 +66,9 @@ const groups: Group[] = [
       { label: "Notification Templates", to: "/admin/notification-templates" },
       { label: "Channels", to: "/admin/notifications/channels" },
       { label: "Providers", to: "/admin/notifications/providers" },
+      { label: "Fiscal Calendar", to: "/admin/fiscal-calendar" },
       { label: "Numbering Rules", to: "/admin/numbering" },
+
       { label: "Reference Sequences", to: "/admin/numbering?tab=sequences" },
       { label: "Modules", to: "/admin/modules" },
       { label: "Module Button Bindings", to: "/admin/module-button-bindings" },

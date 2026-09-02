@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { MultiSelectChips } from './engagement/MultiSelectChips';
 import { AuditeeContactSelector } from './engagement/AuditeeContactSelector';
 import { ScheduleIntelligence } from './engagement/ScheduleIntelligence';
+import { useFiscalYears } from '@/hooks/useFiscalYears';
+import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
 
 const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
@@ -63,8 +65,20 @@ const RISK_SOURCE_LABELS: Record<string, string> = {
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-function getQuarterFromDate(dateStr: string): string {
+/**
+ * Quarter is a DERIVED value, not master data. It is measured from the start of
+ * the fiscal year that contains the planned start date (core_fiscal_year), so a
+ * January-start and an April-start fiscal year never share Q1 semantics.
+ * Falls back to the calendar quarter only when no fiscal year covers the date.
+ */
+function getQuarterFromDate(
+  dateStr: string,
+  fiscalYears: Array<{ start_date: string; end_date: string }> = [],
+): string {
   if (!dateStr) return '';
+  const fy = fiscalYears.find(f => dateStr >= f.start_date && dateStr <= f.end_date);
+  const derived = deriveFiscalQuarter(fy, dateStr);
+  if (derived) return derived;
   const month = new Date(dateStr).getMonth(); // 0-indexed
   if (month < 3) return 'Q1';
   if (month < 6) return 'Q2';
@@ -76,6 +90,7 @@ function getMonthFromDate(dateStr: string): string {
   if (!dateStr) return '';
   return MONTHS[new Date(dateStr).getMonth()] || '';
 }
+
 
 /** Calculate working days between two dates (excludes weekends) */
 function calcWorkingDays(start: string, end: string): number {
@@ -124,6 +139,8 @@ export function EditEngagementDialog({
   const { toast } = useToast();
   const { data: departments = [] } = useIADepartments();
   const { data: auditors = [] } = useIAActiveAuditors();
+  // Enterprise fiscal calendar drives quarter derivation.
+  const { data: fiscalYears = [] } = useFiscalYears();
   const isEditMode = !!engagement?.id;
 
   const [dirty, setDirty] = useState(false);
@@ -255,7 +272,7 @@ export function EditEngagementDialog({
   // Auto-derive quarter and month from start date
   useEffect(() => {
     if (form.planned_start_date && !quarterOverride) {
-      const q = getQuarterFromDate(form.planned_start_date);
+      const q = getQuarterFromDate(form.planned_start_date, fiscalYears);
       if (q && q !== form.quarter) {
         setForm(f => ({ ...f, quarter: q }));
       }
@@ -266,7 +283,7 @@ export function EditEngagementDialog({
         setForm(f => ({ ...f, month: m }));
       }
     }
-  }, [form.planned_start_date, quarterOverride, monthOverride]);
+  }, [form.planned_start_date, quarterOverride, monthOverride, fiscalYears]);
 
   // Auto-calculate estimated days from date range
   useEffect(() => {
@@ -360,7 +377,7 @@ export function EditEngagementDialog({
 
   // Derived values for display
   const derivedWeeks = form.estimated_days ? Math.ceil(Number(form.estimated_days) / 5) : null;
-  const derivedQuarter = form.planned_start_date ? getQuarterFromDate(form.planned_start_date) : null;
+  const derivedQuarter = form.planned_start_date ? getQuarterFromDate(form.planned_start_date, fiscalYears) : null;
   const derivedMonth = form.planned_start_date ? getMonthFromDate(form.planned_start_date) : null;
   const leadAuditorName = mappedAuditors.find((a: any) => a.id === form.lead_auditor_id)?.name || '';
 

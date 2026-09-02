@@ -64578,6 +64578,65 @@ export type Database = {
           },
         ]
       }
+      core_fiscal_year: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organization_id: string
+          planning_open?: boolean
+          start_date: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organization_id?: string
+          planning_open?: boolean
+          start_date?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_fiscal_year_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "core_organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       core_generated_document: {
         Row: {
           case_stage_code: string | null
@@ -74830,6 +74889,7 @@ export type Database = {
           execution_gate_status: string | null
           executive_summary: string | null
           fiscal_year: string
+          fiscal_year_id: string | null
           function_id: string | null
           id: string
           internally_approved: boolean | null
@@ -74904,6 +74964,7 @@ export type Database = {
           execution_gate_status?: string | null
           executive_summary?: string | null
           fiscal_year: string
+          fiscal_year_id?: string | null
           function_id?: string | null
           id?: string
           internally_approved?: boolean | null
@@ -74978,6 +75039,7 @@ export type Database = {
           execution_gate_status?: string | null
           executive_summary?: string | null
           fiscal_year?: string
+          fiscal_year_id?: string | null
           function_id?: string | null
           id?: string
           internally_approved?: boolean | null
@@ -75033,6 +75095,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "v_ia_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_annual_plans_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
             referencedColumns: ["id"]
           },
           {
@@ -75277,6 +75346,7 @@ export type Database = {
           expected_deliverable: string | null
           expected_deliverable_codes: Json | null
           expected_deliverable_notes: string | null
+          fiscal_period_exception_reason: string | null
           function_id: string | null
           id: string
           inclusion_rationale: string | null
@@ -75352,6 +75422,7 @@ export type Database = {
           expected_deliverable?: string | null
           expected_deliverable_codes?: Json | null
           expected_deliverable_notes?: string | null
+          fiscal_period_exception_reason?: string | null
           function_id?: string | null
           id?: string
           inclusion_rationale?: string | null
@@ -75427,6 +75498,7 @@ export type Database = {
           expected_deliverable?: string | null
           expected_deliverable_codes?: Json | null
           expected_deliverable_notes?: string | null
+          fiscal_period_exception_reason?: string | null
           function_id?: string | null
           id?: string
           inclusion_rationale?: string | null
@@ -78598,6 +78670,53 @@ export type Database = {
           },
         ]
       }
+      ia_fiscal_year_migration_map: {
+        Row: {
+          action: string
+          classification: string
+          created_at: string
+          fiscal_year_id: string | null
+          id: string
+          legacy_fiscal_year: string | null
+          mapping_confidence: string
+          plan_id: string
+          plan_title: string | null
+          rationale: string | null
+        }
+        Insert: {
+          action: string
+          classification: string
+          created_at?: string
+          fiscal_year_id?: string | null
+          id?: string
+          legacy_fiscal_year?: string | null
+          mapping_confidence: string
+          plan_id: string
+          plan_title?: string | null
+          rationale?: string | null
+        }
+        Update: {
+          action?: string
+          classification?: string
+          created_at?: string
+          fiscal_year_id?: string | null
+          id?: string
+          legacy_fiscal_year?: string | null
+          mapping_confidence?: string
+          plan_id?: string
+          plan_title?: string | null
+          rationale?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_fiscal_year_migration_map_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_follow_ups: {
         Row: {
           action_id: string | null
@@ -78614,6 +78733,7 @@ export type Database = {
           engagement_id: string | null
           finding_id: string | null
           fiscal_year: string | null
+          fiscal_year_id: string | null
           follow_up_type: string | null
           id: string
           lifecycle_status: string
@@ -78646,6 +78766,7 @@ export type Database = {
           engagement_id?: string | null
           finding_id?: string | null
           fiscal_year?: string | null
+          fiscal_year_id?: string | null
           follow_up_type?: string | null
           id?: string
           lifecycle_status?: string
@@ -78678,6 +78799,7 @@ export type Database = {
           engagement_id?: string | null
           finding_id?: string | null
           fiscal_year?: string | null
+          fiscal_year_id?: string | null
           follow_up_type?: string | null
           id?: string
           lifecycle_status?: string
@@ -78743,6 +78865,13 @@ export type Database = {
             columns: ["finding_id"]
             isOneToOne: false
             referencedRelation: "ia_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_follow_ups_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
             referencedColumns: ["id"]
           },
         ]
@@ -79503,12 +79632,14 @@ export type Database = {
           priority: string | null
           resolved_at: string | null
           resolved_by: string | null
+          source_fiscal_year_id: string | null
           source_id: string | null
           source_reference: string | null
           source_type: string
           status: string | null
           target_engagement_id: string | null
           target_fiscal_year: string | null
+          target_fiscal_year_id: string | null
           target_plan_id: string | null
           target_resolution_date: string | null
         }
@@ -79529,12 +79660,14 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_fiscal_year_id?: string | null
           source_id?: string | null
           source_reference?: string | null
           source_type: string
           status?: string | null
           target_engagement_id?: string | null
           target_fiscal_year?: string | null
+          target_fiscal_year_id?: string | null
           target_plan_id?: string | null
           target_resolution_date?: string | null
         }
@@ -79555,12 +79688,14 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_fiscal_year_id?: string | null
           source_id?: string | null
           source_reference?: string | null
           source_type?: string
           status?: string | null
           target_engagement_id?: string | null
           target_fiscal_year?: string | null
+          target_fiscal_year_id?: string | null
           target_plan_id?: string | null
           target_resolution_date?: string | null
         }
@@ -79580,10 +79715,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ia_plan_carry_forward_source_fiscal_year_id_fkey"
+            columns: ["source_fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ia_plan_carry_forward_target_engagement_id_fkey"
             columns: ["target_engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_plan_carry_forward_target_fiscal_year_id_fkey"
+            columns: ["target_fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
             referencedColumns: ["id"]
           },
           {
@@ -129671,6 +129820,18 @@ export type Database = {
           p_signature_id: string
         }
         Returns: Json
+      }
+      core_fiscal_quarter_of: {
+        Args: { p_date: string; p_fiscal_year_id: string }
+        Returns: string
+      }
+      core_fiscal_year_for_date: {
+        Args: { p_date: string; p_organization_id?: string }
+        Returns: string
+      }
+      core_fiscal_year_planning_eligible: {
+        Args: { p_fiscal_year_id: string }
+        Returns: boolean
       }
       core_generate_number: {
         Args: {
