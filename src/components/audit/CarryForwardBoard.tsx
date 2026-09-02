@@ -125,13 +125,28 @@ export function CarryForwardBoard({ currentFiscalYear }: CarryForwardBoardProps)
         <div className="flex items-end gap-3 p-3 rounded-md bg-muted/50 border">
           <div className="space-y-1">
             <Label className="text-xs">Source Year</Label>
-            <Input value={sourceYear} onChange={e => setSourceYear(e.target.value)} className="h-8 w-24 text-sm" />
+            <Select value={sourceYear} onValueChange={setSourceYear}>
+              <SelectTrigger className="h-8 w-32 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {fiscalYears.map(fy => (
+                  <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground mb-2" />
           <div className="space-y-1">
             <Label className="text-xs">Target Year</Label>
-            <Input value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="h-8 w-24 text-sm" />
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="h-8 w-32 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {eligibleTargets.map(fy => (
+                  <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           <Button size="sm" className="h-8" onClick={handleBuild} disabled={buildCarryForward.isPending}>
             {buildCarryForward.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
             Build Carry-Forward
