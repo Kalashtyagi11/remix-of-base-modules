@@ -263,7 +263,14 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
 
         {step === 'preview' && selectedEnt && (
           <div className="space-y-4">
+            {awardError && (
+              <div className="flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>{awardError}</span>
+              </div>
+            )}
             {/* Config controls */}
+
             <div className="grid grid-cols-4 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Frequency</Label>
