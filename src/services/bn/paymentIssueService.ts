@@ -529,9 +529,13 @@ async function nextLegacyChequeNumber(): Promise<string> {
     .select('cheque_number')
     .like('cheque_number', '9_______')
     .order('cheque_number', { ascending: false })
-    .limit(1);
-  const last = Number(data?.[0]?.cheque_number || 0);
-  const next = Number.isFinite(last) && last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
+    .limit(200);
+  const last = (data || [])
+    .map((r: any) => String(r.cheque_number || ''))
+    .filter((n: string) => /^9\d{7}$/.test(n))
+    .map(Number)
+    .reduce((a: number, b: number) => Math.max(a, b), 0);
+  const next = last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
   return String(next);
 }
 
