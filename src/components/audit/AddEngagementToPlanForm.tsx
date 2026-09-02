@@ -32,6 +32,8 @@ const RISK_SOURCE_LABELS: Record<string, string> = {
 export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagementToPlanFormProps) {
   const { data: departments = [] } = useIADepartments();
   const { data: auditors = [] } = useIAActiveAuditors();
+  // Quarter is derived from the enterprise fiscal calendar, never chosen by hand.
+  const { data: fiscalYears = [] } = useFiscalYears();
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
   const [form, setForm] = useState({
@@ -135,7 +137,7 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
       supportive_auditor_ids: form.supportive_auditor_ids,
       scope: form.scope,
       status: 'Planned',
-      quarter: form.quarter || null,
+      quarter: derivedQuarter || null,
       estimated_hours: form.estimated_hours ? Number(form.estimated_hours) : null,
       inclusion_rationale: form.inclusion_rationale || null,
       coverage_category: form.coverage_category || null,
