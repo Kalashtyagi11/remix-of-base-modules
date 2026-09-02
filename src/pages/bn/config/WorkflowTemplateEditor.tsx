@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Trash2, Save, ArrowUp, ArrowDown, Workflow, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowUp, ArrowDown, Workflow, ShieldAlert, Search } from 'lucide-react';
 import { useBnWorkflowTemplates, useUpsertBnWorkflowTemplate } from '@/hooks/bn/useBnConfig';
 import { useBnWorkbaskets } from '@/hooks/bn/useBnWorkbasket';
 import { useQuery } from '@tanstack/react-query';
@@ -314,6 +314,17 @@ export default function WorkflowTemplateEditor() {
 
   const step = steps[activeStep];
 
+  const [search, setSearch] = useState('');
+  const filteredTemplates = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return templates;
+    return templates.filter((t: { template_name?: string; template_code?: string; description?: string }) =>
+      (t.template_name ?? '').toLowerCase().includes(q) ||
+      (t.template_code ?? '').toLowerCase().includes(q) ||
+      (t.description ?? '').toLowerCase().includes(q),
+    );
+  }, [templates, search]);
+
   return (
     <div className="container mx-auto py-6 space-y-4">
       <div className="flex items-start justify-between">
@@ -331,12 +342,24 @@ export default function WorkflowTemplateEditor() {
         {/* Template list */}
         <Card className="col-span-3">
           <CardHeader className="pb-2"><CardTitle className="text-sm">Templates</CardTitle></CardHeader>
-          <CardContent className="p-2">
+          <CardContent className="p-2 space-y-2">
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2 top-2.5 text-muted-foreground" />
+              <Input
+                className="pl-7 h-8 text-sm"
+                placeholder="Search by code, name, or description"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
             <ScrollArea className="h-[70vh]">
               <div className="space-y-1">
                 {isLoading && <p className="text-xs text-muted-foreground p-2">Loading…</p>}
                 {!isLoading && templates.length === 0 && <p className="text-xs text-muted-foreground p-2">No templates yet.</p>}
-                {templates.map((t: any) => (
+                {!isLoading && templates.length > 0 && filteredTemplates.length === 0 && (
+                  <p className="text-xs text-muted-foreground p-2">No templates match "{search}".</p>
+                )}
+                {filteredTemplates.map((t: any) => (
                   <button
                     key={t.id}
                     onClick={() => handleSelectTemplate(t.id)}

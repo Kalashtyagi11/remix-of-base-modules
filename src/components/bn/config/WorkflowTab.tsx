@@ -4,10 +4,12 @@ import { useBnWorkflowTemplates } from '@/hooks/bn/useBnConfig';
 import { useBnProductVersion, useUpdateBnProductVersion } from '@/hooks/bn/useBnProduct';
 import { useBnWorkbaskets } from '@/hooks/bn/useBnWorkbasket';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Save, Workflow, AlertCircle } from 'lucide-react';
+import { Save, Workflow, AlertCircle, ChevronsUpDown, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect, useMemo } from 'react';
 import { ReadOnlyVersionBanner } from './ReadOnlyVersionBanner';
@@ -16,6 +18,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ProductWorkflowChannelGrid } from './ProductWorkflowChannelGrid';
 
 interface Props { versionId: string | undefined; isReadOnly?: boolean; versionStatus?: string | null; }
+
+interface WorkflowTemplateSummary { id: string; template_name: string; template_code: string; }
 
 const STAGE_BASKETS: { key: string; label: string; help: string }[] = [
   { key: 'default_workbasket_id', label: 'Default Workbasket', help: 'Fallback when no stage-specific basket matches.' },
@@ -67,6 +71,7 @@ export function WorkflowTab({ versionId, isReadOnly, versionStatus }: Props) {
   const { data: escalationPolicies = [] } = useEscalationPolicies();
   const { data: transitions = [] } = useTransitionRulesPreview((version as any)?.bn_product?.product_category);
   const updateMutation = useUpdateBnProductVersion();
+  const [legacyTemplatePickerOpen, setLegacyTemplatePickerOpen] = useState(false);
 
   const [form, setForm] = useState({
     workflow_template_id: '',
@@ -173,13 +178,54 @@ export function WorkflowTab({ versionId, isReadOnly, versionStatus }: Props) {
 
           <div className="space-y-2 max-w-md">
             <Label>Legacy Workflow Template (product-level fallback)</Label>
-            <Select disabled={isReadOnly} value={form.workflow_template_id || '__none__'} onValueChange={v => setForm(p => ({ ...p, workflow_template_id: v === '__none__' ? '' : v }))}>
-              <SelectTrigger><SelectValue placeholder="Select workflow template" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">None</SelectItem>
-                {templates.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.template_name} ({t.template_code})</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Popover open={legacyTemplatePickerOpen} onOpenChange={setLegacyTemplatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  disabled={isReadOnly}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className="truncate">
+                    {form.workflow_template_id
+                      ? (() => {
+                          const t = (templates as WorkflowTemplateSummary[]).find((x) => x.id === form.workflow_template_id);
+                          return t ? `${t.template_name} (${t.template_code})` : 'Select workflow template';
+                        })()
+                      : <span className="text-muted-foreground">None</span>}
+                  </span>
+                  <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search by name or code…" />
+                  <CommandList className="max-h-[320px]">
+                    <CommandEmpty>No template matches.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="__none__ none"
+                        onSelect={() => { setForm(p => ({ ...p, workflow_template_id: '' })); setLegacyTemplatePickerOpen(false); }}
+                      >
+                        <Check className={`h-3.5 w-3.5 mr-2 ${!form.workflow_template_id ? 'opacity-100' : 'opacity-0'}`} />
+                        None
+                      </CommandItem>
+                      {(templates as WorkflowTemplateSummary[]).map((t) => (
+                        <CommandItem
+                          key={t.id}
+                          value={`${t.template_name} ${t.template_code}`}
+                          onSelect={() => { setForm(p => ({ ...p, workflow_template_id: t.id })); setLegacyTemplatePickerOpen(false); }}
+                        >
+                          <Check className={`h-3.5 w-3.5 mr-2 ${form.workflow_template_id === t.id ? 'opacity-100' : 'opacity-0'}`} />
+                          {t.template_name} ({t.template_code})
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <p className="text-xs text-muted-foreground">
               Used only when no per-channel mapping below matches. Prefer the Channel Workflow Mapping for new configurations.
             </p>
