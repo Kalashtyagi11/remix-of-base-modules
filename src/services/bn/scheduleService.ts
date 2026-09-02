@@ -445,6 +445,7 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
   } = params;
 
   const rows: Omit<BnPaymentScheduleRow, 'id' | 'entered_at'>[] = [];
+  const generatedAt = new Date().toISOString();
   const periodAmount = computePeriodAmount(frequency, weeklyRate, monthlyRate);
 
   if (frequency === 'ONE_TIME') {
@@ -481,8 +482,8 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       arrears_to: null,
       arrears_periods: null,
       entered_by: performedBy,
-      modified_by: null,
-      modified_at: null,
+      modified_by: performedBy,
+      modified_at: generatedAt,
       legacy_schedule_ref: null,
     });
     return rows;
@@ -537,8 +538,8 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       arrears_to: null,
       arrears_periods: null,
       entered_by: performedBy,
-      modified_by: null,
-      modified_at: null,
+      modified_by: performedBy,
+      modified_at: generatedAt,
       legacy_schedule_ref: null,
     });
 
