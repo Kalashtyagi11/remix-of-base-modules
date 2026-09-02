@@ -63,6 +63,8 @@ const ExternalPortalApprovals = lazy(() => import('@/pages/admin/ExternalPortalA
 const PublicCatalogValidation = lazy(() => import('@/pages/admin/PublicCatalogValidation'));
 // NumberingRulesAdmin now rendered inside NumberingAdmin (Rules tab).
 const NumberingAdmin = lazy(() => import('@/pages/admin/NumberingAdmin'));
+const FiscalCalendarAdmin = lazy(() => import('@/pages/admin/FiscalCalendarAdmin'));
+
 const AuditLogAdmin = lazy(() => import('@/pages/admin/AuditLogAdmin'));
 const DepartmentsAdmin = lazy(() => import('@/pages/admin/DepartmentsAdmin'));
 import {
@@ -2052,6 +2054,8 @@ export const AppRoutes = () => {
       <Route path="/admin/external-portal-approvals" element={<ExternalPortalApprovals />} />
       <Route path="/admin/public-catalog-validation" element={<PublicCatalogValidation />} />
       <Route path="/admin/numbering" element={<NumberingAdmin />} />
+      <Route path="/admin/fiscal-calendar" element={<FiscalCalendarAdmin />} />
+
       <Route path="/admin/numbering-rules" element={<Navigate to="/admin/numbering" replace />} />
       <Route path="/admin/web-users" element={<WebUsers />} />
       <Route path="/admin/audit-log" element={<Suspense fallback={<div>Loading...</div>}><AuditLogAdmin /></Suspense>} />
