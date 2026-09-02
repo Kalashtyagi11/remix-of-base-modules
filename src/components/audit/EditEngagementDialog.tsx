@@ -16,6 +16,8 @@ import { Badge } from '@/components/ui/badge';
 import { MultiSelectChips } from './engagement/MultiSelectChips';
 import { AuditeeContactSelector } from './engagement/AuditeeContactSelector';
 import { ScheduleIntelligence } from './engagement/ScheduleIntelligence';
+import { useFiscalYears } from '@/hooks/useFiscalYears';
+import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
 
 const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
@@ -137,6 +139,8 @@ export function EditEngagementDialog({
   const { toast } = useToast();
   const { data: departments = [] } = useIADepartments();
   const { data: auditors = [] } = useIAActiveAuditors();
+  // Enterprise fiscal calendar drives quarter derivation.
+  const { data: fiscalYears = [] } = useFiscalYears();
   const isEditMode = !!engagement?.id;
 
   const [dirty, setDirty] = useState(false);
@@ -268,7 +272,7 @@ export function EditEngagementDialog({
   // Auto-derive quarter and month from start date
   useEffect(() => {
     if (form.planned_start_date && !quarterOverride) {
-      const q = getQuarterFromDate(form.planned_start_date);
+      const q = getQuarterFromDate(form.planned_start_date, fiscalYears);
       if (q && q !== form.quarter) {
         setForm(f => ({ ...f, quarter: q }));
       }
@@ -279,7 +283,7 @@ export function EditEngagementDialog({
         setForm(f => ({ ...f, month: m }));
       }
     }
-  }, [form.planned_start_date, quarterOverride, monthOverride]);
+  }, [form.planned_start_date, quarterOverride, monthOverride, fiscalYears]);
 
   // Auto-calculate estimated days from date range
   useEffect(() => {
@@ -373,7 +377,7 @@ export function EditEngagementDialog({
 
   // Derived values for display
   const derivedWeeks = form.estimated_days ? Math.ceil(Number(form.estimated_days) / 5) : null;
-  const derivedQuarter = form.planned_start_date ? getQuarterFromDate(form.planned_start_date) : null;
+  const derivedQuarter = form.planned_start_date ? getQuarterFromDate(form.planned_start_date, fiscalYears) : null;
   const derivedMonth = form.planned_start_date ? getMonthFromDate(form.planned_start_date) : null;
   const leadAuditorName = mappedAuditors.find((a: any) => a.id === form.lead_auditor_id)?.name || '';
 
