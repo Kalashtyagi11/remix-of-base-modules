@@ -156,10 +156,24 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
    * Wave 4 closure (DEF-2A): operator-initiated stage communications are
    * raised as Omni-Comms obligations. This surface never contacts a provider,
    * never chooses a template, sender or channel, and never sends directly.
+   *
+   * DEF-E3B-001: the operator dialog must supply the FULL declared token
+   * vocabulary of the catalogued event. Previously only five facts were passed,
+   * so engagement events (which declare auditeeUnit / scopeSummary / planned
+   * dates) were blocked by the producer's missing-fact guard before any
+   * emission reached Omni-Comms.
    */
   const sendActualEmail = async (_subject: string, _htmlBody: string, toEmail: string) => {
     try {
       setIsSendingEmail(true);
+      const ctx = engagementContext || {};
+      const engagementTitle = ctx.engagement_name || engagementName || engagementId;
+      const auditeeUnit = ctx.department_name || ctx.function_name || '';
+      const scopeSummary = ctx.scope || ctx.objectives || '';
+      const plannedStart = ctx.planned_start_date ? formatDateForDisplay(ctx.planned_start_date) : '';
+      const plannedEnd = ctx.planned_end_date ? formatDateForDisplay(ctx.planned_end_date) : '';
+      const docDue = pendingDocs.find(d => d.due_date)?.due_date as string | undefined;
+
       const result = await emitInternalAuditStageCommunication({
         stageCode,
         mode: mode === 'reminder' ? 'reminder' : mode === 'resend' ? 'reissue' : 'initial',
@@ -167,13 +181,22 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
         entityId: engagementId,
         recipientName: recipientName || 'Department Head',
         recipientEmail: toEmail,
-        reference: engagementContext?.engagement_name || engagementName || engagementId,
+        reference: engagementTitle,
         values: {
-          engagementTitle: engagementContext?.engagement_name || engagementName || '',
+          engagementTitle,
+          auditeeUnit,
+          scopeSummary,
+          plannedStartDate: plannedStart,
+          plannedEndDate: plannedEnd,
+          departmentName: auditeeUnit,
+          leadAuditor: ctx.lead_auditor_name || '',
+          leadAuditorName: ctx.lead_auditor_name || '',
           requestSummary: messageContent,
-          departmentName: engagementContext?.department_name || '',
-          leadAuditor: engagementContext?.lead_auditor_name || '',
-          dueDate: engagementContext?.planned_end_date || '',
+          querySummary: messageContent,
+          clarificationSummary: messageContent,
+          dueDate: docDue ? formatDateForDisplay(docDue) : plannedEnd,
+          issuedOn: formatDateForDisplay(new Date().toISOString()),
+          launchedOn: plannedStart,
         },
       });
       if (result.outcome === 'blocked') {
@@ -184,6 +207,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
       setIsSendingEmail(false);
     }
   };
+
 
 
   const handleSend = async () => {
@@ -328,13 +352,14 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
           {/* Recipient */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Recipient Name</Label>
-              <Input value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="Department Head" className="h-8 text-sm" />
+              <Label htmlFor="ia-recipient-name" className="text-xs">Recipient Name</Label>
+              <Input id="ia-recipient-name" value={recipientName} onChange={e => setRecipientName(e.target.value)} placeholder="Department Head" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Recipient Email *</Label>
-              <Input type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@example.com" className="h-8 text-sm" />
+              <Label htmlFor="ia-recipient-email" className="text-xs">Recipient Email *</Label>
+              <Input id="ia-recipient-email" type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@example.com" className="h-8 text-sm" />
             </div>
+
           </div>
 
           {/* Communication Content */}
