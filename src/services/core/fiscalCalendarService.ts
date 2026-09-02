@@ -60,36 +60,30 @@ export async function listPlanningEligibleFiscalYears(): Promise<FiscalYear[]> {
   return all.filter(isPlanningEligible);
 }
 
-export async function getDefaultOrganizationId(): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('core_organization' as any)
-    .select('id')
-    .eq('org_code', 'SKN-SSB')
-    .maybeSingle();
-  if (error) throw error;
-  return (data as any)?.id ?? null;
-}
-
-export async function createFiscalYear(input: FiscalYearInput, userCode?: string): Promise<FiscalYear> {
-  const organizationId = await getDefaultOrganizationId();
-  if (!organizationId) throw new Error('CORE_ORGANISATION_NOT_CONFIGURED: no organisation is configured.');
-  const { data, error } = await supabase
-    .from(TABLE as any)
-    .insert({
-      organization_id: organizationId,
-      code: input.code.trim(),
-      display_name: input.display_name.trim() || input.code.trim(),
-      start_date: input.start_date,
-      end_date: input.end_date,
-      status: input.status ?? 'OPEN',
-      is_active: input.is_active ?? true,
-      planning_open: input.planning_open ?? true,
-      notes: input.notes ?? null,
-      created_by: userCode || 'system',
-      updated_by: userCode || 'system',
-    } as any)
-    .select('*')
-    .single();
+/**
+ * Governed mutation path (Stage 2A-S / DEF-E2E-013).
+ *
+ * All Fiscal Master writes go through SECURITY DEFINER server commands which
+ * derive the actor (auth.uid()), derive the organisation server-side and check
+ * the central platform master-data administration capability
+ * (public.core_master_data_actor_can). Direct table DML is revoked for anon and
+ * authenticated, so the browser cannot bypass this path.
+ *
+ * Single-organisation deployment: the server resolves the configured
+ * organisation; the browser never supplies organization_id, created_by or
+ * updated_by.
+ */
+export async function createFiscalYear(input: FiscalYearInput): Promise<FiscalYear> {
+  const { data, error } = await supabase.rpc('core_fiscal_year_create' as any, {
+    p_code: input.code.trim(),
+    p_display_name: input.display_name?.trim() || input.code.trim(),
+    p_start_date: input.start_date,
+    p_end_date: input.end_date,
+    p_status: input.status ?? 'OPEN',
+    p_is_active: input.is_active ?? true,
+    p_planning_open: input.planning_open ?? true,
+    p_notes: input.notes ?? null,
+  } as any);
   if (error) throw error;
   return data as unknown as FiscalYear;
 }
@@ -97,30 +91,41 @@ export async function createFiscalYear(input: FiscalYearInput, userCode?: string
 export async function updateFiscalYear(
   id: string,
   patch: Partial<FiscalYearInput>,
-  userCode?: string,
 ): Promise<FiscalYear> {
-  const { data, error } = await supabase
-    .from(TABLE as any)
-    .update({ ...patch, updated_by: userCode || 'system' } as any)
-    .eq('id', id)
-    .select('*')
-    .single();
+  const { data, error } = await supabase.rpc('core_fiscal_year_update' as any, {
+    p_id: id,
+    p_code: patch.code ?? null,
+    p_display_name: patch.display_name ?? null,
+    p_start_date: patch.start_date ?? null,
+    p_end_date: patch.end_date ?? null,
+    p_status: patch.status ?? null,
+    p_is_active: patch.is_active ?? null,
+    p_planning_open: patch.planning_open ?? null,
+    p_notes: patch.notes ?? null,
+  } as any);
   if (error) throw error;
   return data as unknown as FiscalYear;
 }
 
 /** Fiscal years are never physically deleted — they are deactivated. */
-export async function setFiscalYearActive(id: string, isActive: boolean, userCode?: string) {
-  return updateFiscalYear(id, { is_active: isActive }, userCode);
+export async function setFiscalYearActive(id: string, isActive: boolean): Promise<FiscalYear> {
+  const { data, error } = await supabase.rpc('core_fiscal_year_set_active' as any, {
+    p_id: id,
+    p_is_active: isActive,
+  } as any);
+  if (error) throw error;
+  return data as unknown as FiscalYear;
 }
 
-export async function setFiscalYearStatus(id: string, status: FiscalYearStatus, userCode?: string) {
-  return updateFiscalYear(
-    id,
-    { status, planning_open: status === 'CLOSED' ? false : undefined },
-    userCode,
-  );
+export async function setFiscalYearStatus(id: string, status: FiscalYearStatus): Promise<FiscalYear> {
+  const { data, error } = await supabase.rpc('core_fiscal_year_set_status' as any, {
+    p_id: id,
+    p_status: status,
+  } as any);
+  if (error) throw error;
+  return data as unknown as FiscalYear;
 }
+
 
 // ── Pure derivation helpers (mirror of the server-side SQL functions) ──
 
