@@ -823,7 +823,7 @@ export function EditEngagementDialog({
           {/* ===== Team & Ownership ===== */}
           <TabsContent value="team" className="space-y-5 mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="lead_auditor_id">
                 <Label>Lead Auditor <span className="text-destructive">*</span></Label>
                 <Select value={form.lead_auditor_id || '__none__'} onValueChange={v => updateField('lead_auditor_id', v === '__none__' ? '' : v)}>
                   <SelectTrigger><SelectValue placeholder="Select lead auditor" /></SelectTrigger>
