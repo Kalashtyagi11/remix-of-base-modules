@@ -398,7 +398,7 @@ function periodEndDate(periodStart: Date, frequency: ScheduleFrequency): Date {
 
 export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPaymentScheduleRow, 'id' | 'entered_at'>[] {
   const {
-    entitlementId, claimId, ssn, claimNumber, frequency,
+    entitlementId, awardId, claimId, ssn, claimNumber, frequency,
     startDate, endDate, weeklyRate, monthlyRate, totalEntitlement,
     maxPeriods = frequency === 'MONTHLY' ? 12 : 52,
     currency = 'XCD', mode, performedBy,
@@ -409,10 +409,13 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
 
   if (frequency === 'ONE_TIME') {
     rows.push({
+      bn_award_id: awardId,
       entitlement_id: entitlementId,
       claim_id: claimId,
       ssn,
       claim_number: claimNumber,
+      schedule_period: startDate,
+      gross_amount: totalEntitlement,
       sequence_number: 1,
       frequency,
       period_start: startDate,
@@ -420,6 +423,7 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       due_date: startDate,
       amount: totalEntitlement,
       currency,
+
       rate_weekly: weeklyRate,
       rate_monthly: monthlyRate,
       rate_applied: totalEntitlement,
