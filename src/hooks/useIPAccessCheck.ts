@@ -113,6 +113,14 @@ export function useIPAccessCheck(): IPCheckResult {
         (async () => {
           const ip = await getClientIP();
 
+          // If the client IP cannot be resolved (ad-blocker, offline, blocked
+          // lookup service) we cannot evaluate the whitelist at all — fail open
+          // rather than locking the user out of every screen.
+          if (!ip || ip === 'unknown') {
+            console.warn('[IPAccessCheck] Client IP could not be resolved — failing open');
+            return { ip: 'unknown', allowed: true };
+          }
+
           const { data, error } = await supabase.functions.invoke('check-ip-access', {
             body: { ip_address: ip },
           });
