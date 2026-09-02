@@ -42,6 +42,8 @@ export const STAGE_TO_BASKET_CODES: Record<string, string[]> = {
   ],
   AWARD_SETUP: ['BN_AWARD_SETUP'],
   PAYMENT: ['BN_PAYMENT_PREPARATION', 'BN_PAYMENT_APPROVAL', 'BN_PAYMENT_ISSUE'],
+  // Payment in progress (status IN_PAYMENT) belongs to the issuing desk.
+  PAYMENT_ISSUE: ['BN_PAYMENT_ISSUE', 'BN_PAYMENT_APPROVAL', 'BN_PAYMENT_PREPARATION'],
 };
 
 const normalise = (value: string | null | undefined) =>

@@ -27,7 +27,8 @@ export type WorkflowStepName =
   | 'CALCULATION'
   | 'DECISION'
   | 'AWARD_SETUP'
-  | 'PAYMENT';
+  | 'PAYMENT'
+  | 'PAYMENT_ISSUE';
 
 export type ClaimStepDisposition =
   /** A step owns the claim; route to that step's basket. */
@@ -57,7 +58,10 @@ const STEP_BY_STATUS: Record<string, ClaimStepDisposition> = {
   APPROVED: { kind: 'STEP', step: 'AWARD_SETUP' },
   AWARD_SETUP: { kind: 'STEP', step: 'AWARD_SETUP' },
   PAYMENT_QUEUE: { kind: 'STEP', step: 'PAYMENT' },
-  IN_PAYMENT: { kind: 'STEP', step: 'PAYMENT' },
+  // Preparation and issue are two different desks. Once "Begin Payment" has
+  // been pressed the preparer is done, so the claim hands over to the payment
+  // issue queue instead of staying in Payment Preparation for ever.
+  IN_PAYMENT: { kind: 'STEP', step: 'PAYMENT_ISSUE' },
 
   // Paused — an officer still owns it, so the basket must not change.
   PENDING_INFO: {
