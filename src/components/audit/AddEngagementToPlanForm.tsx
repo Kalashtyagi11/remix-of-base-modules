@@ -121,6 +121,13 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
     }
   };
 
+  const derivedQuarter = React.useMemo(() => {
+    const fy = fiscalYears.find(
+      f => form.planned_start_date >= f.start_date && form.planned_start_date <= f.end_date,
+    );
+    return deriveFiscalQuarter(fy, form.planned_start_date);
+  }, [fiscalYears, form.planned_start_date]);
+
   const handleSubmit = () => {
     if (!form.engagement_name.trim()) return;
     onSave({
