@@ -182,6 +182,41 @@ export async function orchestrateApproval(
       critical: true,
     });
 
+    /**
+     * Create the actual award record. This step used to be missing entirely:
+     * the orchestrator logged an `AWARD_CREATED` event and moved the claim to
+     * AWARD_SETUP while `bn_award` stayed empty, so Payment Preparation had an
+     * entitlement but nothing to build a payment schedule against.
+     *
+     * `force` is passed because the periodic routing decision has already been
+     * made above — the award must not be re-gated on `award_creation_rule`.
+     */
+    try {
+      const { createAwardOnApproval } = await import('@/services/bn/awards/awardCreationService');
+      const awardRes = await createAwardOnApproval(claimId, performedBy, {
+        force: true,
+        source: 'post_approval_orchestrator',
+      });
+      awardId = awardRes.awardId;
+      if (!awardRes.awardId) {
+        awardWarning = `Award record was not created (${awardRes.reason ?? 'unknown reason'}). A payment schedule cannot be generated until an award exists.`;
+      }
+    } catch (e: any) {
+      // Non-fatal: the approval itself stands. The reason is surfaced on the
+      // result and audited rather than swallowed into the console.
+      awardWarning = `Award record was not created: ${e?.message ?? String(e)}`;
+    }
+    if (awardWarning) {
+      await db.from('bn_claim_event').insert({
+        claim_id: claimId,
+        event_type: 'AWARD_CREATION_FAILED',
+        notes: awardWarning,
+        performed_by: performedBy,
+        performed_at: new Date().toISOString(),
+      }).then(() => undefined, () => undefined);
+    }
+
+
     // Also raise the first periodic payment instruction so the claim
     // becomes visible in the Payables Queue and in the Workbench
     // Payments tab immediately after activation.
