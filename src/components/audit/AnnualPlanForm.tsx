@@ -35,9 +35,25 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
   const [isSaving, setIsSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Fiscal Year is enterprise master data (core_fiscal_year). It is never free
+  // text and never derived from the browser clock.
+  const { data: allFiscalYears = [], isLoading: fiscalYearsLoading } = useFiscalYears();
+  const { data: planningEligible = [] } = usePlanningEligibleFiscalYears();
+
+  // A plan created before the master existed keeps its historical text label.
+  const isLegacyPlan = Boolean(plan && !plan.fiscal_year_id);
+
+  // When editing, the plan's own (possibly now-closed) year must remain visible.
+  const currentFiscalYear = plan?.fiscal_year_id
+    ? allFiscalYears.find(fy => fy.id === plan.fiscal_year_id)
+    : undefined;
+  const eligibleFiscalYears = currentFiscalYear && !planningEligible.some(fy => fy.id === currentFiscalYear.id)
+    ? [currentFiscalYear, ...planningEligible]
+    : planningEligible;
+
   const [formData, setFormData] = useState({
-    fiscalYear: plan?.fiscal_year || `${currentYear}-${currentYear + 1}`,
-    title: plan?.title || `Annual Internal Audit Plan ${currentYear}-${currentYear + 1}`,
+    fiscalYearId: plan?.fiscal_year_id || '',
+    title: plan?.title || `Annual Internal Audit Plan ${currentYear}`,
     executiveSummary: plan?.executive_summary || '',
     objective: plan?.objective || '',
     scope: plan?.scope || '',
@@ -56,6 +72,7 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
   });
 
   const set = (key: string, value: string) => setFormData(prev => ({ ...prev, [key]: value }));
+
 
   const mapToDbPayload = (status: string) => {
     const payload: any = {
