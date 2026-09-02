@@ -156,7 +156,7 @@ export function EditEngagementDialog({
     engagement_name: '',
     department_id: '',
     function_id: '',
-    engagement_type: 'Planned Audit',
+    engagement_type: '', // Stage 2B: governed IA reference master supplies values; no hardcoded default
     engagement_risk_rating: 'Medium',
     risk_override: false,
     risk_override_reason: '',
@@ -202,7 +202,7 @@ export function EditEngagementDialog({
         engagement_name: engagement.engagement_name || '',
         department_id: engagement.department_id || '',
         function_id: engagement.function_id || '',
-        engagement_type: engagement.engagement_type || 'Planned Audit',
+        engagement_type: engagement.engagement_type || '',
         engagement_risk_rating: engagement.engagement_risk_rating || 'Medium',
         risk_override: false,
         risk_override_reason: '',
@@ -242,7 +242,7 @@ export function EditEngagementDialog({
       setMonthOverride(false);
     } else if (!engagement && open) {
       setForm({
-        engagement_name: '', department_id: '', function_id: '', engagement_type: 'Planned Audit',
+        engagement_name: '', department_id: '', function_id: '', engagement_type: '',
         engagement_risk_rating: 'Medium', risk_override: false, risk_override_reason: '', derived_risk_rating: '',
         planned_start_date: '', planned_end_date: '', lead_auditor_id: '', supportive_auditor_ids: [],
         reviewer_id: '', scope: '', objectives: '', quarter: '', month: '', estimated_hours: '', estimated_days: '',

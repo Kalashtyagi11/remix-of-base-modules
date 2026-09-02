@@ -44,7 +44,7 @@ const emptyForm = {
   scope: '', objectives: '',
   engagement_risk_rating: 'Medium',
   planned_start_date: '', planned_end_date: '', status: 'Planned',
-  engagement_type: 'Planned Audit',
+  engagement_type: '', // Stage 2B: governed IA reference master supplies values; no hardcoded default
 };
 
 export default function AuditEngagements() {
@@ -142,7 +142,7 @@ export default function AuditEngagements() {
       engagement_risk_rating: r.engagement_risk_rating || 'Medium',
       planned_start_date: r.planned_start_date || '', planned_end_date: r.planned_end_date || '',
       status: r.status || 'Planned',
-      engagement_type: r.engagement_type || 'Planned Audit',
+      engagement_type: r.engagement_type || '',
     });
     setModalState({ mode: 'edit', record: r });
   };
