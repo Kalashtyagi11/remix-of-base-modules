@@ -196,6 +196,9 @@ export function EditEngagementDialog({
   const [overrideReason, setOverrideReason] = useState('');
   const [quarterOverride, setQuarterOverride] = useState(false);
   const [monthOverride, setMonthOverride] = useState(false);
+  // IA-UX-VAL-001: controlled tabs so validation can route the user to the owning tab.
+  const [activeTab, setActiveTab] = useState<string>('identity');
+  const [issues, setIssues] = useState<IaValidationIssue[]>([]);
 
   const [form, setForm] = useState({
     engagement_name: '',
