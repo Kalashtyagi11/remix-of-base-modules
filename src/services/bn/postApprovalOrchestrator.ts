@@ -113,6 +113,19 @@ export async function orchestrateApproval(
   const lump = Number(calc?.lump_sum || 0);
   const today = new Date().toISOString().slice(0, 10);
 
+  // Beneficiary name is denormalised onto the payable so Batch Operations and
+  // the cheque register can display and validate it without a person lookup.
+  let beneficiaryName: string | null = null;
+  for (const table of ['ip_master', 'au_ip_master']) {
+    const { data: ipRow } = await db
+      .from(table)
+      .select('firstname, surname')
+      .eq('ssn', claim.ssn)
+      .maybeSingle();
+    const name = ipRow ? [ipRow.firstname, ipRow.surname].filter(Boolean).join(' ').trim() : '';
+    if (name) { beneficiaryName = name; break; }
+  }
+
   // Resolve payment frequency: respect product version config; otherwise infer
   // from benefit duration (short-term benefits — e.g. Sickness, Maternity,
   // Employment Injury — pay WEEKLY; long-term/pension defaults to MONTHLY).
@@ -235,12 +248,17 @@ export async function orchestrateApproval(
           ssn: claim.ssn,
           amount: firstAmt,
           currency: 'XCD',
-          payment_method: claim.bank_account ? 'EFT' : 'CHEQUE',
+          payment_method: claim.bank_account ? 'DIRECT_DEPOSIT' : 'CHEQUE',
           bank_code: claim.bank_routing_number || null,
           account_number: claim.bank_account || null,
           due_date: today,
           frequency,
           status: 'READY',
+          instruction_type: 'PERIODIC',
+          beneficiary_name: beneficiaryName,
+          period_start: today,
+          period_end: today,
+          office_code: 'HQ',
 
           description: `${product.benefit_name} — first periodic payment`,
         })
@@ -277,12 +295,17 @@ export async function orchestrateApproval(
         ssn: claim.ssn,
         amount: amt,
         currency: 'XCD',
-        payment_method: claim.bank_account ? 'EFT' : 'CHEQUE',
+        payment_method: claim.bank_account ? 'DIRECT_DEPOSIT' : 'CHEQUE',
         bank_code: claim.bank_routing_number || null,
         account_number: claim.bank_account || null,
         due_date: today,
         frequency: 'ONE_OFF',
         status: 'READY',
+        instruction_type: 'LUMP_SUM',
+        beneficiary_name: beneficiaryName,
+        period_start: today,
+        period_end: today,
+        office_code: 'HQ',
 
         description: `${product.benefit_name} — ${claim.claim_number}`,
       })

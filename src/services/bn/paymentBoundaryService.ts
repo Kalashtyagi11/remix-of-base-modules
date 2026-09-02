@@ -231,6 +231,20 @@ export async function createScheduleFromAward(
 }
 
 
+async function resolveBeneficiaryName(ssn: string | null): Promise<string | null> {
+  if (!ssn) return null;
+  for (const table of ['ip_master', 'au_ip_master']) {
+    const { data } = await db
+      .from(table)
+      .select('firstname, surname')
+      .eq('ssn', ssn)
+      .maybeSingle();
+    const name = data ? [data.firstname, data.surname].filter(Boolean).join(' ').trim() : '';
+    if (name) return name;
+  }
+  return null;
+}
+
 // ─── 3) Instruction creation from due schedule rows ─────────────────
 
 export async function createInstructionsFromDueSchedule(
@@ -244,9 +258,20 @@ export async function createInstructionsFromDueSchedule(
     .maybeSingle();
   if (!award) return { instructionIds: [] };
 
+  // Claim context so the payable carries claim, beneficiary and banking
+  // details into Batch Operations (previously blank, which broke validation).
+  const { data: claimCtx } = await db
+    .from('bn_claim')
+    .select('id, claim_number, bank_account, bank_routing_number')
+    .eq('id', award.bn_claim_id)
+    .maybeSingle();
+  const bankAccount = claimCtx?.bank_account || null;
+  const bankRouting = claimCtx?.bank_routing_number || null;
+  const beneficiaryName = await resolveBeneficiaryName(award.ssn);
+
   const { data: due } = await db
     .from('bn_payment_schedule')
-    .select('id, schedule_period, due_date, net_amount, gross_amount, bn_payment_instruction_id')
+    .select('id, schedule_period, period_start, period_end, due_date, net_amount, gross_amount, bn_payment_instruction_id')
     .eq('bn_award_id', awardId)
     .in('status', ['PENDING', 'PROJECTED', 'DUE', 'ARREARS'])
     .is('bn_payment_instruction_id', null);
@@ -262,10 +287,17 @@ export async function createInstructionsFromDueSchedule(
         ssn: award.ssn,
         amount,
         currency: award.currency || 'XCD',
-        payment_method: 'EFT',
+        payment_method: bankAccount ? 'DIRECT_DEPOSIT' : 'CHEQUE',
+        account_number: bankAccount,
+        bank_code: bankRouting,
         due_date: row.due_date,
         frequency: award.frequency || 'one_off',
-        status: 'queued',
+        status: 'READY',
+        instruction_type: 'PERIODIC',
+        beneficiary_name: beneficiaryName,
+        period_start: row.period_start || row.schedule_period || row.due_date,
+        period_end: row.period_end || row.due_date,
+        office_code: 'HQ',
         description: `Schedule ${row.schedule_period}`,
       })
       .select('id')

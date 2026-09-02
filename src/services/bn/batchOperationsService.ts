@@ -350,23 +350,39 @@ async function addPayablesToBatch(
     throw new Error(`${existingInBatch.length} payable(s) already assigned to a batch`);
   }
 
+  // Resolve claim context. bn_payment_instruction holds a claim_id, not a
+  // claim_number — reading `p.claim_number` always yielded undefined, so every
+  // batch item failed validation with "Missing claim number".
+  const claimIds = Array.from(new Set(payables.map((p: any) => p.claim_id).filter(Boolean)));
+  const claimMap = new Map<string, any>();
+  if (claimIds.length) {
+    const { data: claims } = await db
+      .from('bn_claim')
+      .select('id, claim_number, ssn')
+      .in('id', claimIds);
+    (claims || []).forEach((c: any) => claimMap.set(c.id, c));
+  }
+
   // Create batch items
-  const items = payables.map((p: any) => ({
-    batch_id: batchId,
-    instruction_id: p.id,
-    item_status: 'INCLUDED',
-    sequence_number: nextSeq++,
-    ssn: p.ssn,
-    claim_number: p.claim_number,
-    beneficiary_name: p.beneficiary_name,
-    amount: p.amount,
-    currency: p.currency || 'XCD',
-    payment_method: p.payment_method,
-    period_start: p.period_start,
-    period_end: p.period_end,
-    instruction_type: p.instruction_type,
-    added_by: userCode,
-  }));
+  const items = payables.map((p: any) => {
+    const claim = p.claim_id ? claimMap.get(p.claim_id) : null;
+    return {
+      batch_id: batchId,
+      instruction_id: p.id,
+      item_status: 'INCLUDED',
+      sequence_number: nextSeq++,
+      ssn: p.ssn || claim?.ssn || null,
+      claim_number: claim?.claim_number || null,
+      beneficiary_name: p.beneficiary_name || p.payee_name || null,
+      amount: p.amount,
+      currency: p.currency || 'XCD',
+      payment_method: p.payment_method,
+      period_start: p.period_start || p.due_date || null,
+      period_end: p.period_end || p.due_date || null,
+      instruction_type: p.instruction_type || (p.frequency === 'ONE_OFF' ? 'LUMP_SUM' : 'PERIODIC'),
+      added_by: userCode,
+    };
+  });
 
   const { error: iErr } = await db.from('bn_batch_item').insert(items);
   if (iErr) throw iErr;
@@ -459,8 +475,15 @@ async function validateBatch(batchId: string, userCode: string): Promise<BatchVa
     if (!item.amount || item.amount <= 0) itemErrors.push('Invalid amount');
     if (!item.ssn) itemErrors.push('Missing SSN');
     if (!item.claim_number) itemErrors.push('Missing claim number');
-    if (item.payment_method === 'DIRECT_DEPOSIT' && !item.beneficiary_name) {
-      itemErrors.push('DD requires beneficiary bank details');
+    if (item.payment_method === 'DIRECT_DEPOSIT') {
+      const { data: instr } = await db
+        .from('bn_payment_instruction')
+        .select('account_number, bank_account_snapshot')
+        .eq('id', item.instruction_id)
+        .maybeSingle();
+      if (!instr?.account_number && !instr?.bank_account_snapshot) {
+        itemErrors.push('DD requires beneficiary bank details');
+      }
     }
 
     const newStatus = itemErrors.length > 0 ? 'FAILED_VALIDATION' : 'VALIDATED';
