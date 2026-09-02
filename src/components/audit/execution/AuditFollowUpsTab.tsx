@@ -24,7 +24,9 @@ import { formatDateForDisplay } from '@/lib/format-config';
  * Derived states (Resolved / Closed / Overdue) are never set from the UI.
  */
 
-const FOLLOW_UP_TYPES = ['Action Verification', 'Implementation Check', 'Evidence Collection', 'Re-Test', 'Management Meeting', 'Other'];
+// Stage 2B: follow-up types come from the governed IA reference master
+// (ia_reference_value / FOLLOW_UP_TYPE); free entry is no longer possible.
+
 
 /** Canonical outcome vocabulary enforced by ia_followup_record_outcome. */
 const OUTCOMES = ['In Verification', 'Implemented', 'Partially Implemented', 'Not Implemented', 'Reopened'] as const;
