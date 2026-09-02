@@ -1,0 +1,28 @@
+import { supabase } from '@/integrations/supabase/client';
+import { executeBatchAction, fetchBatchItems } from '@/services/bn/batchOperationsService';
+import { prepareIssueFromBatch, executeIssue } from '@/services/bn/paymentIssueService';
+const db = supabase as any;
+await (supabase as any).auth.setSession(JSON.parse(process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON!));
+const { data: pays } = await db.from('bn_payment_instruction').select('id, claim_id, amount, payment_method').eq('status','READY').is('batch_id', null).limit(1);
+const pay = pays[0];
+const { data: claim } = await db.from('bn_claim').select('claim_number').eq('id', pay.claim_id).maybeSingle();
+console.log('payable', pay, claim);
+const batch = await executeBatchAction({ action:'CREATE', userCode:'MAKER1', paymentMethod:'MIXED', officeCode:'HQ', notes:'e2e verification' });
+await executeBatchAction({ action:'ADD_PAYABLES', batchId: batch.id, payableIds:[pay.id], userCode:'MAKER1' });
+const items = await fetchBatchItems(batch.id);
+console.log('item', items.map((i:any)=>({claim:i.claim_number,ben:i.beneficiary_name,ps:i.period_start,amt:i.amount,st:i.item_status})));
+console.log('validate', await executeBatchAction({ action:'VALIDATE', batchId: batch.id, userCode:'MAKER1' }));
+await executeBatchAction({ action:'APPROVE', batchId: batch.id, userCode:'CHECK1' });
+await executeBatchAction({ action:'RELEASE', batchId: batch.id, userCode:'FIN01' });
+console.log('prepared', await prepareIssueFromBatch(batch.id, 'FIN01'));
+const { data: iss } = await db.from('bn_issue_record').select('id, target_table, issue_method, status').eq('batch_id', batch.id);
+console.log('issue', iss);
+console.log('exec', JSON.stringify(await executeIssue(iss.map((i:any)=>i.id),'FIN01')));
+const { data: after } = await db.from('bn_issue_record').select('status, cheque_number, dd_reference, error_message').eq('batch_id', batch.id);
+console.log('after', after);
+// duplicate guard: reset the batch item to VALIDATED and re-prepare
+await db.from('bn_batch_item').update({ item_status: 'VALIDATED' }).eq('batch_id', batch.id);
+console.log('re-prepared (expect 0)', await prepareIssueFromBatch(batch.id, 'FIN01'));
+const { data: dup } = await db.from('bn_batch_item').select('item_status, validation_errors').eq('batch_id', batch.id);
+console.log('dup item', dup);
+await db.from('bn_batch_item').update({ item_status: 'ISSUED', validation_errors: null }).eq('batch_id', batch.id);
