@@ -778,8 +778,11 @@ export async function regenerateSchedule(
 
   if (!ent) throw new Error('Entitlement not found for regeneration');
 
+  const awardId = await resolveAwardIdForEntitlement(entitlementId);
+
   const newRows = generateScheduleRows({
     entitlementId,
+    awardId,
     claimId: ent.claim_id,
     ssn: ent.ssn,
     claimNumber: ent.bn_claim?.claim_number || ent.claim_number,
@@ -849,8 +852,11 @@ export async function generateArrearsRows(
 
   if (!ent) throw new Error('Entitlement not found');
 
+  const awardId = await resolveAwardIdForEntitlement(entitlementId);
+
   const arrearsRows = generateScheduleRows({
     entitlementId,
+    awardId,
     claimId: ent.claim_id,
     ssn: ent.ssn,
     claimNumber: ent.bn_claim?.claim_number || ent.claim_number,
