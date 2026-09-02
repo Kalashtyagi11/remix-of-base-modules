@@ -235,7 +235,16 @@ export default function RiskAssessment() {
   const [likelihoodScore, setLikelihoodScore] = useState(1);
   const [impactScore, setImpactScore] = useState(1);
   const [riskOwner, setRiskOwner] = useState('');
-  const [assessmentYear, setAssessmentYear] = useState(new Date().getFullYear().toString());
+  // Assessment year is master-backed (core_fiscal_year), never generated text.
+  const { data: fiscalYears = [] } = useFiscalYears();
+  const [assessmentYear, setAssessmentYear] = useState('');
+  useEffect(() => {
+    if (!assessmentYear && fiscalYears.length) {
+      const today = new Date().toISOString().slice(0, 10);
+      const current = fiscalYears.find(f => f.start_date <= today && f.end_date >= today);
+      setAssessmentYear((current || fiscalYears[0]).code);
+    }
+  }, [fiscalYears, assessmentYear]);
   const [assessmentDate, setAssessmentDate] = useState(new Date().toISOString().slice(0, 10));
   const [assessedBy, setAssessedBy] = useState('');
   const [notes, setNotes] = useState('');
@@ -528,10 +537,9 @@ export default function RiskAssessment() {
               <Select value={assessmentYear} onValueChange={setAssessmentYear} disabled={isReadOnly}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {[0, -1, -2, -3].map(offset => {
-                    const y = String(new Date().getFullYear() + offset);
-                    return <SelectItem key={y} value={y}>{y}</SelectItem>;
-                  })}
+                  {fiscalYears.map(fy => (
+                    <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
