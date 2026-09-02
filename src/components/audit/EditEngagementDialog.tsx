@@ -662,13 +662,6 @@ export function EditEngagementDialog({
                   <SelectContent>{deptFunctions.map((fn: any) => <SelectItem key={fn.id} value={fn.id}>{fn.function_name}</SelectItem>)}</SelectContent>
                 </Select>
               </FieldSlot>
-              <div>
-                <Label>Business Function <span className="text-destructive">*</span></Label>
-                <Select value={form.function_id} onValueChange={v => updateField('function_id', v)} disabled={!form.department_id}>
-                  <SelectTrigger><SelectValue placeholder={form.department_id ? 'Select function' : 'Select department first'} /></SelectTrigger>
-                  <SelectContent>{deptFunctions.map((fn: any) => <SelectItem key={fn.id} value={fn.id}>{fn.function_name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
             </div>
 
             {/* Risk */}
