@@ -10,6 +10,7 @@
  *
  *   0. Version substance — at least one active eligibility rule and one
  *      active formula binding. Blocks. (BUG-02)
+ *   0b. At least one application channel enabled. Blocks. (BUG-48)
  *   1. Cross-tab conflict detection  → ERROR-level conflicts block.
  *   2. Channel readiness (staff/public) → disabled channels are OK;
  *      mis-configured enabled channels block.
@@ -38,6 +39,7 @@ export interface PublishGateReport {
     baseline?: { status: string; failures: string[] };
     legal?: { ok: boolean; blocking: LegalIssue[]; warnings: LegalIssue[]; total_rules: number };
     substance?: { eligibilityRules: number; formulaBindings: number };
+    channelsEnabled?: { enabledChannels: number };
   };
 }
 
@@ -105,6 +107,45 @@ async function checkVersionHasSubstance(versionId: string): Promise<{
   return { errors, eligibilityRules: rules, formulaBindings: bindings };
 }
 
+/**
+ * BUG-48 — a version with every channel disabled must never go live.
+ *
+ * Channel enablement (bn_product_channel_config.is_enabled) is the only thing
+ * in this system controlling whether a claim can ever be submitted against a
+ * product version. The existing channel-readiness checks below only validate
+ * a channel WHEN it is enabled ("is this enabled channel configured well
+ * enough?") — they never asked whether any channel is enabled at all. A
+ * version with both ONLINE and OFFLINE set to is_enabled = false therefore
+ * passed every check and went ACTIVE, after which the Application Channels
+ * tab locks (read-only) and no claim can ever be registered against it.
+ *
+ * Same shape as BUG-02: a check with nothing to inspect reported success
+ * instead of refusing to proceed.
+ */
+async function checkAtLeastOneChannelEnabled(versionId: string): Promise<{
+  errors: string[];
+  enabledChannels: number;
+}> {
+  const { count, error } = await db
+    .from('bn_product_channel_config')
+    .select('id', { count: 'exact', head: true })
+    .eq('product_version_id', versionId)
+    .eq('is_enabled', true);
+  if (error) {
+    throw new Error(`could not count enabled channels — ${error.message}`);
+  }
+
+  const enabledChannels = count ?? 0;
+  const errors: string[] = [];
+  if (enabledChannels === 0) {
+    errors.push(
+      'No application channel is enabled. At least one channel (Public/Online or Staff/Offline) ' +
+      'must be enabled on the Application Channels tab before this version can be published.',
+    );
+  }
+  return { errors, enabledChannels };
+}
+
 
 export async function assertSafeToPublish(versionId: string): Promise<PublishGateReport> {
   const errors: string[] = [];
@@ -125,6 +166,20 @@ export async function assertSafeToPublish(versionId: string): Promise<PublishGat
     // A check that could not run must block, not warn.
     errors.push(
       `Cannot confirm this version has eligibility rules and a formula binding: ${(e as Error).message}. ` +
+      `Publishing is refused until the check can run.`,
+    );
+  }
+
+  // 0b. At least one application channel must be enabled, or the version can
+  // never receive a claim. Deliberately not downgraded to a warning on
+  // failure, for the same reason as the substance check above.
+  try {
+    const channels = await checkAtLeastOneChannelEnabled(versionId);
+    details.channelsEnabled = { enabledChannels: channels.enabledChannels };
+    errors.push(...channels.errors);
+  } catch (e) {
+    errors.push(
+      `Cannot confirm this version has an enabled application channel: ${(e as Error).message}. ` +
       `Publishing is refused until the check can run.`,
     );
   }

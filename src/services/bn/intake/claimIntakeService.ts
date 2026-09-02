@@ -217,6 +217,59 @@ export async function submitClaimApplication(
     ? 'CENTRAL'
     : 'BN_FALLBACK';
 
+  // BUG-054 — the generic "Benefit Facts" step captures deceased SSN, date of
+  // death and relationship-to-deceased into formPayload.benefit_facts, but
+  // bn_submit_claim_application only archives the whole payload as raw JSON
+  // (bn_claim_application.raw_application_json) — it never becomes queryable
+  // data. Every Funeral Grant eligibility rule that depends on who the
+  // deceased is (contribution weeks, age at death, filing deadline) or the
+  // claimant's relationship had nothing real to read, and always failed or
+  // came back unevaluated regardless of the true facts. Writes the real rows
+  // those resolvers already expect, scoped narrowly to only fire when these
+  // exact Funeral Grant fact keys are present — no other benefit's intake,
+  // which uses entirely different benefit_facts keys, is affected.
+  try {
+    const facts = (input.formPayload as { benefit_facts?: Record<string, unknown> } | undefined)
+      ?.benefit_facts ?? {};
+    const deceasedSsn = typeof facts.deceased_ssn === 'string' ? facts.deceased_ssn.trim() : '';
+    const dateOfDeath = typeof facts.date_of_death === 'string' ? facts.date_of_death.trim() : '';
+    const relationship = typeof facts.relationship_to_deceased === 'string'
+      ? facts.relationship_to_deceased.trim()
+      : '';
+
+    if (deceasedSsn || dateOfDeath || relationship) {
+      if (dateOfDeath) {
+        await db.from('bn_claim').update({ death_date: dateOfDeath }).eq('id', claimId);
+      }
+      if (deceasedSsn) {
+        await db.from('bn_claim_participant').insert({
+          claim_id: claimId,
+          kind: 'DECEASED',
+          ssn: deceasedSsn,
+          participant_role: 'DECEASED_INSURED_PERSON',
+          status: 'ACTIVE',
+          is_primary_applicant: false,
+        });
+      }
+      if (relationship) {
+        await db.from('bn_claim_participant').insert({
+          claim_id: claimId,
+          kind: 'CLAIMANT',
+          ssn: input.ssn,
+          participant_role: 'APPLICANT',
+          relationship_to_insured: relationship.toUpperCase(),
+          status: 'ACTIVE',
+          is_primary_applicant: true,
+        });
+      }
+    }
+  } catch (factErr) {
+    // Non-blocking, matching the workflow-integration error handling below:
+    // the claim is already persisted, a fact-persistence failure must not
+    // fail the whole submission.
+    console.warn('[claimIntake] Funeral Grant fact persistence error (non-fatal):', factErr);
+  }
+
   // BUG-33 — a claim must never be left without an owner. The workbasket is
   // resolved below whether or not a workflow can be started; if no workflow
   // starts, the claim is assigned to that workbasket directly rather than the
