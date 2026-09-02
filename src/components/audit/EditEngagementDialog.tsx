@@ -841,7 +841,7 @@ export function EditEngagementDialog({
                     )}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldSlot>
               <div>
                 <Label>Reviewer</Label>
                 <Select value={form.reviewer_id || '__none__'} onValueChange={v => updateField('reviewer_id', v === '__none__' ? '' : v)}>
