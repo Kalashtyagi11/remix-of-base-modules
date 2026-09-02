@@ -474,11 +474,22 @@ export function EditEngagementDialog({
   }, [planFiscalYear, form.planned_start_date]);
 
   const handleSubmit = () => {
-    const errors = validate();
-    if (errors.length > 0) {
-      toast({ title: 'Validation Errors', description: errors[0], variant: 'destructive' });
+    const found = buildIssues();
+    setIssues(found);
+    if (found.length > 0) {
+      // Never surface a hidden-tab error first: if the tab the user is working on
+      // has a problem, keep them there; otherwise take them to the first failing tab.
+      const onActiveTab = issuesForTab(found, activeTab).length > 0;
+      const targetTab = onActiveTab ? activeTab : (getFirstInvalidTab(found, ENGAGEMENT_TAB_ORDER) ?? activeTab);
+      routeToIssue(targetTab, found);
+      toast({
+        title: 'Some details need attention',
+        description: summariseIssues(found, ENGAGEMENT_TABS),
+        variant: 'destructive',
+      });
       return;
     }
+
 
     // Build inclusion_rationale text from codes for backward compat
     const inclusionText = form.inclusion_reason_codes.join('; ') + (form.inclusion_reason_notes ? ` — ${form.inclusion_reason_notes}` : '');
