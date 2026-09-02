@@ -8,6 +8,7 @@ import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from 'lucide-re
 import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
 import { useIaReferenceConfigurationHealth } from '@/hooks/audit/useIaReferenceValues';
+import { useIaNumberingHealth } from '@/hooks/audit/useIaNumberingHealth';
 
 
 const severityBadge = (check: FiscalHealthCheck) => {
@@ -35,6 +36,8 @@ const severityBadge = (check: FiscalHealthCheck) => {
 export default function AuditConfigurationHealth() {
   const { data: checks = [], isLoading, isFetching, refetch } = useFiscalConfigurationHealth();
   const { data: refChecks = [], isLoading: refLoading } = useIaReferenceConfigurationHealth();
+  const { data: numChecks = [], isLoading: numLoading } = useIaNumberingHealth();
+
 
 
   const counts = useMemo(() => {
