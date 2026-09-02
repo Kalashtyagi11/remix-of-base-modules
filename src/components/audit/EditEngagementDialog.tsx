@@ -18,11 +18,14 @@ import { AuditeeContactSelector } from './engagement/AuditeeContactSelector';
 import { ScheduleIntelligence } from './engagement/ScheduleIntelligence';
 import { useFiscalYears } from '@/hooks/useFiscalYears';
 import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
 
-const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
+// Stage 2B (DEF-E2E-007/008): audit type and coverage category come from the
+// governed IA reference master. Risk ratings remain owned by the canonical risk
+// architecture (ia_risk_classification_thresholds) — no duplicate master here.
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
-const COVERAGE_CATEGORIES = ['Compliance', 'Financial', 'Operational', 'IT', 'Governance', 'Special'];
 const ENGAGEMENT_STATUSES = ['Draft', 'Planned', 'Ready', 'In Preparation', 'In Progress', 'Completed', 'Closed', 'Cancelled'];
+
 
 const INCLUSION_REASONS = [
   'High Risk Area',
