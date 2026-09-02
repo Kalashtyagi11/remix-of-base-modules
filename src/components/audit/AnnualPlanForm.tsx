@@ -75,8 +75,15 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
 
 
   const mapToDbPayload = (status: string) => {
+    const selectedFiscalYear = allFiscalYears.find(fy => fy.id === formData.fiscalYearId);
     const payload: any = {
-      fiscal_year: formData.fiscalYear,
+      // fiscal_year is a display snapshot only; fiscal_year_id is authoritative.
+      // Legacy plans keep their historical label untouched.
+      ...(isLegacyPlan
+        ? {}
+        : { fiscal_year_id: formData.fiscalYearId || null, fiscal_year: selectedFiscalYear?.display_name || null }),
+      title: formData.title,
+
       title: formData.title,
       objective: formData.objective,
       scope: formData.scope,
