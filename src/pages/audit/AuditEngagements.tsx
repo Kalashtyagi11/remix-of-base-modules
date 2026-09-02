@@ -31,12 +31,10 @@ const PLAN_STATUS_OPTIONS = ['All Plans', 'Approved', 'Draft', 'Active', 'Supers
 // Stage 2B (DEF-E2E-007): audit types come from the governed IA reference master.
 
 
-const generateEngagementCode = () => {
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  const rand = String(Math.floor(1000 + Math.random() * 9000));
-  return `AUD-${dateStr}-${rand}`;
-};
+// Stage 2C (DEF-E2E-009): the authoritative engagement code is allocated server-side
+// by the central platform numbering engine (INTERNAL_AUDIT/ENGAGEMENT). The browser
+// never generates, chooses or submits it.
+
 
 const emptyForm = {
   engagement_name: '', engagement_code: '', annual_plan_id: '', department_id: '',
@@ -129,7 +127,7 @@ export default function AuditEngagements() {
   const getAuditorName = (id: string) => auditors?.find((a: any) => a.id === id)?.name || '—';
 
   const openAdd = () => {
-    setForm({ ...emptyForm, engagement_code: generateEngagementCode() });
+    setForm({ ...emptyForm });
     setModalState({ mode: 'create' });
   };
   const openEdit = (r: any) => {
@@ -151,7 +149,7 @@ export default function AuditEngagements() {
     if (!form.engagement_name) return;
     const payload = {
       engagement_name: form.engagement_name,
-      engagement_code: form.engagement_code,
+      // engagement_code intentionally omitted: allocated server-side (Stage 2C).
       annual_plan_id: form.annual_plan_id || null,
       department_id: form.department_id || null,
       function_id: form.function_id || null,
@@ -322,7 +320,7 @@ export default function AuditEngagements() {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Identity</p>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Audit Title *</Label><Input value={form.engagement_name} onChange={e => setForm(f => ({ ...f, engagement_name: e.target.value }))} /></div>
-            <div><Label>Audit Code <span className="text-xs text-muted-foreground">(auto)</span></Label><Input value={form.engagement_code} disabled className="bg-muted" /></div>
+            <div><Label>Audit Code <span className="text-xs text-muted-foreground">(system-generated)</span></Label><Input value={form.engagement_code || 'Assigned automatically on save'} disabled readOnly className="bg-muted" /></div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Audit Type</Label>

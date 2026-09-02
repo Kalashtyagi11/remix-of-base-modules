@@ -372,11 +372,9 @@ export function EditEngagementDialog({
     return errors;
   };
 
-  const generateCode = () => {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    return `ENG-${dateStr}-${String(Math.floor(1000 + Math.random() * 9000))}`;
-  };
+  // Stage 2C (DEF-E2E-009): engagement_code is allocated server-side by the central
+  // numbering engine and is immutable after allocation.
+
 
   // Derived values for display
   const derivedWeeks = form.estimated_days ? Math.ceil(Number(form.estimated_days) / 5) : null;
@@ -446,9 +444,9 @@ export function EditEngagementDialog({
 
     if (isEditMode) {
       payload.id = engagement.id;
-    } else {
-      payload.engagement_code = generateCode();
     }
+    // Create path: engagement_code is allocated server-side (Stage 2C, DEF-E2E-009).
+
 
     if (form.risk_override && form.risk_override_reason) {
       payload.risk_override_reason = form.risk_override_reason;
