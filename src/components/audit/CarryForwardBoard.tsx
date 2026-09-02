@@ -15,9 +15,23 @@ interface CarryForwardBoardProps {
 }
 
 export function CarryForwardBoard({ currentFiscalYear }: CarryForwardBoardProps) {
-  const currentYear = currentFiscalYear || new Date().getFullYear().toString();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [sourceYear, setSourceYear] = useState((parseInt(currentYear) - 1).toString());
+  // Fiscal years come from the enterprise master (core_fiscal_year); they are
+  // never free text. Targets must additionally be planning-eligible.
+  const { data: fiscalYears = [] } = useFiscalYears();
+  const eligibleTargets = fiscalYears.filter(isPlanningEligible);
+  const defaultTarget = currentFiscalYear || eligibleTargets[0]?.code || '';
+  const [selectedYear, setSelectedYear] = useState(defaultTarget);
+  const [sourceYear, setSourceYear] = useState('');
+
+  useEffect(() => {
+    if (!selectedYear && eligibleTargets.length) setSelectedYear(eligibleTargets[0].code);
+    if (!sourceYear && fiscalYears.length) {
+      const target = fiscalYears.find(f => f.code === (selectedYear || eligibleTargets[0]?.code));
+      const prior = fiscalYears.find(f => !target || f.start_date < target.start_date);
+      if (prior) setSourceYear(prior.code);
+    }
+  }, [fiscalYears, eligibleTargets, selectedYear, sourceYear]);
+
 
   const { data: items = [], isLoading } = useCarryForwardItems(selectedYear);
   const buildCarryForward = useBuildCarryForward();
