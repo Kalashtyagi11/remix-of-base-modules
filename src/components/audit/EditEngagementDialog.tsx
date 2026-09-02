@@ -63,8 +63,20 @@ const RISK_SOURCE_LABELS: Record<string, string> = {
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-function getQuarterFromDate(dateStr: string): string {
+/**
+ * Quarter is a DERIVED value, not master data. It is measured from the start of
+ * the fiscal year that contains the planned start date (core_fiscal_year), so a
+ * January-start and an April-start fiscal year never share Q1 semantics.
+ * Falls back to the calendar quarter only when no fiscal year covers the date.
+ */
+function getQuarterFromDate(
+  dateStr: string,
+  fiscalYears: Array<{ start_date: string; end_date: string }> = [],
+): string {
   if (!dateStr) return '';
+  const fy = fiscalYears.find(f => dateStr >= f.start_date && dateStr <= f.end_date);
+  const derived = deriveFiscalQuarter(fy, dateStr);
+  if (derived) return derived;
   const month = new Date(dateStr).getMonth(); // 0-indexed
   if (month < 3) return 'Q1';
   if (month < 6) return 'Q2';
@@ -76,6 +88,7 @@ function getMonthFromDate(dateStr: string): string {
   if (!dateStr) return '';
   return MONTHS[new Date(dateStr).getMonth()] || '';
 }
+
 
 /** Calculate working days between two dates (excludes weekends) */
 function calcWorkingDays(start: string, end: string): number {
