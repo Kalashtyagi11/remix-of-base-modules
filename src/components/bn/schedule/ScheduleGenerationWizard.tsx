@@ -371,7 +371,7 @@ export const ScheduleGenerationWizard: React.FC<Props> = ({ open, onClose, onGen
           )}
           <Button variant="outline" onClick={onClose} disabled={generating}>Cancel</Button>
           {step === 'preview' && (
-            <Button onClick={handleGenerate} disabled={generating || previewRows.length === 0}>
+            <Button onClick={handleGenerate} disabled={generating || resolvingAward || !awardId || previewRows.length === 0}>
               {generating && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               <CheckCircle className="h-4 w-4 mr-1" />
               Generate {previewRows.length} Rows
