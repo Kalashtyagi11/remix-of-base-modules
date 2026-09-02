@@ -584,21 +584,59 @@ export function EditEngagementDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="identity" className="mt-3">
+        {/* IA-UX-VAL-001: form-level summary — every item deep-links to its section. */}
+        {issues.length > 0 && (
+          <div role="alert" className="mt-3 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+            <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {issueSummary}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {issues.map((issue, i) => (
+                <li key={`${issue.field}-${i}`}>
+                  <button
+                    type="button"
+                    onClick={() => routeToIssue(issue.tabId, issues)}
+                    className="text-left text-xs text-destructive underline underline-offset-2 hover:no-underline"
+                  >
+                    {ENGAGEMENT_TABS.find(t => t.id === issue.tabId)?.label}: {issue.message}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-3">
           <TabsList className="flex-wrap h-auto gap-1 p-1">
-            <TabsTrigger value="identity" className="text-sm font-medium px-4 py-2">Identity & Coverage</TabsTrigger>
-            <TabsTrigger value="planning" className="text-sm font-medium px-4 py-2">Planning Narrative</TabsTrigger>
-            <TabsTrigger value="team" className="text-sm font-medium px-4 py-2">Team & Ownership</TabsTrigger>
-            <TabsTrigger value="schedule" className="text-sm font-medium px-4 py-2">Schedule & Resources</TabsTrigger>
+            {ENGAGEMENT_TABS.map(tab => {
+              const count = tabErrorCounts[tab.id] ?? 0;
+              return (
+                <TabsTrigger key={tab.id} value={tab.id} className="text-sm font-medium px-4 py-2">
+                  <span className="flex items-center gap-1.5">
+                    {tab.label}
+                    {count > 0 && (
+                      <span
+                        className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground"
+                        aria-label={`${count} ${count === 1 ? 'issue' : 'issues'} in ${tab.label}`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </span>
+                </TabsTrigger>
+              );
+            })}
           </TabsList>
 
           {/* ===== Identity & Coverage ===== */}
           <TabsContent value="identity" className="space-y-5 mt-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="engagement_name">
                 <Label>Audit Title <span className="text-destructive">*</span></Label>
                 <Input value={form.engagement_name} onChange={e => updateField('engagement_name', e.target.value)} placeholder="e.g. IT Security Audit" />
-              </div>
+              </FieldSlot>
+
               <div>
                 <Label>Audit Type</Label>
                 <IaReferenceSelect
