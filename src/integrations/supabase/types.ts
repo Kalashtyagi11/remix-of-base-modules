@@ -129821,6 +129821,7 @@ export type Database = {
         }
         Returns: Json
       }
+      core_fiscal_calendar_epoch: { Args: never; Returns: string }
       core_fiscal_quarter_of: {
         Args: { p_date: string; p_fiscal_year_id: string }
         Returns: string
@@ -131948,6 +131949,18 @@ export type Database = {
           p_subject?: string
         }
         Returns: Json
+      }
+      ia_fiscal_configuration_health: {
+        Args: never
+        Returns: {
+          affected_count: number
+          check_code: string
+          detail: string
+          drill_ref: string
+          severity: string
+          status: string
+          title: string
+        }[]
       }
       ia_followup_record_outcome: {
         Args: { p_followup_id: string; p_notes?: string; p_outcome: string }

@@ -1,23 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, ArrowRight, Calendar, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { useCarryForwardItems, useBuildCarryForward } from '@/hooks/useAuditCommunicationStages';
+import { useFiscalYears } from '@/hooks/useFiscalYears';
+import { isPlanningEligible } from '@/services/core/fiscalCalendarService';
 import { PageShell, DataTable, StatusBadge } from '@/components/common';
 import type { DataTableColumn } from '@/components/common';
+
 
 interface CarryForwardBoardProps {
   currentFiscalYear?: string;
 }
 
 export function CarryForwardBoard({ currentFiscalYear }: CarryForwardBoardProps) {
-  const currentYear = currentFiscalYear || new Date().getFullYear().toString();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [sourceYear, setSourceYear] = useState((parseInt(currentYear) - 1).toString());
+  // Fiscal years come from the enterprise master (core_fiscal_year); they are
+  // never free text. Targets must additionally be planning-eligible.
+  const { data: fiscalYears = [] } = useFiscalYears();
+  const eligibleTargets = fiscalYears.filter(isPlanningEligible);
+  const defaultTarget = currentFiscalYear || eligibleTargets[0]?.code || '';
+  const [selectedYear, setSelectedYear] = useState(defaultTarget);
+  const [sourceYear, setSourceYear] = useState('');
+
+  useEffect(() => {
+    if (!selectedYear && eligibleTargets.length) setSelectedYear(eligibleTargets[0].code);
+    if (!sourceYear && fiscalYears.length) {
+      const target = fiscalYears.find(f => f.code === (selectedYear || eligibleTargets[0]?.code));
+      const prior = fiscalYears.find(f => !target || f.start_date < target.start_date);
+      if (prior) setSourceYear(prior.code);
+    }
+  }, [fiscalYears, eligibleTargets, selectedYear, sourceYear]);
+
 
   const { data: items = [], isLoading } = useCarryForwardItems(selectedYear);
   const buildCarryForward = useBuildCarryForward();
@@ -109,13 +125,28 @@ export function CarryForwardBoard({ currentFiscalYear }: CarryForwardBoardProps)
         <div className="flex items-end gap-3 p-3 rounded-md bg-muted/50 border">
           <div className="space-y-1">
             <Label className="text-xs">Source Year</Label>
-            <Input value={sourceYear} onChange={e => setSourceYear(e.target.value)} className="h-8 w-24 text-sm" />
+            <Select value={sourceYear} onValueChange={setSourceYear}>
+              <SelectTrigger className="h-8 w-32 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {fiscalYears.map(fy => (
+                  <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ArrowRight className="h-4 w-4 text-muted-foreground mb-2" />
           <div className="space-y-1">
             <Label className="text-xs">Target Year</Label>
-            <Input value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="h-8 w-24 text-sm" />
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="h-8 w-32 text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {eligibleTargets.map(fy => (
+                  <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           <Button size="sm" className="h-8" onClick={handleBuild} disabled={buildCarryForward.isPending}>
             {buildCarryForward.isPending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
             Build Carry-Forward

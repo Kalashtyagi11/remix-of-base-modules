@@ -64,6 +64,7 @@ const PublicCatalogValidation = lazy(() => import('@/pages/admin/PublicCatalogVa
 // NumberingRulesAdmin now rendered inside NumberingAdmin (Rules tab).
 const NumberingAdmin = lazy(() => import('@/pages/admin/NumberingAdmin'));
 const FiscalCalendarAdmin = lazy(() => import('@/pages/admin/FiscalCalendarAdmin'));
+const AuditConfigurationHealth = lazy(() => import('@/pages/audit/AuditConfigurationHealth'));
 
 const AuditLogAdmin = lazy(() => import('@/pages/admin/AuditLogAdmin'));
 const DepartmentsAdmin = lazy(() => import('@/pages/admin/DepartmentsAdmin'));
@@ -2055,6 +2056,7 @@ export const AppRoutes = () => {
       <Route path="/admin/public-catalog-validation" element={<PublicCatalogValidation />} />
       <Route path="/admin/numbering" element={<NumberingAdmin />} />
       <Route path="/admin/fiscal-calendar" element={<FiscalCalendarAdmin />} />
+      <Route path="/audit/configuration-health" element={<AuditConfigurationHealth />} />
 
       <Route path="/admin/numbering-rules" element={<Navigate to="/admin/numbering" replace />} />
       <Route path="/admin/web-users" element={<WebUsers />} />
