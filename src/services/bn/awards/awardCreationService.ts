@@ -105,22 +105,41 @@ export async function createAwardOnApproval(
     pv = data;
   }
 
-  const duration = pv?.benefit_duration_type ?? 'SHORT_TERM';
-  const rule = pv?.award_creation_rule ?? 'NONE';
-  if (duration !== 'LONG_TERM' || rule !== 'ON_APPROVAL') {
-    return { created: false, reason: 'PRODUCT_NOT_LONG_TERM' };
-  }
-
-  // Resolve benefit code from product
-  let benefitCode = claim.legacy_benefit_type || 'BN';
+  // Resolve product shape (category / payment type) and benefit code.
+  let product: any = null;
   if (claim.product_id) {
-    const { data: prod } = await db
+    const { data } = await db
       .from('bn_product')
-      .select('benefit_code')
+      .select('benefit_code, category, payment_type')
       .eq('id', claim.product_id)
       .maybeSingle();
-    if (prod?.benefit_code) benefitCode = prod.benefit_code;
+    product = data;
   }
+
+  /**
+   * The old gate demanded `benefit_duration_type = LONG_TERM` AND
+   * `award_creation_rule = ON_APPROVAL`. Nearly every product version carries
+   * `award_creation_rule = NONE`, so no award was ever created and periodic
+   * claims arrived in Payment Preparation with an entitlement but no award to
+   * schedule against. The award now follows the same periodic test the
+   * post-approval orchestrator uses to route the claim to AWARD_SETUP.
+   */
+  const duration = String(pv?.benefit_duration_type ?? '').toUpperCase();
+  const rule = String(pv?.award_creation_rule ?? 'NONE').toUpperCase();
+  const paymentType = String(product?.payment_type ?? '').toUpperCase();
+  const category = String(product?.category ?? '').toUpperCase();
+  const periodic =
+    paymentType === 'LUMP_SUM'
+      ? false
+      : paymentType === 'PERIODIC' || paymentType === 'BOTH' || PERIODIC_CATEGORIES.has(category);
+  const legacyLongTermRule = duration === 'LONG_TERM' && rule === 'ON_APPROVAL';
+
+  if (!options.force && !periodic && !legacyLongTermRule) {
+    return { created: false, reason: 'PRODUCT_NOT_AWARD_BEARING' };
+  }
+
+  const benefitCode = product?.benefit_code || claim.legacy_benefit_type || 'BN';
+
 
   // Latest calculation for base amount
   const { data: calc } = await db
