@@ -1,0 +1,16 @@
+import { supabase } from '@/integrations/supabase/client';
+import { executeIssue } from '@/services/bn/paymentIssueService';
+const db = supabase as any;
+await (supabase as any).auth.setSession(JSON.parse(process.env.LOVABLE_BROWSER_SUPABASE_SESSION_JSON!));
+const batchId = 'c52b2527-d3d9-4b9e-a4d8-3ac6df8dff65';
+const { data: issues } = await db.from('bn_issue_record').select('id, status, instruction_id, claim_number').eq('batch_id', batchId);
+console.log('issues', issues);
+await db.from('bn_issue_record').update({ status: 'PENDING', error_message: null, retry_count: 0 }).eq('batch_id', batchId);
+console.log(JSON.stringify(await executeIssue(issues.map((i:any)=>i.id), 'FIN01'), null, 1));
+const { data: after } = await db.from('bn_issue_record').select('status, cheque_number, error_message, claim_number').eq('batch_id', batchId);
+console.log('after', after);
+const { data: chq } = await db.from('cl_cheques').select('claim_number, cheque_number, cheque_item, payment_amount, cheque_status, batch_number, date_of_issue').eq('batch_number', 'x').limit(0);
+const { data: pi } = await db.from('bn_payment_instruction').select('status, payment_reference').eq('id', issues[0].instruction_id);
+console.log('payable', pi);
+const { data: bi } = await db.from('bn_batch_item').select('item_status, cl_cheque_no').eq('batch_id', batchId);
+console.log('items', bi);
