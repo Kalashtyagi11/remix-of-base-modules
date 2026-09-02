@@ -75327,6 +75327,7 @@ export type Database = {
           closure_notes: string | null
           conflict_check_result: Json | null
           coverage_category: string | null
+          coverage_category_id: string | null
           created_at: string | null
           created_by: string | null
           criteria: string | null
@@ -75337,6 +75338,7 @@ export type Database = {
           engagement_name: string
           engagement_risk_rating: string | null
           engagement_type: string | null
+          engagement_type_id: string | null
           estimated_budget: number | null
           estimated_days: number | null
           estimated_hours: number | null
@@ -75403,6 +75405,7 @@ export type Database = {
           closure_notes?: string | null
           conflict_check_result?: Json | null
           coverage_category?: string | null
+          coverage_category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           criteria?: string | null
@@ -75413,6 +75416,7 @@ export type Database = {
           engagement_name: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null
+          engagement_type_id?: string | null
           estimated_budget?: number | null
           estimated_days?: number | null
           estimated_hours?: number | null
@@ -75479,6 +75483,7 @@ export type Database = {
           closure_notes?: string | null
           conflict_check_result?: Json | null
           coverage_category?: string | null
+          coverage_category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           criteria?: string | null
@@ -75489,6 +75494,7 @@ export type Database = {
           engagement_name?: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null
+          engagement_type_id?: string | null
           estimated_budget?: number | null
           estimated_days?: number | null
           estimated_hours?: number | null
@@ -75541,6 +75547,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "ia_audit_engagements_coverage_category_id_fkey"
+            columns: ["coverage_category_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ia_audit_engagements_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -75552,6 +75565,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "v_ia_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_audit_engagements_engagement_type_id_fkey"
+            columns: ["engagement_type_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
             referencedColumns: ["id"]
           },
           {
@@ -78735,6 +78755,7 @@ export type Database = {
           fiscal_year: string | null
           fiscal_year_id: string | null
           follow_up_type: string | null
+          follow_up_type_id: string | null
           id: string
           lifecycle_status: string
           outcome: string | null
@@ -78768,6 +78789,7 @@ export type Database = {
           fiscal_year?: string | null
           fiscal_year_id?: string | null
           follow_up_type?: string | null
+          follow_up_type_id?: string | null
           id?: string
           lifecycle_status?: string
           outcome?: string | null
@@ -78801,6 +78823,7 @@ export type Database = {
           fiscal_year?: string | null
           fiscal_year_id?: string | null
           follow_up_type?: string | null
+          follow_up_type_id?: string | null
           id?: string
           lifecycle_status?: string
           outcome?: string | null
@@ -78872,6 +78895,13 @@ export type Database = {
             columns: ["fiscal_year_id"]
             isOneToOne: false
             referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_follow_ups_follow_up_type_id_fkey"
+            columns: ["follow_up_type_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
             referencedColumns: ["id"]
           },
         ]
@@ -80829,6 +80859,134 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ia_findings"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_reference_migration_map: {
+        Row: {
+          canonical_code: string | null
+          classification: string
+          created_at: string
+          id: string
+          legacy_value: string | null
+          rationale: string | null
+          reference_type: string
+          rows_affected: number
+        }
+        Insert: {
+          canonical_code?: string | null
+          classification: string
+          created_at?: string
+          id?: string
+          legacy_value?: string | null
+          rationale?: string | null
+          reference_type: string
+          rows_affected?: number
+        }
+        Update: {
+          canonical_code?: string | null
+          classification?: string
+          created_at?: string
+          id?: string
+          legacy_value?: string | null
+          rationale?: string | null
+          reference_type?: string
+          rows_affected?: number
+        }
+        Relationships: []
+      }
+      ia_reference_type: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_reference_value: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          description: string | null
+          display_order: number
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          reference_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          description?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          reference_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          description?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          reference_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_reference_value_reference_type_fkey"
+            columns: ["reference_type"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_type"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -132139,6 +132297,7 @@ export type Database = {
       }
       ia_is_ia_user: { Args: never; Returns: boolean }
       ia_is_quality_reviewer: { Args: never; Returns: boolean }
+      ia_is_risk_band_label: { Args: { _value: string }; Returns: boolean }
       ia_issue_report: {
         Args: { p_notes?: string; p_report_id: string }
         Returns: Json
@@ -132279,6 +132438,47 @@ export type Database = {
           p_target_date?: string
         }
         Returns: Json
+      }
+      ia_reference_admin_can: { Args: never; Returns: boolean }
+      ia_reference_assert_id: {
+        Args: { _id: string; _type: string }
+        Returns: string
+      }
+      ia_reference_configuration_health: {
+        Args: never
+        Returns: {
+          affected_count: number
+          check_code: string
+          detail: string
+          severity: string
+        }[]
+      }
+      ia_reference_resolve: {
+        Args: { _type: string; _value: string }
+        Returns: string
+      }
+      ia_reference_value_create: {
+        Args: {
+          _code: string
+          _description?: string
+          _display_order?: number
+          _name: string
+          _reference_type: string
+        }
+        Returns: string
+      }
+      ia_reference_value_set_active: {
+        Args: { _id: string; _is_active: boolean; _reason?: string }
+        Returns: string
+      }
+      ia_reference_value_update: {
+        Args: {
+          _description?: string
+          _display_order?: number
+          _id: string
+          _name?: string
+        }
+        Returns: string
       }
       ia_register_actions: { Args: { p_filters?: Json }; Returns: Json }
       ia_register_findings: { Args: { p_filters?: Json }; Returns: Json }
