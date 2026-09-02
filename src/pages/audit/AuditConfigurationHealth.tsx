@@ -34,6 +34,8 @@ const severityBadge = (check: FiscalHealthCheck) => {
  */
 export default function AuditConfigurationHealth() {
   const { data: checks = [], isLoading, isFetching, refetch } = useFiscalConfigurationHealth();
+  const { data: refChecks = [], isLoading: refLoading } = useIaReferenceConfigurationHealth();
+
 
   const counts = useMemo(() => {
     const failing = checks.filter(c => c.status === 'FAIL');
