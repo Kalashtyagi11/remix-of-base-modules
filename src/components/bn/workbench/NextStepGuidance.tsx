@@ -36,20 +36,26 @@ interface Props {
 interface DownstreamState {
   hasEntitlement: boolean;
   hasPayable: boolean;
+  hasAward: boolean;
   payableId?: string;
 }
 
 async function fetchDownstream(claimId: string): Promise<DownstreamState> {
-  const [{ data: ents }, { data: pis }] = await Promise.all([
+  const [{ data: ents }, { data: pis }, { data: awards }] = await Promise.all([
     db.from('bn_entitlement').select('id').eq('claim_id', claimId).limit(1),
     db.from('bn_payment_instruction').select('id').eq('claim_id', claimId).limit(1),
+    db.from('bn_award').select('id').eq('bn_claim_id', claimId).limit(1),
   ]);
   return {
     hasEntitlement: (ents?.length || 0) > 0,
     hasPayable: (pis?.length || 0) > 0,
+    hasAward: (awards?.length || 0) > 0,
     payableId: pis?.[0]?.id,
   };
 }
+
+/** Claim statuses where an award should already exist. */
+const AWARD_EXPECTED_STATUSES = ['AWARD_SETUP', 'PAYMENT_QUEUE', 'IN_PAYMENT'];
 
 export const NextStepGuidance: React.FC<Props> = ({
   claimId, status, hasEligibilityPass, hasCalculation,
@@ -71,6 +77,7 @@ export const NextStepGuidance: React.FC<Props> = ({
     qc.invalidateQueries({ queryKey: ['bn', 'next-step-downstream', claimId] });
     qc.invalidateQueries({ queryKey: ['bn', 'payables'] });
     qc.invalidateQueries({ queryKey: ['bn', 'entitlements'] });
+    qc.invalidateQueries({ queryKey: ['bn', 'awards'] });
   };
 
   /**
@@ -121,6 +128,25 @@ export const NextStepGuidance: React.FC<Props> = ({
     onSuccess: (r: any) => { toast.success(r.message || 'Generated'); invalidate(); },
     onError: (e: any) => toast.error('Generation failed', { description: e?.message }),
   }, 'Generating payable...');
+
+  // Repair path for claims approved before the award record was created on the
+  // approval path: creates the missing award (and its first schedule row) so
+  // Payment Preparation can generate a payment schedule.
+  const awardMut = useBlockingMutation({
+    mutationFn: async () => {
+      const { createAwardFromApprovedClaim } = await import('@/services/bn/paymentBoundaryService');
+      const res = await createAwardFromApprovedClaim({
+        claimId,
+        performedBy: userCode!,
+        force: true,
+        source: 'workbench_repair',
+      });
+      if (!res) throw new Error('The award could not be created for this claim.');
+      return res;
+    },
+    onSuccess: () => { toast.success('Award created'); invalidate(); },
+    onError: (e: any) => toast.error('Award creation failed', { description: e?.message }),
+  }, 'Creating award...');
 
   const step = useMemo(() => {
     // Blocked states first
@@ -180,6 +206,22 @@ export const NextStepGuidance: React.FC<Props> = ({
       };
     }
 
+    // Award missing on a claim that is already past approval — offer the repair
+    // before any payment guidance, because the schedule cannot be built without it.
+    if (
+      downstream && !downstream.hasAward &&
+      (AWARD_EXPECTED_STATUSES.includes(status) || (status === 'APPROVED' && downstream.hasEntitlement))
+    ) {
+      return {
+        tone: 'blocked' as const,
+        title: 'No award record for this claim',
+        body: 'This claim has an entitlement but no award, so a payment schedule cannot be generated. Create the award to continue.',
+        actionLabel: 'Create Award',
+        onAction: () => { if (guard()) awardMut.mutate(); },
+        pending: awardMut.isPending || userCodeLoading,
+      };
+    }
+
     if (downstream?.hasPayable && ['PAYMENT_QUEUE', 'AWARD_SETUP', 'IN_PAYMENT', 'APPROVED'].includes(status)) {
       return {
         tone: 'success' as const,
@@ -209,7 +251,7 @@ export const NextStepGuidance: React.FC<Props> = ({
     }
 
     return null;
-  }, [status, hasEligibilityPass, hasCalculation, downstream, submitMut.isPending, approveMut.isPending, generateMut.isPending, userCodeLoading]);
+  }, [status, hasEligibilityPass, hasCalculation, downstream, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, userCodeLoading]);
 
   if (!step) return null;
 
