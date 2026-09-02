@@ -556,15 +556,34 @@ export async function executeDeterminationAction(params: ExecuteDeterminationPar
       performed_at: new Date().toISOString(),
     });
 
-    // Create long-term award if product is configured for it (non-blocking)
+    // Create the award record when the product is award-bearing.
+    // Non-blocking for the decision itself, but no longer silent: a failure is
+    // written to the claim event log so operations can see why Payment
+    // Preparation has no award to schedule against.
     if (newStatus === 'APPROVED') {
       try {
         const { createAwardOnApproval } = await import('@/services/bn/awards/awardCreationService');
-        await createAwardOnApproval(claimId, performedBy);
-      } catch (e) {
-        console.warn('[determinationService] award creation skipped:', e);
+        const res = await createAwardOnApproval(claimId, performedBy, { source: 'determination' });
+        if (!res.awardId && res.reason && !res.reason.startsWith('PRODUCT_NOT_AWARD_BEARING')) {
+          await db.from('bn_claim_event').insert({
+            claim_id: claimId,
+            event_type: 'AWARD_CREATION_FAILED',
+            notes: `Award not created on approval: ${res.reason}`,
+            performed_by: performedBy,
+            performed_at: new Date().toISOString(),
+          }).then(() => undefined, () => undefined);
+        }
+      } catch (e: any) {
+        await db.from('bn_claim_event').insert({
+          claim_id: claimId,
+          event_type: 'AWARD_CREATION_FAILED',
+          notes: `Award not created on approval: ${e?.message ?? String(e)}`,
+          performed_by: performedBy,
+          performed_at: new Date().toISOString(),
+        }).then(() => undefined, () => undefined);
       }
     }
+
   } else {
     // Non-status-changing action (CALCULATE, RECALCULATE, OVERRIDE)
     await db.from('bn_claim_event').insert({
