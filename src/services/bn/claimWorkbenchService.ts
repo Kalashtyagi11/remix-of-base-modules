@@ -19,6 +19,15 @@
  * OUTBOUND PAYMENTS: cl_cheques only. cn_payment* NEVER used.
  */
 import { supabase } from '@/integrations/supabase/client';
+import {
+  runClaimEligibility,
+  runClaimCalculation,
+  createClaimDecision,
+} from './claimActionRunner';
+import {
+  checkApprovalPreconditions,
+  describeApprovalBlockers,
+} from './claims/approvalPreconditions';
 
 const db = supabase as any;
 
@@ -189,7 +198,6 @@ export async function executeClaimAction(
     // ── 1. Preconditions & side-effects BEFORE status change ──
     switch (action) {
       case 'CHECK_ELIGIBILITY': {
-        const { runClaimEligibility } = await import('./claimActionRunner');
         const res = await runClaimEligibility(claimId, userCode);
         sideEffect.eligibilityId = res.eligibilityId;
         sideEffect.overallResult = res.overallResult;
@@ -197,7 +205,6 @@ export async function executeClaimAction(
         break;
       }
       case 'RUN_CALCULATION': {
-        const { runClaimCalculation } = await import('./claimActionRunner');
         const res = await runClaimCalculation(claimId, userCode);
         sideEffect.calculationId = res.calculationId;
         sideEffect.weeklyRate = res.weeklyRate;
@@ -214,7 +221,6 @@ export async function executeClaimAction(
         if (!calc || calc.length === 0) {
           throw new Error('No calculation exists. Run calculation before submitting for decision.');
         }
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'RECOMMENDATION',
@@ -231,9 +237,6 @@ export async function executeClaimAction(
         // every control is asserted here, in the service. The previous check
         // looked only at blocking documents, discarded its own query error, and
         // treated an empty checklist as satisfied.
-        const { checkApprovalPreconditions, describeApprovalBlockers } = await import(
-          './claims/approvalPreconditions'
-        );
         const pre = await checkApprovalPreconditions(claimId, userCode, { reasonCode, narrative });
         if (!pre.ok) {
           // Named conditions, so the officer knows what to correct. Not a
@@ -243,7 +246,6 @@ export async function executeClaimAction(
         // Recorded so an audit can see WHICH controls were applied, and whether
         // they came from the product's policy or the strict default.
         sideEffect.approvalControls = pre.controls;
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'APPROVED',
@@ -259,7 +261,6 @@ export async function executeClaimAction(
       case 'DENY': {
         if (!reasonCode) throw new Error('Reason code is required to deny a claim.');
         if (!narrative) throw new Error('Narrative is required to deny a claim.');
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'DENIED',
