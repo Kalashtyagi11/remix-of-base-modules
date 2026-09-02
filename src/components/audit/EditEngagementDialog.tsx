@@ -729,17 +729,19 @@ export function EditEngagementDialog({
             </div>
 
             {/* Structured Inclusion Rationale */}
-            <MultiSelectChips
-              label="Inclusion Rationale"
-              required
-              options={INCLUSION_REASONS}
-              selected={form.inclusion_reason_codes}
-              onChange={v => { updateField('inclusion_reason_codes', v); setDirty(true); }}
-              maxSelections={2}
-              helperText="Why is this audit included in the annual plan?"
-            />
+            <FieldSlot field="inclusion_reason_codes">
+              <MultiSelectChips
+                label="Inclusion Rationale"
+                required
+                options={INCLUSION_REASONS}
+                selected={form.inclusion_reason_codes}
+                onChange={v => { updateField('inclusion_reason_codes', v); setDirty(true); }}
+                maxSelections={2}
+                helperText="Why is this audit included in the annual plan?"
+              />
+            </FieldSlot>
             {(form.inclusion_reason_codes.includes('Other') || form.inclusion_reason_notes) && (
-              <div>
+              <FieldSlot field="inclusion_reason_notes">
                 <Label>
                   Additional Inclusion Notes
                   {form.inclusion_reason_codes.includes('Other') && <span className="text-destructive"> *</span>}
@@ -750,7 +752,7 @@ export function EditEngagementDialog({
                   placeholder="Provide additional context for the inclusion rationale..."
                   rows={2}
                 />
-              </div>
+              </FieldSlot>
             )}
 
             <div className="grid grid-cols-2 gap-4">
