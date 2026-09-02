@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logLgActivity } from "@/services/legal/lgAuditService";
 import { assertLgEnforcementTransition, type LgEnforcementStatus } from "@/services/legal/lgEnforcementStateMachine";
 import type { LgEnforcementRecord } from "@/types/legal/judicial";
+import { allocatePayment } from "@/services/legal/lgLiabilityService";
 
 const sb = supabase as any;
 
@@ -133,7 +134,7 @@ export async function changeEnforcementStatus(
     try {
       const { data: links } = await sb.from("lg_enforcement_liability").select("liability_id, allocated_amount").eq("enforcement_id", id);
       if (links && links.length > 0) {
-        const { allocatePayment } = await import("@/services/legal/lgLiabilityService");
+        // static import (see top of file) — avoids mixed static/dynamic chunking
         const amt = opts!.amountRecovered!;
         const perRow = links[0].allocated_amount ?? amt;
         await allocatePayment(
