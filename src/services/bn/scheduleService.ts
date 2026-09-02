@@ -349,7 +349,9 @@ export const SCHEDULE_ROLE_MATRIX: Record<string, { canView: boolean; canAct: bo
 
 export interface GenerateScheduleParams {
   entitlementId: string;
+  awardId: string;
   claimId: string;
+
   ssn: string;
   claimNumber: string | null;
   frequency: ScheduleFrequency;
