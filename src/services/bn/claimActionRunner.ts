@@ -155,7 +155,7 @@ export async function runClaimEligibility(
   // BUG-29 — evaluation is delegated to the shared evaluator so intake and the
   // workbench cannot diverge, and so a rule that cannot be evaluated is recorded
   // as UNEVALUATED (blocking) instead of being reported as passed.
-  const traces: EligibilityRuleTrace[] = await evaluateEligibilityRules(rules ?? [], ctx);
+  const traces: EligibilityRuleTrace[] = await evaluateEligibilityRules((rules ?? []) as unknown as Parameters<typeof evaluateEligibilityRules>[0], ctx);
 
   // ─── Apply ACTIVE APPROVED eligibility overrides ───────────────────
   // Rule per spec: re-run evaluates every rule, but any failure that has an

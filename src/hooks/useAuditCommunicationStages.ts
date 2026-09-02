@@ -60,6 +60,10 @@ export function useRecordCommunicationStage() {
       createdBy?: string;
       acknowledgmentRequired?: boolean;
       mode?: 'send' | 'resend' | 'reminder';
+      /** Omni-Comms evidence link (DEF-E3B-004): proves real governed delivery. */
+      eventCode?: string | null;
+      omniCommsRequestId?: string | null;
+      occurrence?: string | null;
     }) => {
       const { data, error } = await supabase.rpc('ia_record_communication_stage' as any, {
         p_engagement_id: params.engagementId,
@@ -71,6 +75,9 @@ export function useRecordCommunicationStage() {
         p_created_by: params.createdBy || null,
         p_acknowledgment_required: params.acknowledgmentRequired || false,
         p_mode: params.mode || 'send',
+        p_event_code: params.eventCode || null,
+        p_omni_comms_request_id: params.omniCommsRequestId || null,
+        p_occurrence: params.occurrence || null,
       });
       if (error) throw error;
       const result = data as any;

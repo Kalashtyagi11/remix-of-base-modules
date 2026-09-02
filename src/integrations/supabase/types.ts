@@ -131943,20 +131943,38 @@ export type Database = {
         Args: { p_reason?: string; p_triggered_by?: string }
         Returns: number
       }
-      ia_record_communication_stage: {
-        Args: {
-          p_acknowledgment_required?: boolean
-          p_created_by?: string
-          p_engagement_id: string
-          p_mode?: string
-          p_notes?: string
-          p_recipient_email?: string
-          p_recipient_name?: string
-          p_stage_code: string
-          p_template_id?: string
-        }
-        Returns: Json
-      }
+      ia_record_communication_stage:
+        | {
+            Args: {
+              p_acknowledgment_required?: boolean
+              p_created_by?: string
+              p_engagement_id: string
+              p_mode?: string
+              p_notes?: string
+              p_recipient_email?: string
+              p_recipient_name?: string
+              p_stage_code: string
+              p_template_id?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_acknowledgment_required?: boolean
+              p_created_by?: string
+              p_engagement_id: string
+              p_event_code?: string
+              p_mode?: string
+              p_notes?: string
+              p_occurrence?: string
+              p_omni_comms_request_id?: string
+              p_recipient_email?: string
+              p_recipient_name?: string
+              p_stage_code: string
+              p_template_id?: string
+            }
+            Returns: Json
+          }
       ia_record_management_response: {
         Args: {
           p_action_plan?: string

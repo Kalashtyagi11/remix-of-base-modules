@@ -202,7 +202,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
       if (result.outcome === 'blocked') {
         return { success: false, message: result.blockers.join(', ') };
       }
-      return { success: true, outcome: result.outcome, requestId: result.requestId };
+      return { success: true, outcome: result.outcome, requestId: result.requestId, eventCode: result.eventCode };
     } finally {
       setIsSendingEmail(false);
     }
@@ -246,6 +246,11 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
         notes: stageNotes,
         acknowledgmentRequired: ackRequired,
         mode,
+        // DEF-E3B-004: link the compliance record to the governed Omni-Comms
+        // request so real provider delivery is distinguishable from a
+        // locally-recorded (simulated) stage.
+        eventCode: emailResult?.eventCode ?? null,
+        omniCommsRequestId: emailResult?.requestId ?? null,
       }, {
         onSuccess: () => {
           toast({
