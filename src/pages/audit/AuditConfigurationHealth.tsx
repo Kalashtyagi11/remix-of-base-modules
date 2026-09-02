@@ -9,6 +9,7 @@ import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
 import { useIaReferenceConfigurationHealth } from '@/hooks/audit/useIaReferenceValues';
 import { useIaNumberingHealth } from '@/hooks/audit/useIaNumberingHealth';
+import { useIaOrgIntegrityHealth } from '@/hooks/audit/useIaOrgIntegrityHealth';
 
 
 const severityBadge = (check: FiscalHealthCheck) => {
@@ -37,6 +38,7 @@ export default function AuditConfigurationHealth() {
   const { data: checks = [], isLoading, isFetching, refetch } = useFiscalConfigurationHealth();
   const { data: refChecks = [], isLoading: refLoading } = useIaReferenceConfigurationHealth();
   const { data: numChecks = [], isLoading: numLoading } = useIaNumberingHealth();
+  const { data: orgChecks = [], isLoading: orgLoading } = useIaOrgIntegrityHealth();
 
 
 
@@ -200,7 +202,51 @@ export default function AuditConfigurationHealth() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="mt-4">
+        <CardHeader><CardTitle className="text-base">Department / Function integrity checks (Stage 2D)</CardTitle></CardHeader>
+        <CardContent>
+          {orgLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Check</TableHead>
+                  <TableHead className="w-28">Result</TableHead>
+                  <TableHead className="w-24">Records</TableHead>
+                  <TableHead>Detail</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orgChecks.map(c => (
+                  <TableRow key={c.check_code}>
+                    <TableCell>
+                      <div className="font-medium text-sm">{c.title}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{c.check_code}</div>
+                    </TableCell>
+                    <TableCell>
+                      {c.status === 'PASS'
+                        ? <Badge className="bg-emerald-100 text-emerald-800">PASS</Badge>
+                        : c.status === 'HISTORICAL'
+                          ? <Badge variant="outline">HISTORICAL</Badge>
+                          : <Badge variant={c.severity === 'CRITICAL' ? 'destructive' : 'secondary'}>{c.severity}</Badge>}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.affected_count}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{c.detail}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-3">
+            Live relationship breaks are critical; deactivated or terminal-record references are reported as
+            tolerated historical context and are never silently repaired.
+          </p>
+        </CardContent>
+      </Card>
     </PageShell>
+
 
   );
 }
