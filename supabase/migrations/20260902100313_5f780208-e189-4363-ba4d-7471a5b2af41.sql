@@ -1,0 +1,1 @@
+SELECT jobid, jobname, schedule, active, left(command, 80) AS cmd FROM cron.job WHERE jobname LIKE 'omni-comms%';
