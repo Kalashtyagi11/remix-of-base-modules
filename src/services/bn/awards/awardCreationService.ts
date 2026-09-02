@@ -185,16 +185,20 @@ export async function createAwardOnApproval(
     .single();
   if (insErr || !inserted) return { created: false, reason: `INSERT_FAILED:${insErr?.message ?? 'unknown'}` };
 
-  // First payment schedule row (best effort)
+  // First payment schedule row (best effort). `schedule_period` is a date
+  // column, so it takes the full period start, not a YYYY-MM prefix.
   await db.from('bn_payment_schedule').insert({
     bn_award_id: inserted.id,
-    schedule_period: startDate.slice(0, 7),
+    schedule_period: startDate,
     due_date: startDate,
     gross_amount: Number(baseAmount ?? 0),
     net_amount: Number(baseAmount ?? 0),
     status: 'PENDING',
+    claim_id: claimId,
+    ssn: claim.ssn,
     entered_by: performedBy,
   } as any).then(() => undefined, () => undefined);
+
 
   // Survivor beneficiaries (best effort)
   const survivorPolicy = (pv?.survivor_beneficiary_policy ?? {}) as any;
