@@ -84,7 +84,6 @@ export function AnnualPlanForm({ plan, onClose, onSuccess, onCreate, onUpdate }:
         : { fiscal_year_id: formData.fiscalYearId || null, fiscal_year: selectedFiscalYear?.display_name || null }),
       title: formData.title,
 
-      title: formData.title,
       objective: formData.objective,
       scope: formData.scope,
       audit_scope: formData.auditScope,
