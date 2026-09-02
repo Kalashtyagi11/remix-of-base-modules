@@ -202,7 +202,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
       if (result.outcome === 'blocked') {
         return { success: false, message: result.blockers.join(', ') };
       }
-      return { success: true, outcome: result.outcome, requestId: result.requestId };
+      return { success: true, outcome: result.outcome, requestId: result.requestId, eventCode: result.eventCode };
     } finally {
       setIsSendingEmail(false);
     }
