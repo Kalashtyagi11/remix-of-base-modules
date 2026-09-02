@@ -59,62 +59,26 @@ export interface CreateAwardResult {
 
 // ─── 1) Award creation from approved BN claim ───────────────────────
 
+/**
+ * Single award-creation path.
+ *
+ * This used to insert into `bn_award` itself, selecting `bn_product_id`,
+ * `benefit_code` and `claim_date` from `bn_claim` — two of which do not exist
+ * on that table, so every call failed its select and returned `null`. It now
+ * delegates to `createAwardOnApproval`, which is the one implementation that
+ * also provisions the first schedule row, survivor beneficiaries, the life
+ * certificate and the medical review.
+ */
 export async function createAwardFromApprovedClaim(
-  input: CreateAwardInput,
+  input: CreateAwardInput & { force?: boolean; source?: string },
 ): Promise<CreateAwardResult | null> {
-  const { claimId, performedBy } = input;
-
-  const { data: claim, error: cErr } = await db
-    .from('bn_claim')
-    .select('id, claim_number, ssn, status, bn_product_id, benefit_code, claim_date')
-    .eq('id', claimId)
-    .maybeSingle();
-  if (cErr || !claim) return null;
-
-  // Idempotent: reuse an existing ACTIVE award for this claim.
-  const { data: existing } = await db
-    .from('bn_award')
-    .select('id')
-    .eq('bn_claim_id', claimId)
-    .in('status', ['ACTIVE', 'SUSPENDED'])
-    .limit(1);
-  if (existing?.length) return { awardId: existing[0].id, created: false };
-
-  const { data: calc } = await db
-    .from('bn_claim_calculation')
-    .select('weekly_rate, lump_sum, total_payable, duration_weeks')
-    .eq('claim_id', claimId)
-    .order('calc_date', { ascending: false })
-    .limit(1);
-  const latest = calc?.[0] ?? {};
-
-  const awardType = latest.lump_sum ? 'LUMP_SUM' : 'PERIODIC';
-  const baseAmount = latest.lump_sum ?? latest.weekly_rate ?? latest.total_payable ?? 0;
-  const frequency = awardType === 'LUMP_SUM' ? 'one_off' : 'weekly';
-  const startDate = claim.claim_date ?? new Date().toISOString().slice(0, 10);
-
-  const { data: inserted, error: insErr } = await db
-    .from('bn_award')
-    .insert({
-      bn_claim_id: claimId,
-      bn_product_id: claim.bn_product_id ?? null,
-      ssn: claim.ssn,
-      benefit_code: claim.benefit_code ?? null,
-      award_type: awardType,
-      status: 'ACTIVE',
-      start_date: startDate,
-      base_amount: baseAmount,
-      currency: 'XCD',
-      frequency,
-      entered_by: performedBy,
-      modified_by: performedBy,
-    })
-    .select('id')
-    .maybeSingle();
-
-  if (insErr || !inserted) return null;
-  return { awardId: inserted.id, created: true };
+  const { claimId, performedBy, force, source } = input;
+  const { createAwardOnApproval } = await import('@/services/bn/awards/awardCreationService');
+  const result = await createAwardOnApproval(claimId, performedBy, { force, source });
+  if (!result.awardId) return null;
+  return { awardId: result.awardId, created: result.created };
 }
+
 
 // ─── 2) Schedule creation from award ────────────────────────────────
 
