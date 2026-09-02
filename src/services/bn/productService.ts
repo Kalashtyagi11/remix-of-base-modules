@@ -308,18 +308,57 @@ export async function findUnmappedEligibilityRules(
 ): Promise<{ rule_code: string; rule_name: string; rawKey: string | null }[]> {
   const { data, error } = await db
     .from('bn_eligibility_rule')
-    .select('rule_code, rule_name, fact_key, fail_action, rule_definition')
+    .select('rule_code, rule_name, fact_key, fail_action, rule_definition, rule_kind, start_fact_key, end_fact_key, fallback_end_fact_key')
     .eq('product_version_id', versionId)
     .eq('is_active', true);
   if (error) throw error;
 
-  const out: { rule_code: string; rule_name: string; rawKey: string | null }[] = [];
-  for (const rule of (data ?? []) as any[]) {
-    if (isInformationalRule(rule)) continue;
-    const { key, rawKey } = resolveRuleFieldKey(rule);
-    if (!key) out.push({ rule_code: rule.rule_code, rule_name: rule.rule_name, rawKey });
+  interface UnmappedCandidateRule {
+    rule_code: string;
+    rule_name: string;
+    fact_key: string | null;
+    fail_action: string | null;
+    rule_definition: Record<string, unknown> | null;
+    rule_kind: string | null;
+    start_fact_key: string | null;
+    end_fact_key: string | null;
+    fallback_end_fact_key: string | null;
   }
-  return out;
+  const candidates: { rule: UnmappedCandidateRule; rawKey: string | null }[] = [];
+  for (const rule of (data ?? []) as UnmappedCandidateRule[]) {
+    if (isInformationalRule(rule)) continue;
+    // DATE_DIFFERENCE rules carry no single fact_key by design — they compare
+    // start_fact_key/end_fact_key instead. Checking only fact_key reported
+    // every correctly-configured date-difference rule as unmapped.
+    if (rule.rule_kind === 'DATE_DIFFERENCE') {
+      if (rule.start_fact_key && (rule.end_fact_key || rule.fallback_end_fact_key)) continue;
+      candidates.push({ rule, rawKey: rule.start_fact_key ?? null });
+      continue;
+    }
+    const { key, rawKey } = resolveRuleFieldKey(rule);
+    if (!key) candidates.push({ rule, rawKey });
+  }
+  if (candidates.length === 0) return [];
+
+  // resolveRuleFieldKey only recognises facts in the hardcoded ELIGIBILITY_FACTS
+  // list. A fact registered directly in the real bn_eligibility_fact table
+  // (as every product-specific fact is) reports as unmapped here even though
+  // it resolves correctly at real claim time. Check the real table before
+  // concluding a rule is genuinely unmapped.
+  const rawKeys = Array.from(new Set(candidates.map((c) => c.rawKey).filter(Boolean))) as string[];
+  let knownInDb = new Set<string>();
+  if (rawKeys.length) {
+    const { data: facts } = await db
+      .from('bn_eligibility_fact')
+      .select('fact_key')
+      .in('fact_key', rawKeys)
+      .eq('is_active', true);
+    knownInDb = new Set(((facts ?? []) as { fact_key: string }[]).map((f) => f.fact_key));
+  }
+
+  return candidates
+    .filter((c) => !(c.rawKey && knownInDb.has(c.rawKey)))
+    .map((c) => ({ rule_code: c.rule.rule_code, rule_name: c.rule.rule_name, rawKey: c.rawKey }));
 }
 
 export async function publishProductVersion(

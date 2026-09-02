@@ -22,7 +22,17 @@ export const BN_CONFIG_APPROVE_DENIED =
 /** True when the signed-in user may approve / reject / publish rule versions. */
 export async function canApproveBnConfiguration(): Promise<boolean> {
   const { data: auth } = await supabase.auth.getUser();
-  const userId = auth?.user?.id;
+  let userId = auth?.user?.id;
+  // getUser() can transiently return no session right after a page load or
+  // navigation, before the client finishes rehydrating from storage — which
+  // denied a genuinely signed-in admin outright. getSession() reads the
+  // locally persisted session directly and is more reliable at that moment;
+  // falling back to it here changes nothing about who is allowed to approve,
+  // only how reliably we notice they're signed in at all.
+  if (!userId) {
+    const { data: session } = await supabase.auth.getSession();
+    userId = session?.session?.user?.id;
+  }
   if (!userId) return false;
 
   try {

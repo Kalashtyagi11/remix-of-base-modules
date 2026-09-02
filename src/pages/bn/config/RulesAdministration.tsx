@@ -1,7 +1,7 @@
 /**
  * Rules Administration — Version governance, compare, simulate, approve, publish
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
 
@@ -151,6 +151,14 @@ export default function RulesAdministration() {
 
   const { data: versions = [], isLoading } = useBnRuleVersions(
     productFilter !== 'all' ? productFilter : undefined
+  );
+  // Several products can share the same display name (e.g. four different
+  // "Funeral Grant" records) — the code is the only way to tell rows apart
+  // at a glance, so it's shown alongside the name rather than relying on the
+  // reader to open each row to find out which product it actually is.
+  const productCodeById = useMemo(
+    () => new Map(products.map((p: { id: string; benefit_code: string }) => [p.id, p.benefit_code])),
+    [products],
   );
   const cloneMutation = useBnCloneVersion();
   const submitMutation = useBnSubmitForApproval();
@@ -323,7 +331,12 @@ export default function RulesAdministration() {
                     <TableBody>
                       {filtered.map((v) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedVersion(v)}>
-                          <TableCell className="font-medium">{v.productName}</TableCell>
+                          <TableCell className="font-medium">
+                            {v.productName}
+                            <div className="text-xs text-muted-foreground font-mono font-normal">
+                              {productCodeById.get(v.productId) ?? '—'}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <span className="font-mono text-sm">{v.versionLabel}</span>
                             <span className="text-muted-foreground text-xs ml-1.5">#{v.versionNumber}</span>
