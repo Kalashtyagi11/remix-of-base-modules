@@ -789,16 +789,18 @@ export function EditEngagementDialog({
             </div>
 
             {/* Structured Expected Deliverables */}
-            <MultiSelectChips
-              label="Expected Deliverables"
-              required
-              options={DELIVERABLE_OPTIONS}
-              selected={form.expected_deliverable_codes}
-              onChange={v => { updateField('expected_deliverable_codes', v); setDirty(true); }}
-              helperText="What outputs will this engagement produce?"
-            />
+            <FieldSlot field="expected_deliverable_codes">
+              <MultiSelectChips
+                label="Expected Deliverables"
+                required
+                options={DELIVERABLE_OPTIONS}
+                selected={form.expected_deliverable_codes}
+                onChange={v => { updateField('expected_deliverable_codes', v); setDirty(true); }}
+                helperText="What outputs will this engagement produce?"
+              />
+            </FieldSlot>
             {(form.expected_deliverable_codes.includes('Other') || form.expected_deliverable_notes) && (
-              <div>
+              <FieldSlot field="expected_deliverable_notes">
                 <Label>
                   Additional Deliverables Notes
                   {form.expected_deliverable_codes.includes('Other') && <span className="text-destructive"> *</span>}
@@ -809,7 +811,7 @@ export function EditEngagementDialog({
                   placeholder="Describe any additional or custom deliverables..."
                   rows={2}
                 />
-              </div>
+              </FieldSlot>
             )}
 
             <div className="space-y-1.5">
