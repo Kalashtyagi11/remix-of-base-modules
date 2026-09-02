@@ -32,6 +32,9 @@ export type OrchestrationResult = {
   toStatus: string;
   entitlementId?: string;
   paymentInstructionId?: string;
+  awardId?: string;
+  /** Set when the award record could not be created; the approval still stands. */
+  awardWarning?: string;
   message: string;
 };
 
@@ -135,6 +138,8 @@ export async function orchestrateApproval(
 
   let entitlementId: string | undefined;
   let paymentInstructionId: string | undefined;
+  let awardId: string | undefined;
+  let awardWarning: string | undefined;
   let toStatus = taskType;
 
 
@@ -337,8 +342,12 @@ export async function orchestrateApproval(
     toStatus,
     entitlementId,
     paymentInstructionId,
+    awardId,
+    awardWarning,
     message: periodic
-      ? `Entitlement created. Claim moved to ${toStatus}.`
+      ? (awardWarning
+          ? `Entitlement created and claim moved to ${toStatus}, but no award record was produced. ${awardWarning}`
+          : `Award and entitlement created. Claim moved to ${toStatus}.`)
       : `Payable queued. Claim moved to ${toStatus}.`,
   };
 }
