@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logLgActivity } from "@/services/legal/lgAuditService";
 import { assertLgEnforcementTransition, type LgEnforcementStatus } from "@/services/legal/lgEnforcementStateMachine";
 import type { LgEnforcementRecord } from "@/types/legal/judicial";
+import { allocatePayment } from "@/services/legal/lgLiabilityService";
 
 const sb = supabase as any;
 
