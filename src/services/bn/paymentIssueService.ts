@@ -468,23 +468,92 @@ async function nextChequeItem(claimNumber: string, claimSeq: number): Promise<nu
   return Number(data?.[0]?.cheque_item || 0) + 1;
 }
 
+/**
+ * Legacy cl_cheques.claim_number is varchar(11); modern BN claim numbers are
+ * longer. Each modern claim therefore gets a stable 11-character legacy
+ * reference, persisted on bn_claim.legacy_claim_ref so the same claim always
+ * maps to the same legacy key.
+ */
+async function resolveLegacyClaimNumber(record: IssueRecord): Promise<string> {
+  const modern = String(record.claim_number);
+  if (modern.length <= 11) return modern;
+
+  const { data: instr } = await db
+    .from('bn_payment_instruction')
+    .select('claim_id')
+    .eq('id', record.instruction_id)
+    .maybeSingle();
+  const claimId = instr?.claim_id;
+
+  if (claimId) {
+    const { data: claim } = await db
+      .from('bn_claim')
+      .select('legacy_claim_ref')
+      .eq('id', claimId)
+      .maybeSingle();
+    const existing = (claim?.legacy_claim_ref || '').trim();
+    if (existing && existing.length <= 11) return existing;
+  }
+
+  const digits = modern.replace(/\D/g, '');
+  let base = Number(digits.slice(-9) || '0');
+  let candidate = '';
+  for (let attempt = 0; attempt < 25; attempt++) {
+    candidate = `BN${String((base + attempt) % 1_000_000_000).padStart(9, '0')}`;
+    const { data: clash } = await db
+      .from('cl_cheques')
+      .select('claim_number')
+      .eq('claim_number', candidate)
+      .limit(1);
+    const { data: refClash } = await db
+      .from('bn_claim')
+      .select('id')
+      .eq('legacy_claim_ref', candidate)
+      .limit(1);
+    if (!clash?.length && !refClash?.length) break;
+  }
+
+  if (claimId) {
+    await db.from('bn_claim').update({ legacy_claim_ref: candidate }).eq('id', claimId);
+  }
+  return candidate;
+}
+
+/** Legacy cheque_number is varchar(11); benefit cheques use a 9xxxxxxx range. */
+async function nextLegacyChequeNumber(): Promise<string> {
+  const { data } = await db
+    .from('cl_cheques')
+    .select('cheque_number')
+    .gte('cheque_number', '90000000')
+    .lte('cheque_number', '99999999')
+    .order('cheque_number', { ascending: false })
+    .limit(1);
+  const last = Number(data?.[0]?.cheque_number || 0);
+  const next = last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
+  return String(next);
+}
+
 async function writeToLegacyTable(record: IssueRecord, userCode: string): Promise<LegacyWriteResult> {
   if (!record.claim_number) throw new Error('Issue record has no claim number — cannot write to cl_cheques');
 
   const now = new Date().toISOString();
-  const claimNumber = String(record.claim_number);
   const claimSeq = 1;
-
-  const chequeNumber = record.issue_method === 'CHEQUE' ? await generateChequeNumber() : null;
-  const ddReference = record.issue_method === 'DIRECT_DEPOSIT' ? await generateDDReference() : null;
 
   // Direct-deposit payments are not cheques: they are recorded on the issue
   // record only and never fabricate a cheque number in the legacy register.
   if (record.issue_method === 'DIRECT_DEPOSIT') {
-    return { cheque_number: null, dd_reference: ddReference };
+    return { cheque_number: null, dd_reference: await generateDDReference() };
   }
 
+  const claimNumber = await resolveLegacyClaimNumber(record);
+  const chequeNumber = await nextLegacyChequeNumber();
   const chequeItem = await nextChequeItem(claimNumber, claimSeq);
+
+  const { data: batch } = await db
+    .from('bn_payment_batch')
+    .select('batch_number')
+    .eq('id', record.batch_id)
+    .maybeSingle();
 
   const legacyRow: any = {
     claim_number: claimNumber,
@@ -498,17 +567,17 @@ async function writeToLegacyTable(record: IssueRecord, userCode: string): Promis
     cheque_date: now,
     date_period_start: record.period_start || null,
     date_period_end: record.period_end || null,
-    batch_number: record.batch_id,
-    entered_by: userCode,
+    batch_number: (batch?.batch_number || '').slice(0, 25) || null,
+    entered_by: (userCode || 'BN').slice(0, 5),
     date_entered: now,
-    remarks: `${record.instruction_type || 'BENEFIT'} — ${record.beneficiary_name || record.ssn}`,
+    remarks: `${record.instruction_type || 'BENEFIT'} ${record.ssn}`.slice(0, 25),
   };
 
   const table = record.target_table;
 
   if (table === 'cl_cheques_survivor') {
     const { error: sErr } = await db.from('cl_cheques_survivor').insert({
-      survivor_number: record.survivor_id ? 1 : 1,
+      survivor_number: 1,
       claim_number: claimNumber,
       claim_seq: claimSeq,
       cheque_number: chequeNumber,
@@ -521,7 +590,7 @@ async function writeToLegacyTable(record: IssueRecord, userCode: string): Promis
       ...legacyRow,
       cheque_id: Date.now(),
       cheque_status: 'O',
-      remarks: `HOLD: ${record.hold_reason || 'withheld'} — ${legacyRow.remarks}`,
+      remarks: `HOLD ${record.hold_reason || 'withheld'}`.slice(0, 25),
     });
     if (hErr) throw hErr;
   } else {
