@@ -154,7 +154,9 @@ export async function createAwardOnApproval(
   const baseAmount =
     calc?.monthly_rate ?? calc?.weekly_rate ?? calc?.lump_sum ?? null;
   const awardNumber = generateAwardNumber(benefitCode);
-  const startDate = (claim.decision_date as string | null) || new Date().toISOString().slice(0, 10);
+  // `decision_date` is a timestamptz; `bn_award.start_date` and
+  // `bn_payment_schedule.schedule_period` are dates, so normalise here.
+  const startDate = String(claim.decision_date ?? new Date().toISOString()).slice(0, 10);
 
   const { data: inserted, error: insErr } = await db
     .from('bn_award')
@@ -172,8 +174,13 @@ export async function createAwardOnApproval(
       frequency,
       entered_by: performedBy,
       modified_by: performedBy,
-      metadata: { source: 'claim_approval', product_version_id: pv?.id ?? null },
+      metadata: {
+        source: options.source ?? 'claim_approval',
+        product_version_id: pv?.id ?? null,
+        forced: !!options.force,
+      },
     })
+
     .select('id, award_number')
     .single();
   if (insErr || !inserted) return { created: false, reason: `INSERT_FAILED:${insErr?.message ?? 'unknown'}` };
