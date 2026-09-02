@@ -65,6 +65,8 @@ const PublicCatalogValidation = lazy(() => import('@/pages/admin/PublicCatalogVa
 const NumberingAdmin = lazy(() => import('@/pages/admin/NumberingAdmin'));
 const FiscalCalendarAdmin = lazy(() => import('@/pages/admin/FiscalCalendarAdmin'));
 const AuditConfigurationHealth = lazy(() => import('@/pages/audit/AuditConfigurationHealth'));
+const AuditReferenceMasters = lazy(() => import('@/pages/audit/AuditReferenceMasters'));
+
 
 const AuditLogAdmin = lazy(() => import('@/pages/admin/AuditLogAdmin'));
 const DepartmentsAdmin = lazy(() => import('@/pages/admin/DepartmentsAdmin'));
