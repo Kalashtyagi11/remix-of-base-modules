@@ -345,7 +345,47 @@ export const SCHEDULE_ROLE_MATRIX: Record<string, { canView: boolean; canAct: bo
   AUDITOR: { canView: true, canAct: false, actions: [] },
 };
 
+// ─── Award Resolution ───────────────────────────────────────────────
+
+/**
+ * Every payment schedule row belongs to an Award. Entitlements do not carry
+ * the award directly, so it is resolved through the entitlement's claim.
+ * Throws a business-worded error when the claim has no active award.
+ */
+export async function resolveAwardIdForEntitlement(entitlementId: string): Promise<string> {
+  const { data: ent, error: entErr } = await db
+    .from('bn_entitlement')
+    .select('claim_id')
+    .eq('id', entitlementId)
+    .maybeSingle();
+
+  if (entErr) throw entErr;
+  if (!ent?.claim_id) {
+    throw new Error('This entitlement is not linked to a claim, so no Award can be resolved.');
+  }
+
+  const { data: awards, error: awardErr } = await db
+    .from('bn_award')
+    .select('id, status, entered_at')
+    .eq('bn_claim_id', ent.claim_id)
+    .order('entered_at', { ascending: false })
+    .limit(20);
+
+  if (awardErr) throw awardErr;
+
+  const active = (awards ?? []).find((a: any) => ['ACTIVE', 'REINSTATED', 'SUSPENDED'].includes(a.status));
+  const chosen = active ?? (awards ?? [])[0];
+
+  if (!chosen) {
+    throw new Error('No active Award exists for this entitlement — approve the Award before generating a payment schedule.');
+  }
+
+  return chosen.id as string;
+}
+
 // ─── Schedule Generation Logic ──────────────────────────────────────
+
+
 
 export interface GenerateScheduleParams {
   entitlementId: string;
