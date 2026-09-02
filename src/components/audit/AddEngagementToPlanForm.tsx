@@ -13,8 +13,11 @@ import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
 import { useFiscalYears } from '@/hooks/useFiscalYears';
 import { deriveFiscalQuarter } from '@/services/core/fiscalCalendarService';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
 
-const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad-hoc Audit', 'Management Requested Audit', 'Special Investigation', 'Follow-up Audit'];
+// Stage 2B (DEF-E2E-007/008): engagement type and coverage category are served
+// exclusively by the governed IA reference master — no hardcoded arrays here.
+
 
 interface AddEngagementToPlanFormProps {
   planId: string;
