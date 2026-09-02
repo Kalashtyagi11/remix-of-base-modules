@@ -71,6 +71,39 @@ const DELIVERABLE_OPTIONS = [
   'Other',
 ];
 
+/**
+ * IA-UX-VAL-001 — tab-aware validation contract for this dialog.
+ * The dialog edits ONE engagement record split across four tabs (classification B),
+ * so Save legitimately validates the whole record — but it must route the user to
+ * the owning tab instead of surfacing a hidden-tab message in a toast.
+ */
+const ENGAGEMENT_TABS: IaTabDescriptor[] = [
+  { id: 'identity', label: 'Identity & Coverage' },
+  { id: 'planning', label: 'Planning Narrative' },
+  { id: 'team', label: 'Team & Ownership' },
+  { id: 'schedule', label: 'Schedule & Resources' },
+];
+const ENGAGEMENT_TAB_ORDER = ENGAGEMENT_TABS.map(t => t.id);
+
+const FIELD_TAB_MAP: Record<string, string> = {
+  engagement_name: 'identity',
+  department_id: 'identity',
+  function_id: 'identity',
+  coverage_category: 'identity',
+  inclusion_reason_codes: 'identity',
+  inclusion_reason_notes: 'identity',
+  expected_deliverable_codes: 'planning',
+  expected_deliverable_notes: 'planning',
+  objectives: 'planning',
+  scope: 'planning',
+  lead_auditor_id: 'team',
+  reviewer_id: 'team',
+  estimated_days: 'schedule',
+  planned_start_date: 'schedule',
+  planned_end_date: 'schedule',
+};
+
+
 const RISK_SOURCE_LABELS: Record<string, string> = {
   risk_assessment_function: 'Function Risk Assessment',
   function_risk_rating: 'Function Risk Rating',
