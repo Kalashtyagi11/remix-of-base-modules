@@ -508,10 +508,12 @@ export function EditEngagementDialog({
               </div>
               <div>
                 <Label>Audit Type</Label>
-                <Select value={form.engagement_type} onValueChange={v => updateField('engagement_type', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ENGAGEMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
+                <IaReferenceSelect
+                  type="AUDIT_TYPE"
+                  value={form.engagement_type}
+                  onChange={v => updateField('engagement_type', v)}
+                />
+
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
