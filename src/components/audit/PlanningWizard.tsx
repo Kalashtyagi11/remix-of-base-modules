@@ -33,7 +33,7 @@ const WIZARD_STEPS = [
 
 export function PlanningWizard({ planId, planStatus, fiscalYear, onComplete }: PlanningWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [scopeData, setScopeData] = useState({ fiscal_year: fiscalYear || new Date().getFullYear().toString(), cycle_type: 'annual', notes: '' });
+  const [scopeData, setScopeData] = useState({ fiscal_year: fiscalYear || '', cycle_type: 'annual', notes: '' });
   const [paramProfile, setParamProfile] = useState('global');
   const [readinessResult, setReadinessResult] = useState<any>(null);
   const [publishNotes, setPublishNotes] = useState('');

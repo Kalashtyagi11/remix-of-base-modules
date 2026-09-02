@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useFiscalYears } from '@/hooks/useFiscalYears';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +51,7 @@ const emptyRisk = {
   review_date: '',
   due_date: '',
   status: 'Open',
-  fiscal_year: new Date().getFullYear().toString(),
+  fiscal_year: '',
   linked_risk_id: '',
   notes: '',
 };
@@ -435,7 +436,14 @@ export default function RiskRegister() {
           </div>
           <div className="space-y-2">
             <Label>Fiscal Year</Label>
-            <Input value={form.fiscal_year} onChange={e => setForm(f => ({ ...f, fiscal_year: e.target.value }))} />
+            <Select value={form.fiscal_year} onValueChange={v => setForm(f => ({ ...f, fiscal_year: v }))}>
+              <SelectTrigger><SelectValue placeholder="Select fiscal year" /></SelectTrigger>
+              <SelectContent>
+                {fiscalYears.map(fy => (
+                  <SelectItem key={fy.id} value={fy.code}>{fy.code}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label>Linked Risk</Label>
