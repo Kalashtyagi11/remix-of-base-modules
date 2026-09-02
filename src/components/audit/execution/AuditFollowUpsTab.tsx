@@ -30,9 +30,14 @@ import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelec
 // (ia_reference_value / FOLLOW_UP_TYPE); free entry is no longer possible.
 
 
-/** Canonical outcome vocabulary enforced by ia_followup_record_outcome. */
-const OUTCOMES = ['In Verification', 'Implemented', 'Partially Implemented', 'Not Implemented', 'Reopened'] as const;
-const OUTCOMES_REQUIRING_NOTES = ['Partially Implemented', 'Not Implemented'];
+import {
+  FOLLOWUP_OUTCOMES,
+  FOLLOWUP_OUTCOMES_REQUIRING_NOTES,
+} from '@/config/auditWorkflowVocabulary';
+
+/** Canonical outcome vocabulary enforced by ia_followup_record_outcome (Stage 2E). */
+const OUTCOMES = FOLLOWUP_OUTCOMES;
+const OUTCOMES_REQUIRING_NOTES: string[] = [...FOLLOWUP_OUTCOMES_REQUIRING_NOTES];
 
 const TERMINAL_ACTION_STATUSES = ['Cancelled', 'Closed', 'Superseded'];
 

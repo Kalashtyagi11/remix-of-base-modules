@@ -14,6 +14,7 @@ import { AuditReadinessPanel } from '@/components/audit/workspace/AuditReadiness
 import { formatDateForDisplay } from '@/lib/format-config';
 import { useUserCode } from '@/hooks/useUserCode';
 import { useToast } from '@/hooks/use-toast';
+import { ACTION_STATES } from '@/config/auditWorkflowVocabulary';
 import { notifyActionAssigned } from '@/services/auditNotificationService';
 import { useInternalAuditPermissions } from '@/hooks/useInternalAuditPermissions';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,7 +32,8 @@ interface AuditActionsTabProps {
   onClose: () => void;
 }
 
-const ACTION_STATUSES = ['Open', 'In Progress', 'Completed', 'Verified', 'Closed'];
+// Stage 2E (DEF-E2E-012): canonical governed corrective-action vocabulary.
+const ACTION_STATUSES = [...ACTION_STATES];
 
 export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, auditResponses, auditEvidence = [], onClose }: AuditActionsTabProps) {
   const { create, update } = useIAActionTrackingMutations();

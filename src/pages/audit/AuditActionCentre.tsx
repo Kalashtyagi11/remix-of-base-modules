@@ -27,13 +27,12 @@ import {
 import {
   ActionCentrePrintView, AuditActionSummaryPrintView, type AppliedFilter,
 } from '@/components/audit/actions/ActionCentrePrintView';
+import { ACTION_STATES, FINDING_STATES } from '@/config/auditWorkflowVocabulary';
 
 const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'];
-const ACTION_STATUSES = [
-  'Open', 'Assigned', 'In Progress', 'Completed by Management',
-  'Verification Required', 'In Verification', 'Returned', 'Verified', 'Closed', 'Cancelled',
-];
-const FINDING_STATUSES = ['Draft', 'Under Review', 'Confirmed', 'Released', 'Responded', 'Closed'];
+// Stage 2E (DEF-E2E-012): canonical governed workflow vocabulary.
+const ACTION_STATUSES = [...ACTION_STATES];
+const FINDING_STATUSES = [...FINDING_STATES];
 
 
 export default function AuditActionCentre() {

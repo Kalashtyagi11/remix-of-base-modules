@@ -11,6 +11,7 @@ import {
   type FindingLifecycleStatus,
 } from '@/hooks/useAuditLifecycleCommands';
 import { formatDateForDisplay } from '@/lib/format-config';
+import { FINDING_TRANSITIONS } from '@/config/auditWorkflowVocabulary';
 
 /**
  * Wave 2 — governed finding lifecycle.
@@ -21,15 +22,15 @@ import { formatDateForDisplay } from '@/lib/format-config';
  */
 type TransitionTarget = Exclude<FindingLifecycleStatus, 'Draft'>;
 
-const NEXT_STATUSES: Record<string, TransitionTarget[]> = {
-  Draft: ['Under Review', 'Withdrawn'],
-  'Under Review': ['Confirmed', 'Withdrawn'],
-  Confirmed: ['Released', 'Withdrawn'],
-  Released: ['Responded'],
-  Responded: ['Closed'],
-  Closed: [],
-  Withdrawn: [],
-};
+// Stage 2E (DEF-E2E-012): forward transitions derive from the canonical contract
+// (the server also permits Under Review -> Draft, which is offered as a separate
+// return-to-draft action rather than a forward step).
+const NEXT_STATUSES: Record<string, TransitionTarget[]> = Object.fromEntries(
+  Object.entries(FINDING_TRANSITIONS).map(([from, targets]) => [
+    from,
+    targets.filter((t) => t !== 'Draft') as TransitionTarget[],
+  ]),
+);
 
 const SEVERITIES = ['Critical', 'High', 'Medium', 'Low'] as const;
 

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, ShieldCheck, Info, Save, Calendar } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Info, Save, Calendar, Lock } from 'lucide-react';
 import { useIADepartments, useIADepartmentFunctions, useIAActiveAuditors } from '@/hooks/useAuditData';
 import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
@@ -24,7 +24,8 @@ import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelec
 // governed IA reference master. Risk ratings remain owned by the canonical risk
 // architecture (ia_risk_classification_thresholds) — no duplicate master here.
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
-const ENGAGEMENT_STATUSES = ['Draft', 'Planned', 'Ready', 'In Preparation', 'In Progress', 'Completed', 'Closed', 'Cancelled'];
+// Stage 2E (DEF-E2E-012): engagement workflow status is governed server state.
+// It is displayed read-only here and changed only through governed commands.
 
 
 const INCLUSION_REASONS = [
@@ -418,7 +419,7 @@ export function EditEngagementDialog({
       reviewer_id: form.reviewer_id || null,
       scope: form.scope || null,
       objectives: form.objectives || null,
-      status: form.status || 'Planned',
+      // status intentionally omitted: governed workflow state (Stage 2E / DEF-E2E-012)
       quarter: form.quarter || null,
       month: form.month || null,
       estimated_hours: form.estimated_hours ? Number(form.estimated_hours) : null,
@@ -588,10 +589,13 @@ export function EditEngagementDialog({
               </div>
               <div>
                 <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => updateField('status', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{ENGAGEMENT_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                </Select>
+                <div className="flex h-10 items-center gap-2 rounded-md border border-input bg-muted/50 px-3 text-sm">
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{form.status || 'Planned'}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Workflow status is governed &mdash; change it from the engagement workspace lifecycle actions.
+                </p>
               </div>
             </div>
 

@@ -15,10 +15,12 @@ import { formatDateForDisplay } from '@/lib/format-config';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { FindingLifecycleControls } from './FindingLifecycleControls';
+import { FINDING_STATES, FINDING_LEGACY_STATES } from '@/config/auditWorkflowVocabulary';
 
 
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
-const FINDING_STATUSES = ['Draft', 'Open', 'In Review', 'Submitted for Response', 'Responded', 'Closed', 'Resolved'];
+// Stage 2E (DEF-E2E-012): governed lifecycle first, legacy values readable for historical rows.
+const FINDING_STATUSES = [...FINDING_STATES, ...FINDING_LEGACY_STATES];
 const IMPACT_AREAS = ['Financial', 'Operational', 'Compliance', 'Reputational', 'Strategic', 'IT/Technology'];
 const ROOT_CAUSE_CATEGORIES = ['Process Gap', 'Policy Gap', 'Control Weakness', 'Human Error', 'System Limitation', 'Training Gap', 'Resource Constraint', 'Oversight', 'Other'];
 

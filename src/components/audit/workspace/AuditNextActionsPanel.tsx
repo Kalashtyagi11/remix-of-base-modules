@@ -3,6 +3,7 @@ import { ArrowRight, AlertTriangle, CheckCircle, Clock, FileText, Send, Rocket, 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ENGAGEMENT_TERMINAL_STATES } from '@/config/auditWorkflowVocabulary';
 
 /**
  * IA-POST-UAT-01 — Recommended Actions must never render a dead button.
@@ -119,11 +120,9 @@ export interface NextActionEntitlements {
 }
 
 /** Audits in a terminal disposition never receive lifecycle recommendations. */
-const TERMINAL_EXECUTION_STATUSES = new Set([
-  'Closed',
-  'Closed – Actions Pending',
+const TERMINAL_EXECUTION_STATUSES = new Set<string>([
+  ...ENGAGEMENT_TERMINAL_STATES,
   'Closed - Actions Pending',
-  'Cancelled',
   'Archived',
 ]);
 

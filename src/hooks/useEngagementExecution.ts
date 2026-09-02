@@ -10,25 +10,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
+import { ENGAGEMENT_STATES, type EngagementState } from '@/config/auditWorkflowVocabulary';
 
 // ============= Execution Statuses =============
 
-export const EXECUTION_STATUSES = [
-  'Planned',
-  'Ready for Launch',
-  'Notification Sent',
-  'Opening Meeting Scheduled',
-  'Fieldwork In Progress',
-  'Findings Drafting',
-  'Management Response Pending',
-  'Final Report Issued',
-  'Follow-up Monitoring',
-  'Closed',
-  'Deferred',
-  'Cancelled',
-] as const;
+// Stage 2E (DEF-E2E-012): re-exported from the canonical workflow contract.
+export const EXECUTION_STATUSES = ENGAGEMENT_STATES;
 
-export type ExecutionStatus = typeof EXECUTION_STATUSES[number];
+export type ExecutionStatus = EngagementState;
 
 // ============= Launch Readiness =============
 

@@ -23,11 +23,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useHasPermission } from '@/hooks/useNavigationMenu';
 import { Progress } from '@/components/ui/progress';
 import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
+// Stage 2E (DEF-E2E-012): workflow vocabulary comes from the canonical contract.
+import { ENGAGEMENT_STATES, PLAN_STATES, PLAN_LEGACY_STATES } from '@/config/auditWorkflowVocabulary';
 
 
-const STATUSES = ['Planned', 'In Progress', 'Findings Raised', 'Management Response', 'Closed'];
+const STATUSES = [...ENGAGEMENT_STATES];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
-const PLAN_STATUS_OPTIONS = ['All Plans', 'Approved', 'Draft', 'Active', 'Superseded', 'Archived'];
+const PLAN_STATUS_OPTIONS = ['All Plans', ...PLAN_STATES, ...PLAN_LEGACY_STATES];
 // Stage 2B (DEF-E2E-007): audit types come from the governed IA reference master.
 
 
