@@ -12,6 +12,8 @@ import { useEngagementFollowUps, useEngagementActions } from '@/hooks/useEngagem
 import { useIaFollowUpSchedule, useIaFollowUpRecordOutcome } from '@/hooks/useAuditActionCentre';
 import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
 import { formatDateForDisplay } from '@/lib/format-config';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
+
 
 /**
  * IA-POST-UAT-02 — Follow-Up UI convergence.
