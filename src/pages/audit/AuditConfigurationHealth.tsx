@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from 'lucide-react';
 import { PageShell } from '@/components/common';
 import { useFiscalConfigurationHealth, type FiscalHealthCheck } from '@/hooks/useFiscalConfigurationHealth';
+import { useIaReferenceConfigurationHealth } from '@/hooks/audit/useIaReferenceValues';
+
 
 const severityBadge = (check: FiscalHealthCheck) => {
   if (check.status === 'PASS') {
