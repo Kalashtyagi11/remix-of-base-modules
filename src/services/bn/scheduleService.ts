@@ -465,10 +465,13 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
     if (rowAmount <= 0) break;
 
     rows.push({
+      bn_award_id: awardId,
       entitlement_id: entitlementId,
       claim_id: claimId,
       ssn,
       claim_number: claimNumber,
+      schedule_period: toStorageDate(currentStart),
+      gross_amount: Math.round(rowAmount * 100) / 100,
       sequence_number: seq,
       frequency,
       period_start: toStorageDate(currentStart),
@@ -476,6 +479,7 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       due_date: toStorageDate(dueDate),
       amount: Math.round(rowAmount * 100) / 100,
       currency,
+
       rate_weekly: weeklyRate,
       rate_monthly: monthlyRate,
       rate_applied: periodAmount,
