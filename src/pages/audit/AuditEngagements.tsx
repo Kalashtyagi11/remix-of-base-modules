@@ -22,6 +22,8 @@ import { formatDepartmentLabel } from '@/lib/audit/departmentLabel';
 import { useToast } from '@/hooks/use-toast';
 import { useHasPermission } from '@/hooks/useNavigationMenu';
 import { Progress } from '@/components/ui/progress';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
+
 
 const STATUSES = ['Planned', 'In Progress', 'Findings Raised', 'Management Response', 'Closed'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
