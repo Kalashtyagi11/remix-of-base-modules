@@ -893,20 +893,20 @@ export function EditEngagementDialog({
                 <Label>Planned Start Date</Label>
                 <Input type="date" value={form.planned_start_date} onChange={e => handleStartDateChange(e.target.value)} />
               </div>
-              <div>
+              <FieldSlot field="planned_end_date">
                 <Label>Planned End Date</Label>
                 <Input type="date" value={form.planned_end_date} onChange={e => handleEndDateChange(e.target.value)} />
-              </div>
+              </FieldSlot>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
-              <div>
+              <FieldSlot field="estimated_days">
                 <Label>Estimated Days <span className="text-destructive">*</span></Label>
                 <Input type="number" value={form.estimated_days} onChange={e => handleEstimatedDaysChange(e.target.value)} placeholder="e.g. 15" />
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {form.planned_start_date && form.planned_end_date ? 'Auto-calculated from date range (editable)' : 'Total working days'}
                 </p>
-              </div>
+              </FieldSlot>
               <div>
                 <Label>Estimated Hours</Label>
                 <Input type="number" value={form.estimated_hours} onChange={e => updateField('estimated_hours', e.target.value)} placeholder="e.g. 120" />
