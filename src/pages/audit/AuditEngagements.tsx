@@ -26,7 +26,8 @@ import { Progress } from '@/components/ui/progress';
 const STATUSES = ['Planned', 'In Progress', 'Findings Raised', 'Management Response', 'Closed'];
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
 const PLAN_STATUS_OPTIONS = ['All Plans', 'Approved', 'Draft', 'Active', 'Superseded', 'Archived'];
-const ENGAGEMENT_TYPES = ['Planned Audit', 'Ad Hoc', 'Supplementary', 'Follow-up'];
+// Stage 2B (DEF-E2E-007): audit types come from the governed IA reference master.
+
 
 const generateEngagementCode = () => {
   const now = new Date();
