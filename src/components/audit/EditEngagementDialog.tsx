@@ -400,27 +400,58 @@ export function EditEngagementDialog({
     onClose();
   };
 
-  const validate = (): string[] => {
-    const errors: string[] = [];
-    if (!form.engagement_name.trim()) errors.push('Audit title is required');
-    if (!form.department_id) errors.push('Department is required');
-    if (!form.function_id) errors.push('Business function is required');
-    if (!form.lead_auditor_id) errors.push('Lead auditor is required');
-    if (!form.estimated_days) errors.push('Estimated days is required');
-    if (form.planned_start_date && form.planned_end_date && form.planned_start_date > form.planned_end_date) {
-      errors.push('Planned start date must be before end date');
-    }
-    // New validations
-    if (form.inclusion_reason_codes.length === 0) errors.push('At least one inclusion reason is required');
+  /**
+   * IA-UX-VAL-001: structured, tab-owned validation. Business rules are unchanged —
+   * only their presentation and routing. Conditional rules stay with the tab that
+   * owns the triggering field.
+   */
+  const buildIssues = (): IaValidationIssue[] => {
+    const out: IaValidationIssue[] = [];
+    const add = (field: string, message: string) =>
+      out.push({ field, tabId: FIELD_TAB_MAP[field] ?? 'identity', message, severity: 'error', blockingAction: 'save' });
+
+    if (!form.engagement_name.trim()) add('engagement_name', 'Audit title is required');
+    if (!form.department_id) add('department_id', 'Department is required');
+    if (!form.function_id) add('function_id', 'Business function is required');
+    if (form.inclusion_reason_codes.length === 0) add('inclusion_reason_codes', 'At least one inclusion reason is required');
     if (form.inclusion_reason_codes.includes('Other') && !form.inclusion_reason_notes.trim()) {
-      errors.push('Inclusion notes are required when "Other" is selected');
+      add('inclusion_reason_notes', 'Inclusion notes are required when "Other" is selected');
     }
-    if (form.expected_deliverable_codes.length === 0) errors.push('At least one expected deliverable is required');
+    if (form.expected_deliverable_codes.length === 0) add('expected_deliverable_codes', 'At least one expected deliverable is required');
     if (form.expected_deliverable_codes.includes('Other') && !form.expected_deliverable_notes.trim()) {
-      errors.push('Deliverable notes are required when "Other" is selected');
+      add('expected_deliverable_notes', 'Deliverable notes are required when "Other" is selected');
     }
-    return errors;
+    if (!form.lead_auditor_id) add('lead_auditor_id', 'Lead auditor is required');
+    if (!form.estimated_days) add('estimated_days', 'Estimated days is required');
+    if (form.planned_start_date && form.planned_end_date && form.planned_start_date > form.planned_end_date) {
+      add('planned_end_date', 'Planned start date must be before end date');
+    }
+    return out;
   };
+
+  const tabErrorCounts = errorCountsByTab(issues);
+  const fieldErrors = fieldErrorMap(issues);
+  const issueSummary = summariseIssues(issues, ENGAGEMENT_TABS);
+
+  /** Inline, field-level error anchored for scroll/focus routing. */
+  const FieldSlot = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <div id={fieldAnchorId(field)} className="scroll-mt-24">
+      {children}
+      {fieldErrors[field] && (
+        <p role="alert" className="mt-1 flex items-center gap-1 text-xs text-destructive">
+          <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {fieldErrors[field]}
+        </p>
+      )}
+    </div>
+  );
+
+  /** Activate the owning tab, then scroll + focus the offending control. */
+  const routeToIssue = (tabId: string, list: IaValidationIssue[]) => {
+    setActiveTab(tabId);
+    focusFirstInvalidField(list, tabId);
+  };
+
 
   // Stage 2C (DEF-E2E-009): engagement_code is allocated server-side by the central
   // numbering engine and is immutable after allocation.
