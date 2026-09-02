@@ -198,7 +198,6 @@ export async function executeClaimAction(
     // ── 1. Preconditions & side-effects BEFORE status change ──
     switch (action) {
       case 'CHECK_ELIGIBILITY': {
-        const { runClaimEligibility } = await import('./claimActionRunner');
         const res = await runClaimEligibility(claimId, userCode);
         sideEffect.eligibilityId = res.eligibilityId;
         sideEffect.overallResult = res.overallResult;
@@ -206,7 +205,6 @@ export async function executeClaimAction(
         break;
       }
       case 'RUN_CALCULATION': {
-        const { runClaimCalculation } = await import('./claimActionRunner');
         const res = await runClaimCalculation(claimId, userCode);
         sideEffect.calculationId = res.calculationId;
         sideEffect.weeklyRate = res.weeklyRate;
@@ -223,7 +221,6 @@ export async function executeClaimAction(
         if (!calc || calc.length === 0) {
           throw new Error('No calculation exists. Run calculation before submitting for decision.');
         }
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'RECOMMENDATION',
@@ -252,7 +249,6 @@ export async function executeClaimAction(
         // Recorded so an audit can see WHICH controls were applied, and whether
         // they came from the product's policy or the strict default.
         sideEffect.approvalControls = pre.controls;
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'APPROVED',
@@ -268,7 +264,6 @@ export async function executeClaimAction(
       case 'DENY': {
         if (!reasonCode) throw new Error('Reason code is required to deny a claim.');
         if (!narrative) throw new Error('Narrative is required to deny a claim.');
-        const { createClaimDecision } = await import('./claimActionRunner');
         const dec = await createClaimDecision({
           claimId,
           decisionType: 'DENIED',
