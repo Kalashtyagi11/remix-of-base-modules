@@ -168,11 +168,13 @@ export function AddEngagementToPlanForm({ planId, onSave, isSaving }: AddEngagem
         </div>
         <div>
           <Label>Engagement Type</Label>
-          <Select value={form.engagement_type} onValueChange={v => setForm(f => ({ ...f, engagement_type: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{ENGAGEMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-          </Select>
+          <IaReferenceSelect
+            type="AUDIT_TYPE"
+            value={form.engagement_type}
+            onChange={v => setForm(f => ({ ...f, engagement_type: v }))}
+          />
         </div>
+
       </div>
 
       <div className="grid grid-cols-2 gap-4">
