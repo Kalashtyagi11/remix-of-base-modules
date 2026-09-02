@@ -19,6 +19,15 @@
  * OUTBOUND PAYMENTS: cl_cheques only. cn_payment* NEVER used.
  */
 import { supabase } from '@/integrations/supabase/client';
+import {
+  runClaimEligibility,
+  runClaimCalculation,
+  createClaimDecision,
+} from './claimActionRunner';
+import {
+  checkApprovalPreconditions,
+  describeApprovalBlockers,
+} from './claims/approvalPreconditions';
 
 const db = supabase as any;
 
