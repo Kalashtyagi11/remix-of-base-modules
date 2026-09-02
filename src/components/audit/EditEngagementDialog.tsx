@@ -7,7 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, ShieldCheck, Info, Save, Calendar, Lock } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Info, Save, Calendar, Lock, AlertCircle } from 'lucide-react';
+import {
+  type IaValidationIssue,
+  type IaTabDescriptor,
+  errorCountsByTab,
+  fieldErrorMap,
+  fieldAnchorId,
+  focusFirstInvalidField,
+  getFirstInvalidTab,
+  issuesForTab,
+  summariseIssues,
+} from '@/lib/audit/tabValidation';
 import { useIADepartments, useIADepartmentFunctions, useIAActiveAuditors } from '@/hooks/useAuditData';
 import { useResolvedEngagementRisk } from '@/hooks/useEngagementRisk';
 import { StatusBadge } from '@/components/common';
