@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { useUserCode } from '@/hooks/useUserCode';
 import {
   createFiscalYear,
   isPlanningEligible,
@@ -53,10 +52,9 @@ function useInvalidate() {
 
 export function useCreateFiscalYear() {
   const { toast } = useToast();
-  const { userCode } = useUserCode();
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: (input: FiscalYearInput) => createFiscalYear(input, userCode || undefined),
+    mutationFn: (input: FiscalYearInput) => createFiscalYear(input),
     onSuccess: (fy) => {
       invalidate();
       toast({ title: 'Fiscal Year Created', description: `${fy.code} is now available for selection.` });
@@ -68,11 +66,10 @@ export function useCreateFiscalYear() {
 
 export function useUpdateFiscalYear() {
   const { toast } = useToast();
-  const { userCode } = useUserCode();
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Partial<FiscalYearInput> }) =>
-      updateFiscalYear(id, patch, userCode || undefined),
+      updateFiscalYear(id, patch),
     onSuccess: () => {
       invalidate();
       toast({ title: 'Fiscal Year Updated' });
@@ -84,11 +81,10 @@ export function useUpdateFiscalYear() {
 
 export function useSetFiscalYearActive() {
   const { toast } = useToast();
-  const { userCode } = useUserCode();
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      setFiscalYearActive(id, isActive, userCode || undefined),
+      setFiscalYearActive(id, isActive),
     onSuccess: (_d, v) => {
       invalidate();
       toast({ title: v.isActive ? 'Fiscal Year Activated' : 'Fiscal Year Deactivated' });
@@ -100,11 +96,10 @@ export function useSetFiscalYearActive() {
 
 export function useSetFiscalYearStatus() {
   const { toast } = useToast();
-  const { userCode } = useUserCode();
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: FiscalYearStatus }) =>
-      setFiscalYearStatus(id, status, userCode || undefined),
+      setFiscalYearStatus(id, status),
     onSuccess: () => {
       invalidate();
       toast({ title: 'Fiscal Year Status Updated' });
