@@ -1,0 +1,1 @@
+SELECT created, status_code, left(coalesce(content,error_msg,''), 160) AS body FROM net._http_response ORDER BY created DESC LIMIT 10;

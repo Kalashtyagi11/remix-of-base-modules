@@ -1,0 +1,1 @@
+SELECT start_time, status, left(coalesce(return_message,''), 120) AS msg FROM cron.job_run_details WHERE jobid = 106 ORDER BY start_time DESC LIMIT 8;
