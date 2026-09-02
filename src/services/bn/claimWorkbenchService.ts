@@ -237,9 +237,6 @@ export async function executeClaimAction(
         // every control is asserted here, in the service. The previous check
         // looked only at blocking documents, discarded its own query error, and
         // treated an empty checklist as satisfied.
-        const { checkApprovalPreconditions, describeApprovalBlockers } = await import(
-          './claims/approvalPreconditions'
-        );
         const pre = await checkApprovalPreconditions(claimId, userCode, { reasonCode, narrative });
         if (!pre.ok) {
           // Named conditions, so the officer knows what to correct. Not a
