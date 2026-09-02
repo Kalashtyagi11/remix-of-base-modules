@@ -648,13 +648,20 @@ export function EditEngagementDialog({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <FieldSlot field="department_id">
                 <Label>Department <span className="text-destructive">*</span></Label>
                 <Select value={form.department_id} onValueChange={v => { updateField('department_id', v); updateField('function_id', ''); updateField('primary_auditee_contact_id', ''); updateField('secondary_auditee_contact_ids', []); }}>
                   <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
                   <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
-              </div>
+              </FieldSlot>
+              <FieldSlot field="function_id">
+                <Label>Business Function <span className="text-destructive">*</span></Label>
+                <Select value={form.function_id} onValueChange={v => updateField('function_id', v)} disabled={!form.department_id}>
+                  <SelectTrigger><SelectValue placeholder={form.department_id ? 'Select function' : 'Select department first'} /></SelectTrigger>
+                  <SelectContent>{deptFunctions.map((fn: any) => <SelectItem key={fn.id} value={fn.id}>{fn.function_name}</SelectItem>)}</SelectContent>
+                </Select>
+              </FieldSlot>
               <div>
                 <Label>Business Function <span className="text-destructive">*</span></Label>
                 <Select value={form.function_id} onValueChange={v => updateField('function_id', v)} disabled={!form.department_id}>
