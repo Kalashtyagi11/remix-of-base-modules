@@ -1,51 +1,56 @@
-# Re-run confirmed: the failure is reproducible, not transient
+# Why BN-20260902-76270 shows "Evidence Complete" with zero evidence
 
-Read-only diagnosis. Nothing was modified.
+Read-only diagnosis of claim `e7c0d598-cb03-4f0e-98e1-0925fadcc564` (SKN-INV v2, product version `02d8f5b9…`, claim status CLOSED). Nothing was modified.
 
-## What the re-run produced
+## Root cause — vacuous success on an unconfigured product version
 
-Yes — the click created brand-new records, and they are identical in outcome to the first attempt:
+Three facts, each verified directly:
 
-| Record | First run | Re-run |
-| --- | --- | --- |
-| `bn_calc_run` | `6e8a1a23…` 12:19:40, COMPLETED, weekly 0.00 | `9ddb0713…` 12:42:09, COMPLETED, weekly 0.00 |
-| `bn_claim_calculation` | `7d7dabb6…` 12:19:45 | `5b6b60e2…` 12:42:14 |
-| `formula_code` / `formula_version` | NULL / NULL | NULL / NULL |
-| `calcType` in outputs | `NONE` | `NONE` |
+1. **SKN-INV v2 has no document requirements at all.** `bn_doc_requirement` returns **0 rows** for product `a4f9e312…` and for both of its versions (v1 `482ca27c…` and v2 `02d8f5b9…`). Platform-wide there are 456 active requirements across 57 product versions — SKN-INV is simply not one of them.
+2. **The claim therefore has no checklist.** `bn_evidence_checklist` = 0 rows, `bn_claim_evidence` = 0, `bn_claim_document` = 0. `generateEvidenceChecklist()` (`evidenceService.ts:345-347`) returns early when the requirement set is empty, so no rows were ever created — which is also why there are no audit actions.
+3. **The badge treats "nothing to check" as "everything verified."** `isEvidenceComplete()` (`evidenceService.ts:327-343`) selects the checklist rows, filters for blocking-and-unsatisfied, and returns `incomplete.length === 0`. On an empty array that is `true`. `EvidenceChecklist.tsx:125-137` renders that boolean directly as the green **Evidence Complete** badge and the caption "All mandatory documents have been verified", with `blockingCount = 0`.
 
-Both runs carry the same two warnings (`CALC_ZERO`, `SCHED_EMPTY`) and an empty `errors` array, so the run is being recorded as a clean success that happens to be worth zero.
+**Exact root cause:** zero configured requirements → empty checklist → `incomplete.length === 0` → `true`. The badge is asserting a verification that never happened.
 
-`bn_calc_trace` for the new run `9ddb0713…` holds the full layer-by-layer trace (eligibility, contribution window, wages) and step 11 is again, verbatim:
+**Classification: both.** The trigger is a **configuration gap** (SKN-INV v2 was activated with no document requirements). The reason it presents as a green assurance rather than a warning is a **code defect** — `isEvidenceComplete` cannot distinguish "all requirements satisfied" from "no requirements exist", and the UI has no third state for it.
+
+## SIP-DOC-01 — is it part of eligibility for this version?
+
+Yes, it is configured on v2, and it is correctly configured:
 
 ```text
-FORMULA / FORMULA_NONE (ERROR)
-"Product version 02d8f5b9-faae-435f-940f-61d65ae72d51 has no formula_template_id
- — pick a formula from the Formula Library."
+rule_code "[ SIP-DOC-01]"   rule_kind DOCUMENT_STATUS   severity BLOCK   fail_action REJECT
+fact_key  document.medical_certificate.status          is_active true
 ```
 
-## Was the formula-binding path reached? No.
+But the eligibility record actually persisted for this claim (`bn_claim_eligibility` `2e44a221…`, 12:19:32) recorded it as:
 
-There is no `FORMULA_BINDING` or `FORMULA_BINDING_FAILED` step in either run, and no per-binding trace rows. That message can only be emitted from `loadProductCalculationConfig()` (`src/services/bn/productCalculationLoader.ts:58`), which is the **legacy** path — the engine only falls there when its bindings lookup came back empty (`calculationEngine.ts:411-419`).
+```text
+"passed": true, "field_key": null, "fail_action": "INFO",
+"message": "Legacy rule — no field_key; treated as INFO."
+```
 
-The data says the lookup should not be empty. Re-checked just now through the same REST API and column list the app uses: binding `1c5a059a…` on version `02d8f5b9…` returns fine, `is_active = true`, formula version pinned to `TIERED_PENSION_V1` v1 (ACTIVE), 6 variable mappings present, all 4 product parameters registered, `AGE_PENSION_RATE_TABLE` active with a matching 150–199 row at 0.16. Grants are open and RLS is off on every table involved.
+All five SIP rules were recorded that way, and the claim came out `overall_result = true`. That message string **does not exist anywhere in the current source** — it is the pre-BUG-29 behaviour described in the header comment of `eligibility/eligibilityEvaluator.ts:9-13`, which read only `rule_definition.field_key` and waved through any rule that used the `fact_key` column instead. The current evaluator fails closed (records UNEVALUATED and blocks).
 
-So the previous "probably transient" reading is withdrawn. **Two consecutive runs, 23 minutes apart, produced the identical failure — this is reproducible and is a code/deploy defect, not data and not permissions.**
+So the eligibility record was written by a **build that predates the current evaluator** — the same stale-bundle signature as the 12:19:45 `FORMULA_NONE` calculation on this claim, 13 seconds later. That reinforces, independently, the earlier finding that the runtime serving this claim is not the current code.
 
-## Where the defect is
+Worth noting: the rule codes are stored with **leading spaces** (`" SIP-DOC-01"`, `" SIP-AGE-01"`). That is a separate data-hygiene defect that will break any code-based lookup, override or reporting join.
 
-`calculationEngine.ts:411-419` wraps the binding lookup in `try { … } catch { bindings = [] }`. Any failure of the lazily imported `./calc/runProductCalculationV2` chunk — a chunk-load error from a stale served bundle, or an older bundle that predates the Formula Bindings branch altogether — is swallowed silently and the engine drops to the legacy path, which then reports a misleading "no formula_template_id" and writes a zero result with no error. Nothing in the run record distinguishes "no formula configured" from "could not load the formula code".
+For completeness, the document fact resolver itself is *not* vacuous: `productMandatoryEvidenceComplete` (`eligibilityFactResolver.ts:193`) returns `false` when the mandatory set is empty, so `document.medical_certificate.status` would resolve to `PENDING`, not `VERIFIED`, under the current evaluator. Only the checklist badge is vacuous.
 
-Expected output once the binding path executes: 180 weeks → rate 0.16 → `350 × 0.16 = 56.00` weekly (ROUND_HALF_UP).
+## Safest UI-only next step
 
-## Safest next action (UI-only)
+The claim is CLOSED, so nothing on it should be re-driven. The safe, UI-only action is configuration, not claim work:
 
-1. In the browser tab running the app, do a **hard reload** (Ctrl/Cmd+Shift+R) — an ordinary reload keeps cached JS chunks, and the binding code lives in a lazily loaded chunk. Then click Re-run once more.
-2. Before clicking, open the browser console and keep it open. If a `Failed to fetch dynamically imported module` / chunk-load error appears at the moment of the click, that is the confirmation and the fix is a rebuild/republish of the app, not a data change.
-3. If the hard reload still yields weekly 0.00 with `FORMULA_NONE` and no console chunk error, stop UI testing — the served build predates the Formula Bindings path and a code defect must be raised.
+1. Open **Product Catalog → SKN-INV → Version 2 → Document Requirements** and confirm it is empty there too (it will be).
+2. Add the mandatory requirements the product actually needs — at minimum the medical certificate the two BLOCK rules `SIP-DOC-01` and `SIP-MEDBOARD-01` depend on — with `requirement_level = MANDATORY` and `blocks_decision = true`. Until that exists, every SKN-INV claim will show a green Evidence Complete badge on an empty folder.
+3. Register a **fresh** SKN-INV claim after a hard browser reload and confirm the Documents tab now shows "N mandatory document(s) still outstanding" instead of the green badge.
 
-## Defect to raise if step 3 is reached
+Do not attempt to correct this claim from the UI; it is closed and its records are the evidence for both this finding and the calculation finding.
 
-- **BN-CALC-BINDING-SILENT-FALLTHROUGH** — `calculationEngine.ts:415` must not swallow the bindings-lookup failure. It should record `FORMULA_BINDING_FAILED` with the underlying error and mark the run FAILED, instead of falling through to the legacy path and persisting a zero-value calculation that reads as successful.
-- Secondary: the legacy loader message should name Formula Bindings as the modern configuration location, so operators are not sent to the Formula Library for a product that is correctly configured.
+## Defects to raise
 
-No writes were made; both zero-value calculation records remain in place as evidence.
+- **BN-EVID-VACUOUS-COMPLETE** (code) — `isEvidenceComplete` must return a third state (`NOT_CONFIGURED`) when the claim has no checklist rows, and `EvidenceChecklist` must render that as a neutral or warning state, never as "All mandatory documents have been verified".
+- **BN-CFG-SKNINV-NO-DOCREQ** (configuration) — SKN-INV v1 and v2 are ACTIVE with zero document requirements while two BLOCK-severity document rules reference a medical certificate.
+- **BN-CFG-RULECODE-WHITESPACE** (data) — leading spaces in `bn_eligibility_rule.rule_code` for `" SIP-DOC-01"` and `" SIP-AGE-01"`.
+- Related, already open from the previous diagnosis: the runtime serving this claim predates both the current eligibility evaluator and the formula-binding path.
