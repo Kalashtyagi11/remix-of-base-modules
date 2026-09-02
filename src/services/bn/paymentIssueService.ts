@@ -521,15 +521,17 @@ async function resolveLegacyClaimNumber(record: IssueRecord): Promise<string> {
 
 /** Legacy cheque_number is varchar(11); benefit cheques use a 9xxxxxxx range. */
 async function nextLegacyChequeNumber(): Promise<string> {
+  // Legacy cheque numbers are stored as text and include 9-digit values, so the
+  // range is matched on an exact 8-character `9` pattern rather than a string
+  // comparison (which would pick up 900000000 and reset the sequence).
   const { data } = await db
     .from('cl_cheques')
     .select('cheque_number')
-    .gte('cheque_number', '90000000')
-    .lte('cheque_number', '99999999')
+    .like('cheque_number', '9_______')
     .order('cheque_number', { ascending: false })
     .limit(1);
   const last = Number(data?.[0]?.cheque_number || 0);
-  const next = last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
+  const next = Number.isFinite(last) && last >= 90000000 && last < 99999999 ? last + 1 : 90000001;
   return String(next);
 }
 
