@@ -22,6 +22,7 @@ import { executeTransition } from '@/services/bn/decisionEngine';
 import { stepForClaimStatus } from '@/services/bn/workflow/claimStatusStepMap';
 import { expectedBasketCodesForStage } from '@/services/bn/workflow/stageBasketExpectation';
 import { toast } from 'sonner';
+import { showBlockerToast } from '@/lib/bn/showBlockerToast';
 import { BnBusyButton } from '@/components/bn/shared';
 import {
   submitClaimForDecision,
@@ -37,6 +38,8 @@ interface Props {
   status: string;
   hasEligibilityPass: boolean;
   hasCalculation: boolean;
+  /** Opens a workbench tab — used to send the officer to Documents on a refusal. */
+  onJumpTab?: (tab: string) => void;
 }
 
 interface DownstreamState {
@@ -64,7 +67,7 @@ async function fetchDownstream(claimId: string): Promise<DownstreamState> {
 const AWARD_EXPECTED_STATUSES = ['AWARD_SETUP', 'PAYMENT_QUEUE', 'IN_PAYMENT'];
 
 export const NextStepGuidance: React.FC<Props> = ({
-  claimId, status, hasEligibilityPass, hasCalculation,
+  claimId, status, hasEligibilityPass, hasCalculation, onJumpTab,
 }) => {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -183,7 +186,7 @@ export const NextStepGuidance: React.FC<Props> = ({
         duration: 14_000,
       });
       if (/document/i.test(text)) {
-        setActiveTab?.('documents');
+        onJumpTab?.('documents');
       }
     },
   }, 'Approving claim...');

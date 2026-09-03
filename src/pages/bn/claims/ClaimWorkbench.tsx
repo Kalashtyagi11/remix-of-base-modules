@@ -403,6 +403,7 @@ export default function ClaimWorkbench() {
         status={currentStatus}
         hasEligibilityPass={eligibility.length > 0 && (eligibility[0].overall_result === true || (eligibility[0] as any).override_applied === true)}
         hasCalculation={calculations.length > 0}
+        onJumpTab={setActiveTab}
       />
 
       {/* Decision Panel */}
