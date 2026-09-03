@@ -187,11 +187,15 @@ export async function evaluateRule(
     } else if (fb) {
       const fR = await resolveFact(fb, ctx); endVal = fR.value; endResolver = fb;
     }
-    const days = daysBetween(sR.value as string | null, endVal as string | null);
-    if (days === null) {
+    const actualInUnit = dateDifferenceInUnit(
+      sR.value as string | null,
+      endVal as string | null,
+      rule.unit ?? 'DAYS',
+    );
+    if (actualInUnit === null) {
       return { ...base, source_fact: `${start} → ${endResolver}`, source_resolver: sR.fact_key, source_table: sR.source_table, operator, actual_value: null, expected_value: expected, result: 'FAIL', message: renderMessage(rule, null, expected, false) };
     }
-    const actualInUnit = convertDays(days, rule.unit ?? 'DAYS');
+
     const passed = apply(operator, actualInUnit, expected);
     return { ...base, source_fact: `${start} → ${endResolver}`, source_resolver: sR.fact_key, source_table: sR.source_table, operator, actual_value: actualInUnit, expected_value: expected, result: passed ? 'PASS' : 'FAIL', message: renderMessage(rule, actualInUnit, expected, passed) };
   }
