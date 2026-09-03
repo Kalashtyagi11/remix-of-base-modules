@@ -83477,7 +83477,7 @@ export type Database = {
           spouse_name: string | null
           spouse_ssn: string | null
           ssn: string | null
-          status: string
+          status: string | null
           submitted_at: string | null
           submitted_by: string | null
           surname: string | null
@@ -83487,7 +83487,7 @@ export type Database = {
           termination_code: string | null
           termination_date: string | null
           tran_code: string | null
-          unique_uuid: string
+          unique_uuid: string | null
           updated_at: string | null
           updated_by: string | null
           userid: string | null
@@ -83589,7 +83589,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -83599,7 +83599,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -83701,7 +83701,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -83711,7 +83711,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
