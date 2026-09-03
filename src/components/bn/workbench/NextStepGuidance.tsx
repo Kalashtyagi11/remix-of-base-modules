@@ -173,8 +173,21 @@ export const NextStepGuidance: React.FC<Props> = ({
   const approveMut = useBlockingMutation({
     mutationFn: () => approveClaim(claimId, userCode!),
     onSuccess: (r: any) => { toast.success(r.message || 'Approved'); invalidate(); },
-    onError: (e: any) => toast.error('Approval failed', { description: e?.message }),
+    // A refusal names each unmet condition on its own line, and outstanding
+    // documents are the common one — so the officer is pointed straight at the
+    // Documents tab to upload and verify, then approve.
+    onError: (e: any) => {
+      const text = String(e?.message ?? '');
+      showBlockerToast(text, {
+        fallbackTitle: 'Approval refused',
+        duration: 14_000,
+      });
+      if (/document/i.test(text)) {
+        setActiveTab?.('documents');
+      }
+    },
   }, 'Approving claim...');
+
 
   const generateMut = useBlockingMutation({
     mutationFn: () => generatePayableForApprovedClaim(claimId, userCode!),
