@@ -954,6 +954,38 @@ const RESOLVERS: Record<string, ResolverFn> = {
     return relationships.some((r) => QUALIFYING.has(r));
   },
 
+  /**
+   * BUG-053 — fg.claimant_relationship_valid was wired to
+   * resolveBeneficiaryRelationshipValid, which reads bn_award_beneficiary —
+   * a table only populated during Award Setup, after approval. At real
+   * claim intake (Eligibility Pre-checks, before any decision) it always
+   * has zero rows, so the rule failed every Funeral Grant claim regardless
+   * of the actual relationship. This reads bn_claim_participant instead,
+   * matching resolveQualifyingSurvivor/resolveSpouseRelationshipValid —
+   * both already correctly read at intake time.
+   */
+  resolveFuneralGrantRelationshipValid: async (ctx) => {
+    if (!ctx.claimId) return null;
+    const { data } = await db
+      .from('bn_claim_participant')
+      .select('id, relationship_to_insured')
+      .eq('claim_id', ctx.claimId)
+      .limit(50);
+    if (!Array.isArray(data)) return null;
+    const QUALIFYING = new Set([
+      'SPOUSE', 'WIDOW', 'WIDOWER', 'CHILD', 'DEPENDENT_CHILD',
+      'PARENT', 'DEPENDENT_PARENT', 'DEPENDENT', 'LEGAL_REPRESENTATIVE',
+    ]);
+    const relationships = (data as { relationship_to_insured?: string | null }[])
+      .map((r) => String(r.relationship_to_insured ?? '').trim().toUpperCase())
+      .filter(Boolean);
+    // Relationship not captured on any participant — unknown, not "false".
+    // BUG-054 (still open) means this is empty for every claim today until
+    // the intake form actually saves relationship_to_insured.
+    if (relationships.length === 0) return null;
+    return relationships.some((r) => QUALIFYING.has(r));
+  },
+
   resolveSpouseRelationshipValid: async (ctx) => {
     if (!ctx.claimId) return null;
     const { data } = await db

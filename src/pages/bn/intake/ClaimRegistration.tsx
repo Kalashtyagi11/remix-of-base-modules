@@ -40,11 +40,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ArrowLeft, ArrowRight, Save, Search, ShieldCheck, AlertCircle,
   AlertTriangle, Loader2, FileText, CheckCircle2, Link2, UserPlus,
   StickyNote, FlagTriangleRight, Inbox, ListChecks, Stethoscope, Banknote,
+  ChevronsUpDown, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { showBlockerToast } from '@/lib/bn/showBlockerToast';
@@ -98,6 +101,14 @@ const CONTACT_EMAIL_MAX = IP_MASTER_FIELDS.contact_email.maxLength;
 
 
 
+interface BenefitOption {
+  id: string;
+  benefit_name?: string;
+  name?: string;
+  benefit_code?: string;
+  code?: string;
+}
+
 type DocStatus = 'PROVIDED' | 'PENDING' | 'WAIVED';
 interface DocState {
   status: DocStatus;
@@ -150,6 +161,7 @@ export default function ClaimRegistration() {
 
   // Step 3–4: benefit + date
   const [productId, setProductId] = useState('');
+  const [benefitPickerOpen, setBenefitPickerOpen] = useState(false);
   const [claimDate, setClaimDate] = useState(new Date().toISOString().slice(0, 10));
 
   // Step 5: resolved version
@@ -868,16 +880,41 @@ export default function ClaimRegistration() {
 
             {step === 'benefit' && (
               <StepCard title="3. Select Benefit" desc="Choose which benefit this application is for.">
-                <Select value={productId} onValueChange={setProductId}>
-                  <SelectTrigger><SelectValue placeholder="Select benefit" /></SelectTrigger>
-                  <SelectContent>
-                    {activeProducts.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {(p as any).benefit_name ?? (p as any).name} ({(p as any).benefit_code ?? (p as any).code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={benefitPickerOpen} onOpenChange={setBenefitPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+                      <span className="truncate">
+                        {(() => {
+                          const p = (activeProducts as BenefitOption[]).find((x) => x.id === productId);
+                          return p
+                            ? `${p.benefit_name ?? p.name} (${p.benefit_code ?? p.code})`
+                            : <span className="text-muted-foreground">Select benefit</span>;
+                        })()}
+                      </span>
+                      <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 ml-2 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search by name or code…" />
+                      <CommandList className="max-h-[320px]">
+                        <CommandEmpty>No benefit matches.</CommandEmpty>
+                        <CommandGroup>
+                          {(activeProducts as BenefitOption[]).map((p) => (
+                            <CommandItem
+                              key={p.id}
+                              value={`${p.benefit_name ?? p.name} ${p.benefit_code ?? p.code}`}
+                              onSelect={() => { setProductId(p.id); setBenefitPickerOpen(false); }}
+                            >
+                              <Check className={`h-3.5 w-3.5 mr-2 ${productId === p.id ? 'opacity-100' : 'opacity-0'}`} />
+                              {p.benefit_name ?? p.name} ({p.benefit_code ?? p.code})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </StepCard>
             )}
 

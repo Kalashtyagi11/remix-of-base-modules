@@ -87,7 +87,13 @@ const NUMERIC_OPS = new Set(['>=', '>', '<=', '<', '=', '==', '!=']);
 
 function extractFieldOp(rule: any): { field?: string; op?: string; value?: any } {
   const def = rule.rule_definition || {};
-  const field = def.field_key || def.field || rule.data_source;
+  // Checked only rule_definition.field_key/.field and the legacy data_source
+  // column — never the fact_key column every LITERAL rule actually uses, and
+  // never a DATE_DIFFERENCE rule's start_fact_key (it carries no single
+  // fact_key by design). Both reported as "no field/operator/value defined"
+  // even when correctly configured.
+  const field = def.field_key || def.field || rule.fact_key || rule.data_source
+    || (rule.rule_kind === 'DATE_DIFFERENCE' ? rule.start_fact_key : undefined);
   const op = def.operator || def.op;
   const value = def.value ?? def.threshold ?? def.compare_value;
   return { field, op, value };
