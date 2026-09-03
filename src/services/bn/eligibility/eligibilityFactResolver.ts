@@ -1122,12 +1122,14 @@ const RESOLVERS: Record<string, ResolverFn> = {
    */
   resolveFgClaimantCostResponsibility: async (ctx) => {
     if (!ctx.claimId) return null;
-    const { data: claim } = await db
-      .from('bn_claim')
-      .select('form_payload')
-      .eq('id', ctx.claimId)
+    const { data: application } = await db
+      .from('bn_claim_application')
+      .select('raw_application_json')
+      .eq('claim_id', ctx.claimId)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
-    const payload = ((claim as any)?.form_payload ?? {}) as Record<string, unknown>;
+    const payload = ((application as any)?.raw_application_json ?? {}) as Record<string, unknown>;
     const facts = (payload.benefit_facts ?? {}) as Record<string, unknown>;
     const basis = String(
       (payload.funeral_cost_responsibility ?? facts.funeral_cost_responsibility ?? '') as string,
