@@ -18,6 +18,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { auditClaimAction, auditAwardAction } from '@/services/bn/audit/bnAuditService';
 import { routeClaimAfterStatusChange } from '@/services/bn/workflow/routeClaimAfterStatusChange';
 import {
+  checkApprovalPreconditions,
+  describeApprovalBlockers,
+} from '@/services/bn/claims/approvalPreconditions';
+import {
   resolveApprovalRouting,
   getUserRoleNames,
   getTransitionSideEffect,
