@@ -22,16 +22,45 @@ Proposal, in this order:
 
 Set `output_value` to 500.00 for the `AGE_3` row. All ten other bands already match the official scale, so this reads as a seed typo, not a local uplift. Row is dated `effective_from 2026-01-01` with no successor and no claims have used it.
 
-## Item 4 — Dependent-child eligibility gate
+## Item 4 — Dependent claims: whose contribution record, and which child qualifies
 
-Confirmed missing: nothing constrains who the deceased dependent may be, and the `OVER_9` band is open-ended, so a 40-year-old "dependent child" would be paid $1,600.
+You are right that my first version was half a fix. Two separate defects sit here, and the contribution one is the blocker.
 
-The data does exist. `ip_depend` carries `dob`, `date_of_death`, `relation`, `school_child` and `invalid` per dependant, and `fg.deceased_age_at_death` is already an implemented fact. What is missing is a fact resolver exposing the student/invalid status to the rule engine.
+**Fact-key check first:** `fg.deceased_age_at_death` does exist — it is an active row in `bn_eligibility_fact` bound to resolver `resolveDeceasedAgeAtDeath` (`eligibilityFactResolver.ts:442`), which reads the claim's `death_date` (falling back to `ip_master.date_died`) against the deceased's `dob`. If your registry check missed it, it may have been scoped to a product filter — its `applicable_products` array is empty.
 
-Proposal:
-- Add one fact, `fg.dependent_child_qualifies`, resolved from the deceased dependant record: true when age at death is under 16; or under 25 with `school_child` set; or `invalid` set.
-- Add one rule, `FG_DEPENDENT_CHILD_ELIGIBLE`, severity BLOCK, applied only when the claim is a dependent-child claim (the existing relationship fact identifies this) so spouse and insured-person claims are unaffected.
-- If the deceased dependant cannot be matched to an `ip_depend` row, the rule must resolve to a review outcome rather than a silent pass — the same vacuous-success trap already seen on SKN-INV's empty evidence checklist.
+### 4a — The contribution test targets the wrong person (the blocker)
+
+`FG_MIN_CONTRIBUTION` binds to `fg.deceased_contribution_weeks`, whose resolver calls `resolveDeceasedSsn(ctx)` — the participant on the claim typed as deceased. For an insured-person death that is correct. For the death of a spouse or a dependent child it is wrong: that person has no contribution record of their own, the lifetime total comes back 0 (or null), and the claim fails at 26 weeks no matter how well it qualifies. This is exactly the end-to-end break you describe.
+
+The statute is written around the **insured person's** record: the grant is payable on the death of an insured person, *their spouse*, or *their dependent child*. So the contribution test must always run against the insured member, whoever died.
+
+Confirmed linkage: `ip_depend.ssn` is the **insured person's** SSN and `ip_depend.depend_ssn` is the dependant's own SSN, alongside `relation` (`CHI`, `DAU`, `SON`, `CLS`, `FAT`…), `dob`, `date_of_death`, `school_child` and `invalid` (both `Y`/`N` text). So the insured parent is found as `select ssn from ip_depend where depend_ssn = <deceased ssn>`.
+
+Proposal — add one resolver, `resolveQualifyingInsuredSsn`, that decides whose record is tested:
+
+```text
+deceased is the insured person   → the deceased's own SSN
+deceased is a spouse / dependant → ip_depend.ssn where depend_ssn = deceased SSN
+neither resolvable               → null  →  rule reports NOT_IMPLEMENTED / review,
+                                            never a silent pass or a silent zero
+```
+
+Then add `fg.qualifying_contribution_weeks` on top of it (same lifetime `computeContributionTotals` logic as today, just keyed on the resolved insured SSN) and repoint `FG_MIN_CONTRIBUTION` at that fact instead of `fg.deceased_contribution_weeks`. For an insured-person death the two are identical, so nothing about that path changes.
+
+Two judgement calls I want your ruling on rather than deciding myself:
+- If the deceased dependant has more than one `ip_depend` row (dependant of two insured parents), do we take the first qualifying insured record, or the best one, or flag for manual review? I lean to: test each and pass if any parent qualifies, recording which was used.
+- If the deceased spouse/child is not in `ip_depend` at all — a real gap for a marriage never registered with the Board — the claim goes to review with the marriage certificate as the resolving evidence, rather than auto-failing.
+
+### 4b — Which dependent child qualifies
+
+Nothing constrains who the deceased dependant may be, and the `OVER_9` band is open-ended, so a 40-year-old "dependent child" would be paid $1,600.
+
+- Add fact `fg.dependent_child_qualifies`, read from the matched `ip_depend` row: true when age at death is under 16; or under 25 with `school_child = 'Y'`; or `invalid = 'Y'`.
+- Add rule `FG_DEPENDENT_CHILD_ELIGIBLE`, severity BLOCK, applied only when the deceased is a dependent child, so spouse and insured-person claims are unaffected.
+- No matching `ip_depend` row must resolve to review, not a silent pass — the same vacuous-success trap already seen on SKN-INV's empty evidence checklist.
+
+Note that `school_child` and `invalid` are point-in-time flags on the dependant record with no history, so a 20-year-old whose student flag was never updated will fail. That is a data-quality reality to state in the fail message, not something code can fix.
+
 
 ## Item 5 — Documents
 
