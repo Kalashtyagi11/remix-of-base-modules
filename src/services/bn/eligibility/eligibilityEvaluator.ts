@@ -341,7 +341,13 @@ async function evaluateDateDifferenceRule(
       return unevaluated(rule, fieldKey, 'fact_key', 'could not compute date difference — one of the dates is invalid', msgCtx, { operator, expected_value: expected, source });
     }
     const unit = (rule.unit ?? 'DAYS') as 'DAYS' | 'WEEKS' | 'MONTHS' | 'YEARS';
-    const actual = convertDays(Math.floor(ms / 86_400_000), unit);
+    // MONTHS/YEARS use true calendar arithmetic (see dateDifferenceInUnit) so a
+    // statutory "within 6 months" test lands on the real calendar boundary.
+    const actual = dateDifferenceInUnit(String(sR.value), String(endVal), unit);
+    if (actual === null) {
+      return unevaluated(rule, fieldKey, 'fact_key', 'could not compute date difference — one of the dates is invalid', msgCtx, { operator, expected_value: expected, source });
+    }
+
 
     const evalRes = evaluateOperator(actual, operator, expected, 'number');
     if (evalRes.evaluable === false) {
