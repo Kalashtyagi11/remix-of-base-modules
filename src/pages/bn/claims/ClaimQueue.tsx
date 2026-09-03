@@ -312,14 +312,14 @@ export default function ClaimQueue() {
               <Button
                 size="sm"
                 variant={scope === 'mine' ? 'default' : 'outline'}
-                onClick={() => { setScope('mine'); setSelectedBasket(null); }}
+                onClick={() => { setScope('mine'); setSelectedBasket(null); clearFilters(); }}
               >
                 My baskets
               </Button>
               <Button
                 size="sm"
                 variant={scope === 'all' ? 'default' : 'outline'}
-                onClick={() => { setScope('all'); setSelectedBasket(null); }}
+                onClick={() => { setScope('all'); setSelectedBasket(null); clearFilters(); }}
               >
                 All baskets
               </Button>
