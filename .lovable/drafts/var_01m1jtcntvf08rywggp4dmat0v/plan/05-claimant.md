@@ -28,14 +28,47 @@ Replace the familial test with the statutory one, on this product version only.
 
 Open question I am not deciding for you: should a claim by a Funeral Arranger pay the arranger directly, or the estate? That is a payee-routing policy question, separate from eligibility, and I have not touched payee logic.
 
+## Item 7 (new) — provided documents never reach the readiness validator
+
+Confirmed, and your read is correct. The data flow, traced end to end:
+
+```text
+ClaimRegistration.tsx:614   providedDocs = docState entries with status PROVIDED
+ClaimRegistration.tsx:643   formPayload.documents = { provided, pending, waived }
+claimIntakeService.ts:191   uploaded_document_codes: formPayload.uploaded_document_codes ?? []
+intakeReadinessService.ts:182  validateRequiredDocuments(..., uploadedDocumentCodes)
+```
+
+Nothing anywhere writes `formPayload.uploaded_document_codes`. The staff screen writes `documents.provided`; the service reads `uploaded_document_codes`; the fallback `?? []` turns the mismatch into a silent empty array rather than an error. So `validateRequiredDocuments` compares every MANDATORY requirement against an empty set and reports all of them missing, regardless of what the officer marked Provided. It is a submit-time gate (`validateReadiness` throws `ClaimIntakeReadinessError` before any row is created), so where `blocks_submission` is set it blocks registration outright.
+
+One nuance beyond your framing, which is why this has not been screaming in production: it only bites where mandatory requirements with `blocks_submission` actually exist. Funeral Grant's three current rows are the ones Item 5 is about to make mandatory and blocking — so **Item 5 would have turned this latent bug into a hard blocker on every funeral claim.** They have to ship together.
+
+Proposed fix, at the seam in `claimIntakeService.ts` rather than in the screen or the validator:
+
+```text
+uploaded_document_codes:
+     formPayload.uploaded_document_codes            // portal/API callers, unchanged
+  ?? [...documents.provided, ...documents.waived.map(d => d.document_type_code)]
+```
+
+Reasoning for each part:
+- **Fix at the service seam**, because `ClaimRegistration.tsx` is not the only caller — the portal apply wizard and any API submission path build their own payloads, and normalising once in the service fixes all of them rather than one screen.
+- **Keep the old key working** so any caller that does send `uploaded_document_codes` is unaffected.
+- **Count WAIVED as satisfied.** A waiver is a deliberate, permission-gated act (the screen already refuses it without the waive permission), and the reason is captured. Treating a waived document as still-missing would make the waiver feature useless. PENDING stays missing — that is exactly what it means.
+- **Drop the silent `?? []`** in favour of a resolved list, so a genuinely absent documents block is visible rather than defaulting to "nothing provided".
+
+This is a bug fix in shared intake code, not Funeral Grant configuration — see the exception noted below.
+
 ## Isolation confirmation
 
-Every change above is scoped to Funeral Grant. Specifically:
+The configuration changes are all scoped to Funeral Grant: rule/fact/rate/document rows filtered to product version `7591e864-def2-491e-ad14-02dd5ac338ef`, one `UPDATE` on the single `fg.`-prefixed fact registry row, and screen-template edits limited to `SCR-SKN-FUN-O1-2796dd` / `TPL-GRANT-FUNERAL`.
 
-- **New resolvers only, no shared edits.** `resolveQualifyingInsuredSsn` and the two new facts are new functions. `resolveDeceasedContribTotalWeeks`, `deceasedWindowOrSnapshot`, `computeContributionTotals` and `resolveDeceasedSsn` are used by Survivors and Death Benefit and will **not** be modified — Item 4 repoints the Funeral rule at a new fact instead of changing the old one's behaviour.
-- **Rule/fact/rate/document rows** are filtered to product version `7591e864-def2-491e-ad14-02dd5ac338ef`; no other version's rows are touched.
-- **Registry metadata clearing** is a single `UPDATE` on the one `fg.` prefixed fact row.
-- **Screen template** changes touch `SCR-SKN-FUN-O1-2796dd` / `TPL-GRANT-FUNERAL` only.
-- The one deliberate exception to raise before I start: if you approve teaching `evidenceService.ts` to evaluate `condition_json` (Item 5's caution), that **is** shared code affecting every product. If you would rather stay strictly inside Funeral Grant, say so and I will register the conditional marriage certificate as non-blocking instead.
+New resolvers only, no shared resolver edits: `resolveQualifyingInsuredSsn` and the new facts are new functions. `resolveDeceasedContribTotalWeeks`, `deceasedWindowOrSnapshot`, `computeContributionTotals` and `resolveDeceasedSsn` are used by Survivors and Death Benefit and will **not** be modified — Item 4 repoints the Funeral rule at a new fact instead of changing the old one's behaviour. `evidenceService.ts` stays untouched per your ruling.
 
-Verification I will run and report: rule/fact/rate/document state before and after, a walkthrough of an insured-person death, a dependent-child death and a Funeral-Arranger claim through the evaluator, the deadline boundary cases around the six-month calendar test, targeted Vitest, typecheck and build.
+Two changes are honestly outside Funeral Grant, and I am naming them rather than burying them:
+
+1. **Calendar-month arithmetic in `eligibilityEvaluator.ts` / `ruleEvaluator.ts`** (Item 2). Shared evaluator code, but zero active `DATE_DIFFERENCE` rules platform-wide use `MONTHS` or `YEARS` today, so no existing product's outcome changes.
+2. **The `uploaded_document_codes` mapping in `claimIntakeService.ts`** (Item 7). Shared intake code by nature — the defect is in the shared seam, and fixing it only for Funeral Grant would mean special-casing one product inside a generic service. Its effect on other products is to start honouring documents they already mark as provided, which is the intended behaviour everywhere. If you would rather split this into its own ticket, say so — but then Item 5 must wait for it, because together they would block every funeral claim.
+
+Verification I will run and report: rule/fact/rate/document state before and after; a real submitted claim walked through `eligibilityEvaluator` for an insured-person death, a dependent-child death and a Funeral-Arranger claim; the six-month boundary cases through the live path, not the Test Rule panel; a staff registration with documents marked Provided proving readiness now passes; targeted Vitest; typecheck; build.
+
