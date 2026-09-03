@@ -171,6 +171,38 @@ const CHANNEL_TO_CONFIG: Record<ApplicationChannel, string> = {
   MIGRATED_LEGACY: 'OFFLINE',
 };
 
+/**
+ * Normalises the document codes an intake payload considers satisfied.
+ *
+ * Staff registration (`ClaimRegistration.tsx`) and the portal wizard write
+ * `formPayload.documents = { provided, pending, waived }`, but the readiness
+ * gate historically read `formPayload.uploaded_document_codes` — a key nothing
+ * ever wrote. The `?? []` fallback turned that mismatch into a silent empty
+ * set, so every MANDATORY requirement reported as missing no matter what the
+ * officer had marked Provided. Fixed at this seam rather than in one screen so
+ * every caller (staff, portal, API) benefits.
+ *
+ * WAIVED counts as satisfied: waiving is a deliberate, permission-gated act
+ * with a recorded reason. PENDING stays missing — that is what it means.
+ */
+export function resolveSuppliedDocumentCodes(formPayload: unknown): string[] {
+  const payload = (formPayload ?? {}) as Record<string, unknown>;
+  const explicit = payload.uploaded_document_codes;
+  if (Array.isArray(explicit)) {
+    // Callers that already send the canonical key are untouched.
+    return explicit.map((c) => String(c)).filter(Boolean);
+  }
+  const documents = (payload.documents ?? null) as Record<string, unknown> | null;
+  if (!documents) return [];
+  const codeOf = (entry: unknown): string =>
+    typeof entry === 'string'
+      ? entry
+      : String((entry as Record<string, unknown> | null)?.document_type_code ?? '');
+  const provided = Array.isArray(documents.provided) ? documents.provided : [];
+  const waived = Array.isArray(documents.waived) ? documents.waived : [];
+  return [...provided, ...waived].map(codeOf).filter(Boolean);
+}
+
 export async function submitClaimApplication(
   input: SubmitClaimApplicationInput,
 ): Promise<SubmitClaimApplicationResult> {
@@ -188,14 +220,14 @@ export async function submitClaimApplication(
       contact_phone: (input.formPayload as any)?.contact_phone ?? null,
       identity_verified: (input.formPayload as any)?.identity_verified === true,
       otp_verified: (input.formPayload as any)?.otp_verified === true,
-      uploaded_document_codes:
-        (input.formPayload as any)?.uploaded_document_codes ?? [],
+      uploaded_document_codes: resolveSuppliedDocumentCodes(input.formPayload),
       employerRegno: input.employerRegno ?? null,
     },
   );
   if (!readiness.ok) {
     throw new ClaimIntakeReadinessError(readiness);
   }
+
 
   const { data, error } = await db.rpc('bn_submit_claim_application', {
     p_ssn: input.ssn,
