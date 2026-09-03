@@ -26,24 +26,13 @@
  */
 import { supabase } from '@/integrations/supabase/client';
 import { writeBatchItemToLegacyPayment } from '@/services/bn/paymentIssueService';
+import { isBenefitsAdmin } from '@/services/bn/bnActorService';
 
 const db = supabase as any;
 
-async function currentUserIsAdmin(): Promise<boolean> {
-  const { data: auth } = await supabase.auth.getUser();
-  let userId = auth?.user?.id;
-  if (!userId) {
-    const { data: session } = await supabase.auth.getSession();
-    userId = session?.session?.user?.id;
-  }
-  if (!userId) return false;
-  try {
-    const { data } = await (supabase.rpc as any)('is_admin', { _user_id: userId });
-    return !!data;
-  } catch {
-    return false;
-  }
-}
+/** Administrators hold full Benefits privilege, including self-approval. */
+const currentUserIsAdmin = isBenefitsAdmin;
+
 
 // ─── Types ──────────────────────────────────────────────────────────
 
