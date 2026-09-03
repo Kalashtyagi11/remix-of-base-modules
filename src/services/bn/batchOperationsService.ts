@@ -214,26 +214,54 @@ export async function fetchBatchItems(batchId: string): Promise<BatchPayableItem
 
 // ─── Fetch Available Payables (READY status, not yet batched) ───────
 
+export interface AvailablePayablesResult {
+  matching: any[];
+  all: any[];
+  totalReady: number;
+  excludedByMethod: number;
+  excludedByOffice: number;
+}
+
 export async function fetchAvailablePayables(
   paymentMethod?: string,
   officeCode?: string
 ): Promise<any[]> {
-  let query = db
+  const res = await fetchAvailablePayablesDetailed(paymentMethod, officeCode);
+  return res.matching;
+}
+
+/**
+ * Returns matching payables plus the full unfiltered READY pool so the UI can
+ * explain WHY nothing matched instead of showing a bare empty state.
+ * Office rule: a payable with no office matches any batch office (legacy rows
+ * were created without an office stamp).
+ */
+export async function fetchAvailablePayablesDetailed(
+  paymentMethod?: string,
+  officeCode?: string
+): Promise<AvailablePayablesResult> {
+  const { data, error } = await db
     .from('bn_payment_instruction')
     .select('*')
     .eq('status', 'READY')
     .is('batch_id', null)
     .order('created_at', { ascending: true });
-
-  if (paymentMethod && paymentMethod !== 'MIXED') {
-    query = query.eq('payment_method', paymentMethod);
-  }
-  if (officeCode) query = query.eq('office_code', officeCode);
-
-  const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+
+  const all: any[] = data || [];
+  const methodOk = (p: any) =>
+    !paymentMethod || paymentMethod === 'MIXED' || p.payment_method === paymentMethod;
+  const officeOk = (p: any) => !officeCode || !p.office_code || p.office_code === officeCode;
+
+  return {
+    matching: all.filter((p) => methodOk(p) && officeOk(p)),
+    all,
+    totalReady: all.length,
+    excludedByMethod: all.filter((p) => !methodOk(p)).length,
+    excludedByOffice: all.filter((p) => methodOk(p) && !officeOk(p)).length,
+  };
 }
+
 
 // ─── Batch Actions ──────────────────────────────────────────────────
 
