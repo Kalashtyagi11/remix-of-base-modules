@@ -53,3 +53,12 @@ Module and sub-module rows are seeded from what actually exists in this reposito
 
 - No in-app tracker module, no tables, no code changes.
 - No commitments on durations or resourcing — the workbook provides the structure; you set the dates offline.
+
+## Also pending (needs build mode)
+
+Two staged database migrations from an accepted draft are waiting to be applied and cannot run in plan mode:
+
+- `20260903053000_bn_seed_amendment_policy.sql` — auto-creates the amendment policy row for every benefit product version (plus backfill), unlocking amendment areas that are currently locked.
+- `20260903090000_bn_award_setup_payment_handoff_guard.sql` — award setup / payment hand-off guard.
+
+Approve this plan (or switch to build mode) and I will apply both, then produce the workbook.
