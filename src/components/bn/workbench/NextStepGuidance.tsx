@@ -80,8 +80,16 @@ export const NextStepGuidance: React.FC<Props> = ({
 
   // Which basket owns the claim right now — an officer looking at Award Setup
   // could not otherwise tell that the claim has not been handed to Payment.
-  const { data: basket } = useQuery({
+  const {
+    data: basket,
+    isPending: basketPending,
+    isFetching: basketFetching,
+    isError: basketError,
+  } = useQuery({
     queryKey: ['bn', 'next-step-basket', claimId, status],
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
     queryFn: async () => {
       const { data } = await db
         .from('bn_claim_queue_assignment')
@@ -232,31 +240,16 @@ export const NextStepGuidance: React.FC<Props> = ({
   });
 
   const basketMismatch = useMemo(() => {
+    // Never diagnose from cached data while the authoritative assignment is
+    // still loading/refetching, or when it could not be read.
+    if (basketPending || basketFetching || basketError) return null;
     if (!expectedCode || !basket?.code) return null;
     if (basket.code === expectedCode) return null;
     return {
       expectedCode,
       expectedName: expectedBasket?.basket_name ?? expectedCode,
     };
-  }, [expectedCode, basket?.code, expectedBasket]);
-
-  // Re-runs the same routing service every status transition uses. No new rule,
-  // status or table — it simply reapplies the basket the status already implies.
-  const rerouteMut = useBlockingMutation({
-    mutationFn: async () => {
-      const { routeClaimToWorkbasket } = await import('@/services/bn/workflow/routeClaimToWorkbasket');
-      const res = await routeClaimToWorkbasket(claimId, userCode!);
-      if (res.outcome !== 'MOVED' && res.outcome !== 'ASSIGNED') {
-        throw new Error(res.reason || `Routing returned ${res.outcome}.`);
-      }
-      return res;
-    },
-    onSuccess: (r: any) => {
-      toast.success(`Claim moved to ${r?.workbasketName ?? 'the correct basket'}`);
-      invalidate();
-    },
-    onError: (e: any) => toast.error('Could not move the claim', { description: e?.message }),
-  }, 'Moving claim to the correct basket...');
+  }, [expectedCode, basket?.code, expectedBasket, basketPending, basketFetching, basketError]);
 
 
   const step = useMemo(() => {
@@ -360,21 +353,17 @@ export const NextStepGuidance: React.FC<Props> = ({
       };
     }
 
-    // The claim's status and its basket disagree — usually a re-route that did
-    // not apply after a status change. Offer the same routing service as a repair.
+    // The claim's status and its freshly-read basket disagree. This is
+    // diagnostic only: officers must never force a basket assignment from the
+    // workbench. The governed lifecycle/routing path remains authoritative.
     if (basketMismatch) {
       return {
         tone: 'blocked' as const,
-        title: 'Claim is in the wrong basket',
+        title: 'Basket routing needs attention',
         body:
           `This claim is ${status.replace(/_/g, ' ').toLowerCase()}, which belongs to the ` +
           `${basketMismatch.expectedName} desk, but it is still sitting in the ` +
-          `${basket?.name ?? 'previous'} basket. Move it so the right team can see it.`,
-        actionLabel: 'Move to the correct basket',
-        onAction: () => { if (guard()) rerouteMut.mutate(); },
-        pending: rerouteMut.isPending || userCodeLoading,
-        secondaryLabel: 'Open Payables Queue',
-        onSecondary: () => navigate('/bn/payables'),
+          `${basket?.name ?? 'previous'} basket. Complete the governed lifecycle action, or contact an administrator if routing has failed.`,
       };
     }
 
@@ -424,7 +413,7 @@ export const NextStepGuidance: React.FC<Props> = ({
     }
 
     return null;
-  }, [status, hasEligibilityPass, hasCalculation, downstream, basket, basketMismatch, rerouteMut.isPending, paymentAction, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, handoffMut.isPending, userCodeLoading]);
+  }, [status, hasEligibilityPass, hasCalculation, downstream, basket, basketMismatch, paymentAction, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, handoffMut.isPending, userCodeLoading]);
 
   if (!step) return null;
 
