@@ -47,19 +47,55 @@ interface DownstreamState {
   hasPayable: boolean;
   hasAward: boolean;
   payableId?: string;
+  /**
+   * Payment-issue readiness for the claim's payables:
+   * - 'none' — payable exists but is not in any batch (batching is next)
+   * - 'in_batch' — payable is in a batch that has not been released yet
+   * - 'released' — payable is in a RELEASED (or later) batch awaiting issue prep
+   * - 'issued_prep' — an issue record exists, so the payable shows in /bn/issue
+   */
+  issueReadiness: 'none' | 'in_batch' | 'released' | 'issued_prep' | null;
+  batchStatus?: string;
 }
 
 async function fetchDownstream(claimId: string): Promise<DownstreamState> {
   const [{ data: ents }, { data: pis }, { data: awards }] = await Promise.all([
     db.from('bn_entitlement').select('id').eq('claim_id', claimId).limit(1),
-    db.from('bn_payment_instruction').select('id').eq('claim_id', claimId).limit(1),
+    db.from('bn_payment_instruction').select('id').eq('claim_id', claimId),
     db.from('bn_award').select('id').eq('bn_claim_id', claimId).limit(1),
   ]);
+  const payableIds = (pis ?? []).map((p: any) => p.id);
+
+  let issueReadiness: DownstreamState['issueReadiness'] = null;
+  let batchStatus: string | undefined;
+  if (payableIds.length > 0) {
+    const [{ data: issues }, { data: items }] = await Promise.all([
+      db.from('bn_issue_record').select('id').in('instruction_id', payableIds).limit(1),
+      db.from('bn_batch_item')
+        .select('id, item_status, bn_payment_batch(status)')
+        .in('instruction_id', payableIds)
+        .neq('item_status', 'REMOVED'),
+    ]);
+    if ((issues?.length || 0) > 0) {
+      issueReadiness = 'issued_prep';
+    } else if ((items?.length || 0) > 0) {
+      const statuses = items.map((i: any) => i.bn_payment_batch?.status).filter(Boolean);
+      batchStatus = statuses[0];
+      issueReadiness = statuses.some((s: string) => ['RELEASED', 'ISSUED', 'PARTIALLY_ISSUED'].includes(s))
+        ? 'released'
+        : 'in_batch';
+    } else {
+      issueReadiness = 'none';
+    }
+  }
+
   return {
     hasEntitlement: (ents?.length || 0) > 0,
-    hasPayable: (pis?.length || 0) > 0,
+    hasPayable: payableIds.length > 0,
     hasAward: (awards?.length || 0) > 0,
-    payableId: pis?.[0]?.id,
+    payableId: payableIds[0],
+    issueReadiness,
+    batchStatus,
   };
 }
 
