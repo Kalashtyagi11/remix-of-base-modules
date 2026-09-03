@@ -154,6 +154,38 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
     throw new Error(`Claim status "${claim.status}" does not match expected "${rule.from_status}"`);
   }
 
+  // 3a. Re-assert the rule's own preconditions. These used to decide button
+  // state only, so anything reaching execution by another route — a stale
+  // page, a direct call — transitioned without them. The button is a
+  // convenience; this is the check that decides.
+  if (rule.requires_eligibility_pass) {
+    const { data: eligRows, error: eligErr } = await db
+      .from('bn_claim_eligibility')
+      .select('overall_result')
+      .eq('claim_id', claimId)
+      .order('check_date', { ascending: false })
+      .limit(1);
+    // An unreadable eligibility result is a refusal, not a pass.
+    if (eligErr || eligRows?.[0]?.overall_result !== true) {
+      throw new Error('Eligibility check must pass first');
+    }
+  }
+  if (rule.requires_calculation) {
+    const { data: calcRows, error: calcErr } = await db
+      .from('bn_claim_calculation')
+      .select('id')
+      .eq('claim_id', claimId)
+      .limit(1);
+    if (calcErr || !calcRows || calcRows.length === 0) {
+      throw new Error('Calculation must be completed first');
+    }
+  }
+  if (rule.requires_evidence_complete && !(await isEvidenceComplete(claimId))) {
+    throw new Error('All mandatory documents must be verified first');
+  }
+
+
+
 
 
   // 3b. Award Setup → Payment Queue requires an award record.
