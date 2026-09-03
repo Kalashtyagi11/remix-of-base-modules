@@ -51,14 +51,21 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+
+      - name: Check Supabase migration history
+        run: |
+         supabase migration list
+         env:
+           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       # --------------------------------
       # 6. Deploy database migrations
       # --------------------------------
-      - name: Deploy database migrations
-        run: |
-          supabase db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      #- name: Deploy database migrations
+         #run: |
+         #supabase db push
+        #env:
+          #SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       # --------------------------------
       # 7. Build React application
