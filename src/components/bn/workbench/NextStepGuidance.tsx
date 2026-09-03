@@ -19,6 +19,8 @@ import { useUserCode } from '@/hooks/useUserCode';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 import { useBnAvailableActions } from '@/hooks/bn/useBnDecisionEngine';
 import { executeTransition } from '@/services/bn/decisionEngine';
+import { stepForClaimStatus } from '@/services/bn/workflow/claimStatusStepMap';
+import { expectedBasketCodesForStage } from '@/services/bn/workflow/stageBasketExpectation';
 import { toast } from 'sonner';
 import { BnBusyButton } from '@/components/bn/shared';
 import {
@@ -422,7 +424,7 @@ export const NextStepGuidance: React.FC<Props> = ({
     }
 
     return null;
-  }, [status, hasEligibilityPass, hasCalculation, downstream, basket, paymentAction, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, handoffMut.isPending, userCodeLoading]);
+  }, [status, hasEligibilityPass, hasCalculation, downstream, basket, basketMismatch, rerouteMut.isPending, paymentAction, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, handoffMut.isPending, userCodeLoading]);
 
   if (!step) return null;
 
