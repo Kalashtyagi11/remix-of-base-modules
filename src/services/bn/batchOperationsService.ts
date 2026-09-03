@@ -644,6 +644,55 @@ async function issueBatch(
   }
 
   for (const item of (items || [])) {
+    // Register the payment in the single issue register that Payment Issue and
+    // Post-Issue Review read from. Without this, batch-issued payments were
+    // invisible on those screens.
+    let issueRecordId: string | null = null;
+    try {
+      const { data: existing } = await db
+        .from('bn_issue_record')
+        .select('id')
+        .eq('batch_item_id', item.id)
+        .not('status', 'in', '("VOIDED")')
+        .maybeSingle();
+
+      if (existing?.id) {
+        issueRecordId = existing.id;
+      } else {
+        const { data: created, error: recErr } = await db
+          .from('bn_issue_record')
+          .insert({
+            batch_id: batchId,
+            batch_item_id: item.id,
+            instruction_id: item.instruction_id,
+            ssn: item.ssn,
+            claim_number: item.claim_number,
+            beneficiary_name: item.beneficiary_name,
+            amount: Number(item.amount || 0),
+            currency: item.currency || 'XCD',
+            issue_method: item.payment_method === 'DIRECT_DEPOSIT' || item.payment_method === 'EFT'
+              ? 'DIRECT_DEPOSIT'
+              : 'CHEQUE',
+            period_start: item.period_start,
+            period_end: item.period_end,
+            instruction_type: item.instruction_type,
+            target_table: 'cl_cheques',
+            status: 'ISSUING',
+          })
+          .select('id')
+          .single();
+        if (recErr) throw recErr;
+        issueRecordId = created?.id ?? null;
+      }
+    } catch (regErr: any) {
+      // Registration failure must not be silent — treat it as an item failure.
+      const message = `Could not register payment: ${regErr?.message || 'unknown error'}`;
+      errors.push(message);
+      await db.from('bn_batch_item').update({ item_status: 'ISSUE_FAILED', issue_error: message }).eq('id', item.id);
+      failed++;
+      continue;
+    }
+
     try {
       // Single canonical legacy writer (shared with Payment Issue) — the legacy
       // cl_cheques table uses PowerBuilder column names, not bn_* names.
@@ -662,12 +711,24 @@ async function issueBatch(
       });
 
       const reference = writeResult.cheque_number || writeResult.dd_reference || null;
+      const now = new Date().toISOString();
+
+      if (issueRecordId) {
+        await db.from('bn_issue_record').update({
+          status: 'ISSUED',
+          cheque_number: writeResult.cheque_number,
+          dd_reference: writeResult.dd_reference,
+          issued_at: now,
+          issued_by: userCode,
+          error_message: null,
+        }).eq('id', issueRecordId);
+      }
 
       // Update batch item
       const { error: itemErr } = await db.from('bn_batch_item').update({
         item_status: 'ISSUED',
         cl_cheque_no: reference,
-        issued_at: new Date().toISOString(),
+        issued_at: now,
         issue_error: null,
       }).eq('id', item.id);
       if (itemErr) throw itemErr;
@@ -677,7 +738,7 @@ async function issueBatch(
       const { error: instrErr } = await db.from('bn_payment_instruction').update({
         status: 'ISSUED_PENDING',
         payment_reference: reference,
-        paid_date: new Date().toISOString().slice(0, 10),
+        paid_date: now.slice(0, 10),
       }).eq('id', item.instruction_id);
       if (instrErr) throw new Error(`Payment written but payable back-link failed: ${instrErr.message}`);
 
@@ -685,6 +746,13 @@ async function issueBatch(
     } catch (err: any) {
       const message = err?.message || 'Issue failed';
       errors.push(message);
+
+      if (issueRecordId) {
+        await db.from('bn_issue_record').update({
+          status: 'FAILED',
+          error_message: message,
+        }).eq('id', issueRecordId);
+      }
 
       // Mark as failed
       await db.from('bn_batch_item').update({
@@ -703,6 +771,7 @@ async function issueBatch(
       });
 
       failed++;
+
     }
   }
 
