@@ -848,7 +848,7 @@ export async function executeAllPendingTasks(batchId: string, userCode: string):
 // ─── Audit ──────────────────────────────────────────────────────────
 
 async function logPostIssueEvent(
-  batchId: string,
+  batchId: string | null,
   taskId: string | null,
   action: string,
   userCode: string,
