@@ -715,9 +715,11 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
   await logBatchEvent(batchId, null, 'ISSUE', userCode, `Issued: ${issued}, Failed: ${failed}`, {
     issued_count: issued,
     failed_count: failed,
+    first_error: errors[0] || null,
   });
 
-  return { issued, failed };
+  return { issued, failed, firstError: errors[0] };
+
 }
 
 // ─── Cancel Batch ───────────────────────────────────────────────────
