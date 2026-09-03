@@ -28,6 +28,7 @@
  *   - Reissue-safe: voided cheques can be reissued with new cheque number.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { ensurePostIssueTasks } from '@/services/bn/postIssueService';
 
 const db = supabase as any;
 
@@ -400,6 +401,9 @@ export async function executeIssue(issueIds: string[], userCode: string): Promis
       }).eq('id', record.instruction_id);
       if (linkErr) throw new Error(`Cheque written but payable back-link failed: ${linkErr.message}`);
 
+
+      // Post-issue checklist must exist for every issued payment.
+      await ensurePostIssueTasks(record.batch_id ?? null, userCode, { issueRecordId: id });
 
       result.issued++;
       result.details.push({ id, ssn: record.ssn, status: 'ISSUED' });

@@ -27,6 +27,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { writeBatchItemToLegacyPayment } from '@/services/bn/paymentIssueService';
 import { isBenefitsAdmin } from '@/services/bn/bnActorService';
+import { ensurePostIssueTasks } from '@/services/bn/postIssueService';
 
 const db = supabase as any;
 
@@ -730,6 +731,11 @@ async function issueBatch(
         paid_date: now.slice(0, 10),
       }).eq('id', item.instruction_id);
       if (instrErr) throw new Error(`Payment written but payable back-link failed: ${instrErr.message}`);
+
+      // Post-issue checklist must exist for every issued payment.
+      if (issueRecordId) {
+        await ensurePostIssueTasks(batchId, userCode, { issueRecordId });
+      }
 
       issued++;
     } catch (err: any) {
