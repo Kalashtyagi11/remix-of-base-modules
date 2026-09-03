@@ -111,7 +111,12 @@ export const NextStepGuidance: React.FC<Props> = ({
     qc.invalidateQueries({ queryKey: ['bn', 'next-step-basket', claimId] });
     qc.invalidateQueries({ queryKey: ['bn', 'available-actions', claimId] });
     qc.invalidateQueries({ queryKey: ['bn', 'claim-events', claimId] });
+    // Workbasket views: claim list per basket, basket list, my queue, and counts
     qc.invalidateQueries({ queryKey: ['bn', 'queue'] });
+    qc.invalidateQueries({ queryKey: ['bn', 'queue-claims'] });
+    qc.invalidateQueries({ queryKey: ['bn', 'workbaskets'] });
+    qc.invalidateQueries({ queryKey: ['bn', 'my-queue'] });
+    qc.invalidateQueries({ queryKey: ['bn', 'basket-claim-counts'] });
     qc.invalidateQueries({ queryKey: ['bn', 'payables'] });
     qc.invalidateQueries({ queryKey: ['bn', 'entitlements'] });
     qc.invalidateQueries({ queryKey: ['bn', 'awards'] });
