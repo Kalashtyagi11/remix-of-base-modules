@@ -31,14 +31,27 @@ export function useBnPostIssueSummary(batchId?: string) {
 export function useGeneratePostIssueTasks() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ batchId, userCode }: { batchId: string; userCode: string }) =>
-      svc.generatePostIssueTasks(batchId, userCode),
+    mutationFn: ({ batchId, userCode }: { batchId?: string; userCode: string }) =>
+      batchId
+        ? svc.generatePostIssueTasks(batchId, userCode)
+        : svc.generateMissingPostIssueTasks(userCode),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['bn', 'post-issue-tasks'] });
       qc.invalidateQueries({ queryKey: ['bn', 'post-issue-summary'] });
+      qc.invalidateQueries({ queryKey: ['bn', 'post-issue-missing'] });
     },
   });
 }
+
+/** Count of issued payments whose checklist has never been generated. */
+export function useBnPostIssueMissingCount() {
+  return useQuery({
+    queryKey: ['bn', 'post-issue-missing'],
+    queryFn: () => svc.countIssuedRecordsMissingTasks(),
+    refetchInterval: 30_000,
+  });
+}
+
 
 export function useExecutePostIssueAction() {
   const qc = useQueryClient();
