@@ -25,6 +25,7 @@
  *   - Batch is an orchestration control layer — not the payment ledger.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { writeBatchItemToLegacyPayment } from '@/services/bn/paymentIssueService';
 
 const db = supabase as any;
 
@@ -606,7 +607,10 @@ async function releaseBatch(batchId: string, userCode: string, narrative?: strin
 
 // ─── Issue Batch (writes to cl_cheques*) ────────────────────────────
 
-async function issueBatch(batchId: string, userCode: string): Promise<{ issued: number; failed: number }> {
+async function issueBatch(
+  batchId: string,
+  userCode: string,
+): Promise<{ issued: number; failed: number; firstError?: string }> {
   const batch = await fetchBatchDetail(batchId);
   if (batch.status !== 'RELEASED' && batch.status !== 'PARTIALLY_ISSUED') {
     throw new Error('Batch must be RELEASED or PARTIALLY_ISSUED for issue');
