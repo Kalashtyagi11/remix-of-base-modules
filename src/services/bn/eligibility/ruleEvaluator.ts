@@ -56,6 +56,65 @@ export function convertDays(days: number, unit: BnEligibilityRule['unit']): numb
   }
 }
 
+/**
+ * Adds `months` calendar months to a UTC date, clamping the day-of-month to the
+ * last valid day of the target month (31 Aug + 6 months → 28/29 Feb).
+ */
+function addCalendarMonths(d: Date, months: number): Date {
+  const y = d.getUTCFullYear();
+  const m = d.getUTCMonth();
+  const day = d.getUTCDate();
+  const target = new Date(Date.UTC(y, m + months, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  target.setUTCHours(d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds());
+  return target;
+}
+
+/**
+ * True calendar-month difference between two dates, expressed in months as a
+ * fraction (whole months + the leftover days as a share of the month the
+ * period lands in). Used instead of an average-length day divide so a statutory
+ * "within 6 months" test lands on the real calendar boundary: 31 Aug → 28 Feb
+ * is exactly 6.0, and one day later is just over 6.
+ */
+function calendarMonthsBetween(start: Date, end: Date): number {
+  const sign = end.getTime() < start.getTime() ? -1 : 1;
+  const [a, b] = sign === 1 ? [start, end] : [end, start];
+  let whole = (b.getUTCFullYear() - a.getUTCFullYear()) * 12 + (b.getUTCMonth() - a.getUTCMonth());
+  if (addCalendarMonths(a, whole).getTime() > b.getTime()) whole -= 1;
+  const anchor = addCalendarMonths(a, whole);
+  const nextAnchor = addCalendarMonths(a, whole + 1);
+  const span = nextAnchor.getTime() - anchor.getTime();
+  const leftover = span > 0 ? (b.getTime() - anchor.getTime()) / span : 0;
+  return sign * (whole + leftover);
+}
+
+/**
+ * Converts a date span to a rule unit. `MONTHS`/`YEARS` use real calendar
+ * arithmetic (no average-length divide); `DAYS`/`WEEKS` keep the day-count
+ * behaviour via {@link convertDays}. Returns null when either date is unusable.
+ *
+ * Exported so `eligibilityEvaluator.ts` (the live submitted-claim path) and the
+ * Test Rule panel produce identical numbers for the same rule.
+ */
+export function dateDifferenceInUnit(
+  startIso: string | null | undefined,
+  endIso: string | null | undefined,
+  unit: BnEligibilityRule['unit'],
+): number | null {
+  if (!startIso || !endIso) return null;
+  const startMs = Date.parse(String(startIso));
+  const endMs = Date.parse(String(endIso));
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+  if (unit === 'MONTHS' || unit === 'YEARS') {
+    const months = calendarMonthsBetween(new Date(startMs), new Date(endMs));
+    return unit === 'YEARS' ? months / 12 : months;
+  }
+  return convertDays(Math.floor((endMs - startMs) / 86_400_000), unit);
+}
+
+
 function apply(operator: string, actual: unknown, expected: unknown): boolean {
   const op = OPERATORS[operator as EligibilityOperator];
   if (!op) return false;
