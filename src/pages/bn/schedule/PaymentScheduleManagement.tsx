@@ -10,7 +10,7 @@ import { BnStatCard, BnEmptyState } from '@/components/bn/shared';
 import { Button } from '@/components/ui/button';
 import {
   CalendarDays, CheckCircle, PauseCircle, AlertTriangle,
-  Clock, Loader2, RotateCcw, Banknote, Plus,
+  Clock, Loader2, RotateCcw, Banknote, Plus, PlayCircle,
 } from 'lucide-react';
 import { useBnScheduleRows } from '@/hooks/bn/useBnSchedule';
 import { ScheduleFiltersBar } from '@/components/bn/schedule/ScheduleFiltersBar';
@@ -18,7 +18,9 @@ import { ScheduleGrid } from '@/components/bn/schedule/ScheduleGrid';
 import { ScheduleRowDrawer } from '@/components/bn/schedule/ScheduleRowDrawer';
 import { ScheduleActionBar } from '@/components/bn/schedule/ScheduleActionBar';
 import { ScheduleGenerationWizard } from '@/components/bn/schedule/ScheduleGenerationWizard';
-import type { ScheduleFilters } from '@/services/bn/scheduleService';
+import type { ScheduleFilters, ScheduleMaturationResultRow } from '@/services/bn/scheduleService';
+import { runScheduleMaturation, summariseMaturation } from '@/services/bn/scheduleService';
+import { toast } from 'sonner';
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'XCD' }).format(n);
@@ -28,8 +30,28 @@ export default function PaymentScheduleManagement() {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showGenWizard, setShowGenWizard] = useState(false);
+  const [maturing, setMaturing] = useState(false);
+  const [lastRun, setLastRun] = useState<ScheduleMaturationResultRow[] | null>(null);
 
   const { data: rows, isLoading, error, refetch } = useBnScheduleRows(filters);
+
+  const handleRunMaturation = async () => {
+    setMaturing(true);
+    try {
+      const result = await runScheduleMaturation({ performedBy: 'MANUAL' });
+      const summary = summariseMaturation(result);
+      setLastRun(result);
+      toast.success(
+        `Maturation complete — ${summary.matured} matured, ${summary.generated} payable(s) generated, ${summary.skipped} skipped`,
+      );
+      refetch();
+    } catch (e: any) {
+      toast.error(e?.message || 'Maturation run failed');
+    } finally {
+      setMaturing(false);
+    }
+  };
+
 
   const stats = useMemo(() => {
     const items = rows ?? [];
