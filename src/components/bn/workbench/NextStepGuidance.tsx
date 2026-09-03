@@ -309,7 +309,40 @@ export const NextStepGuidance: React.FC<Props> = ({
       };
     }
 
-    if (downstream?.hasPayable && ['PAYMENT_QUEUE', 'AWARD_SETUP', 'IN_PAYMENT', 'APPROVED'].includes(status)) {
+    // The claim's status and its basket disagree — usually a re-route that did
+    // not apply after a status change. Offer the same routing service as a repair.
+    if (basketMismatch) {
+      return {
+        tone: 'blocked' as const,
+        title: 'Claim is in the wrong basket',
+        body:
+          `This claim is ${status.replace(/_/g, ' ').toLowerCase()}, which belongs to the ` +
+          `${basketMismatch.expectedName} desk, but it is still sitting in the ` +
+          `${basket?.name ?? 'previous'} basket. Move it so the right team can see it.`,
+        actionLabel: 'Move to the correct basket',
+        onAction: () => { if (guard()) rerouteMut.mutate(); },
+        pending: rerouteMut.isPending || userCodeLoading,
+        secondaryLabel: 'Open Payables Queue',
+        onSecondary: () => navigate('/bn/payables'),
+      };
+    }
+
+    // Payment issue desk: preparation is done, the instrument is issued here.
+    if (status === 'IN_PAYMENT') {
+      return {
+        tone: 'success' as const,
+        title: 'With the Payment Issue desk',
+        body:
+          `${basket?.name ? `Claim is in the ${basket.name} basket. ` : ''}` +
+          'Generate the cheque or EFT instrument in Payment Issue, then reconcile it in Post-Issue Review.',
+        actionLabel: 'Open Payment Issue',
+        onAction: () => navigate('/bn/issue'),
+        secondaryLabel: 'Open Payables Queue',
+        onSecondary: () => navigate('/bn/payables'),
+      };
+    }
+
+    if (downstream?.hasPayable && ['PAYMENT_QUEUE', 'AWARD_SETUP', 'APPROVED'].includes(status)) {
       return {
         tone: 'success' as const,
         title: 'Payment instruction created',
@@ -318,6 +351,7 @@ export const NextStepGuidance: React.FC<Props> = ({
         onAction: () => navigate('/bn/payables'),
       };
     }
+
 
 
     if (downstream?.hasEntitlement && !downstream?.hasPayable) {
