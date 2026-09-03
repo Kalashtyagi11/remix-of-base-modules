@@ -83843,7 +83843,7 @@ export type Database = {
           deb_crd_amount: number | null
           delivery_zone: string | null
           district: string | null
-          dob: string
+          dob: string | null
           email_addr: string | null
           employer_address: string | null
           employer_name: string | null
@@ -83886,7 +83886,7 @@ export type Database = {
           resident_addr2: string | null
           second_middle_name: string | null
           self_ref_no: string | null
-          sex: string
+          sex: string | null
           signature_location: string | null
           spouse_addr1: string | null
           spouse_addr2: string | null
@@ -83894,7 +83894,7 @@ export type Database = {
           spouse_name: string | null
           spouse_ssn: string | null
           ssn: string | null
-          status: string
+          status: string | null
           submitted_at: string | null
           submitted_by: string | null
           surname: string | null
@@ -83904,7 +83904,7 @@ export type Database = {
           termination_code: string | null
           termination_date: string | null
           tran_code: string | null
-          unique_uuid: string
+          unique_uuid: string | null
           updated_at: string | null
           updated_by: string | null
           userid: string | null
@@ -83955,7 +83955,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83998,7 +83998,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -84006,7 +84006,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -84016,7 +84016,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -84067,7 +84067,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob?: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -84110,7 +84110,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex?: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -84118,7 +84118,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -84128,7 +84128,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
