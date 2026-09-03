@@ -1,0 +1,51 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: var(--font-sans); fill: hsl(var(--foreground)); }
+    .lbl { font-size: 14px; font-weight: 480; }
+    .note { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .mono { font-family: var(--font-mono); font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .box { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .wire { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="hsl(var(--muted-foreground))"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="10" y="40" width="130" height="52" rx="8"/>
+  <text class="lbl" x="75" y="64" text-anchor="middle">Validated batch</text>
+  <text class="mono" x="75" y="82" text-anchor="middle">BN-HQ-…-162610</text>
+
+  <rect class="box" x="175" y="40" width="130" height="52" rx="8"/>
+  <text class="lbl" x="240" y="70" text-anchor="middle">Approve</text>
+
+  <rect class="box" x="340" y="40" width="130" height="52" rx="8"/>
+  <text class="lbl" x="405" y="70" text-anchor="middle">Release</text>
+
+  <rect class="box" x="505" y="40" width="125" height="52" rx="8"/>
+  <text class="lbl" x="567" y="70" text-anchor="middle">Assign cheques</text>
+
+  <line class="wire" x1="142" y1="66" x2="171" y2="66" marker-end="url(#a)"/>
+  <line class="wire" x1="307" y1="66" x2="336" y2="66" marker-end="url(#a)"/>
+  <line class="wire" x1="472" y1="66" x2="501" y2="66" marker-end="url(#a)"/>
+
+  <circle cx="240" cy="130" r="11" fill="hsl(var(--accent))"/>
+  <text x="240" y="134" text-anchor="middle" style="font-size:12px; fill:hsl(var(--accent-foreground))">1</text>
+  <line class="wire" x1="240" y1="94" x2="240" y2="118"/>
+  <text class="note" x="262" y="128">maker-checker blocks the creator</text>
+  <text class="note" x="262" y="146">→ admins become exempt</text>
+
+  <circle cx="567" cy="130" r="11" fill="hsl(var(--accent))"/>
+  <text x="567" y="134" text-anchor="middle" style="font-size:12px; fill:hsl(var(--accent-foreground))">2</text>
+  <line class="wire" x1="567" y1="94" x2="567" y2="118"/>
+  <text class="note" x="330" y="180">batch carries no bank account → falls back to office "HQ"</text>
+  <text class="note" x="330" y="198">no cheque book is held against "HQ" → allocation fails</text>
+  <text class="note" x="330" y="216">→ pick a cheque book on screen, numeric start only</text>
+
+  <rect class="box" x="10" y="160" width="290" height="110" rx="8" stroke-dasharray="4 3" stroke="hsl(var(--border))"/>
+  <text class="note" x="26" y="182">registered cheque books</text>
+  <text class="mono" x="26" y="206">RBC-OPS-001 · RBC1000000–1000999</text>
+  <text class="mono" x="26" y="226">FCB-OPS-001 · FCB2000000–2000999</text>
+  <text class="mono" x="26" y="246">SKNANB-OPS-001 · NAT3000000–3000999</text>
+</svg>
