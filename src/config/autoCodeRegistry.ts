@@ -137,6 +137,52 @@ export const AUTO_CODE_REGISTRY: Record<string, AutoCodeEntity> = {
     target: { table: "ia_audit_engagements", column: "engagement_code" },
     allowOverride: false,
   },
+  IA_FINDING: {
+    key: "IA_FINDING",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "FINDING",
+    label: "Internal Audit Finding",
+    pattern: "IA-FND-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_findings", column: "finding_id" },
+    allowOverride: false,
+  },
+  IA_WORKING_PAPER: {
+    key: "IA_WORKING_PAPER",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "WORKING_PAPER",
+    label: "Internal Audit Working Paper",
+    pattern: "IA-WP-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_working_papers", column: "working_paper_id" },
+    allowOverride: false,
+  },
+  IA_EVIDENCE: {
+    key: "IA_EVIDENCE",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "EVIDENCE",
+    label: "Internal Audit Evidence",
+    pattern: "IA-EVD-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_evidence", column: "evidence_id" },
+    allowOverride: false,
+  },
+  IA_REPORT: {
+    key: "IA_REPORT",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "REPORT",
+    label: "Internal Audit Report",
+    pattern: "IA-RPT-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_audit_reports", column: "report_number" },
+    allowOverride: false,
+  },
+  IA_LEAVE_REQUEST: {
+    key: "IA_LEAVE_REQUEST",
+    moduleCode: "INTERNAL_AUDIT",
+    entityType: "LEAVE_REQUEST",
+    label: "Internal Audit Leave Request",
+    pattern: "IA-LR-SKN-{YYYY}-{SEQ}",
+    target: { table: "ia_leave_requests", column: "request_id" },
+    allowOverride: false,
+  },
+
 };
 
 /**

@@ -237,7 +237,6 @@ export function AuditReportBuilderStudio() {
       create.mutate(
         {
           ...reportData,
-          report_number: `RPT-${Date.now().toString(36).toUpperCase().slice(-6)}`,
           created_by: userCode || null,
           generated_on: new Date().toISOString(),
         } as any,

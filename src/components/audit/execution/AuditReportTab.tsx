@@ -273,7 +273,6 @@ Follow-up reviews will be conducted to verify implementation of agreed correctiv
     } else {
       create.mutate({
         ...reportData,
-        report_number: `RPT-${Date.now().toString(36).toUpperCase().slice(-6)}`,
         created_by: userCode || null,
         generated_on: new Date().toISOString(),
       } as any, {

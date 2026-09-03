@@ -56,7 +56,7 @@ function InlineEvidenceForm({ auditId, activityId, onClose }: { auditId: string;
   const { userCode } = useUserCode();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ evidence_id: `EVD-${Date.now().toString(36).toUpperCase().slice(-6)}`, description: '', reference_no: '' });
+  const [form, setForm] = useState({ description: '', reference_no: '' });
 
   const handleSave = async () => {
     if (!form.description) return;
@@ -77,7 +77,7 @@ function InlineEvidenceForm({ auditId, activityId, onClose }: { auditId: string;
       fileName = file.name; fileType = file.type; fileSize = file.size;
     }
     create.mutate({
-      evidence_id: form.evidence_id, description: form.description, reference_no: form.reference_no || null,
+      description: form.description, reference_no: form.reference_no || null,
       file_name: fileName || null, file_url: fileUrl || null, file_type: fileType || null, file_size: fileSize,
       activity_id: activityId, engagement_id: auditId, uploaded_by: userCode || null,
       upload_date: new Date().toISOString(), created_by: userCode || null,
@@ -115,11 +115,8 @@ function InlineWorkingPaperForm({ auditId, activityId, onClose }: { auditId: str
 
   const handleSave = async () => {
     if (!form.title) return;
-    const workingPaperId = form.reference_number.trim() || `WP-${Date.now().toString(36).toUpperCase()}`;
-
     create.mutate({
       title: form.title.trim(),
-      working_paper_id: workingPaperId,
       description: form.description.trim() || null,
       audit_area: form.paper_type.trim() || 'Analysis',
       engagement_id: auditId,
@@ -136,7 +133,7 @@ function InlineWorkingPaperForm({ auditId, activityId, onClose }: { auditId: str
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div><Label className="text-xs">Title *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title" className="h-8 text-xs" /></div>
-        <div><Label className="text-xs">Working Paper ID</Label><Input value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="WP-001" className="h-8 text-xs" /></div>
+        <div><Label className="text-xs">Working Paper ID</Label><Input value="Assigned automatically on save" disabled className="h-8 text-xs bg-muted" /></div>
         <div><Label className="text-xs">Audit Area</Label><Input value={form.paper_type} onChange={e => setForm(f => ({ ...f, paper_type: e.target.value }))} placeholder="Analysis" className="h-8 text-xs" /></div>
       </div>
       <div><Label className="text-xs">Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} className="text-xs" /></div>
@@ -155,10 +152,7 @@ function InlineFindingForm({ auditId, activityId, onClose }: { auditId: string; 
 
   const handleSave = () => {
     if (!form.title) return;
-    const findingId = `FND-${Date.now().toString(36).toUpperCase()}`;
-
     create.mutate({
-      finding_id: findingId,
       title: form.title.trim(),
       condition: form.description.trim() || null,
       risk_rating: form.risk_rating,

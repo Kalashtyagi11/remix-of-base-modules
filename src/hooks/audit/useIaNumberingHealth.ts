@@ -22,8 +22,20 @@ const CANONICAL = /^IA-ENG-SKN-\d{4}-\d{6}$/;
 const LEGACY_DUPLICATE_EXCEPTION = 'ENG-2026-2027-001';
 /** Stage 2C cutover: engagements created from this date must be canonical. */
 const CUTOVER = '2026-09-03';
+/** Stage 2F cutover: artefact references created from this date must be canonical. */
+const STAGE_2F_CUTOVER = '2026-09-04';
+
+/** The five authoritative Internal Audit artefact references converged in Stage 2F. */
+const ARTEFACTS = [
+  { entityType: 'FINDING', label: 'Finding', table: 'ia_findings', column: 'finding_id', prefix: 'IA-FND-SKN' },
+  { entityType: 'WORKING_PAPER', label: 'Working paper', table: 'ia_working_papers', column: 'working_paper_id', prefix: 'IA-WP-SKN' },
+  { entityType: 'EVIDENCE', label: 'Evidence', table: 'ia_evidence', column: 'evidence_id', prefix: 'IA-EVD-SKN' },
+  { entityType: 'REPORT', label: 'Report', table: 'ia_audit_reports', column: 'report_number', prefix: 'IA-RPT-SKN' },
+  { entityType: 'LEAVE_REQUEST', label: 'Leave request', table: 'ia_leave_requests', column: 'request_id', prefix: 'IA-LR-SKN' },
+] as const;
 
 const sb = supabase as any;
+
 
 async function loadNumberingHealth(): Promise<IaNumberingCheck[]> {
   const checks: IaNumberingCheck[] = [];
@@ -118,8 +130,55 @@ async function loadNumberingHealth(): Promise<IaNumberingCheck[]> {
     detail: 'Preserved unchanged, including the closed FY2032 plan. Reported, never rewritten.',
   });
 
+  // ---- Stage 2F (DEF-E2E-014): authoritative artefact references ----
+  const { data: artefactSeq } = await sb
+    .from('core_number_sequence')
+    .select('entity_type, number_pattern, is_active')
+    .eq('module_code', 'INTERNAL_AUDIT')
+    .in('entity_type', ARTEFACTS.map(a => a.entityType));
+
+  const seqByEntity = new Map<string, any>((artefactSeq || []).map((s: any) => [s.entity_type, s]));
+  const missingSeq = ARTEFACTS.filter(a => !seqByEntity.get(a.entityType)?.is_active);
+  checks.push({
+    check_code: 'IA-NUM-07',
+    title: 'Artefact numbering sequences registered and active',
+    severity: 'CRITICAL',
+    status: missingSeq.length === 0 ? 'PASS' : 'FAIL',
+    affected_count: missingSeq.length,
+    detail: missingSeq.length === 0
+      ? ARTEFACTS.map(a => `${a.entityType} → ${seqByEntity.get(a.entityType)?.number_pattern}`).join(' · ')
+      : `Missing/inactive: ${missingSeq.map(a => a.entityType).join(', ')}`,
+  });
+
+  let idx = 8;
+  for (const artefact of ARTEFACTS) {
+    const { data: artefactRows } = await sb
+      .from(artefact.table)
+      .select(`${artefact.column}, created_at`);
+    const list: any[] = artefactRows || [];
+    const canonical = new RegExp(`^${artefact.prefix}-\\d{4}-\\d{6}$`);
+    const newNon = list.filter(
+      r => (r.created_at || '') >= STAGE_2F_CUTOVER && !canonical.test(r[artefact.column] || ''),
+    );
+    const historical = list.filter(
+      r => (r.created_at || '') < STAGE_2F_CUTOVER && !canonical.test(r[artefact.column] || ''),
+    );
+    checks.push({
+      check_code: `IA-NUM-${String(idx).padStart(2, '0')}`,
+      title: `${artefact.label} references issued by the central engine`,
+      severity: 'CRITICAL',
+      status: newNon.length === 0 ? 'PASS' : 'FAIL',
+      affected_count: newNon.length,
+      detail: newNon.length === 0
+        ? `All ${artefact.label.toLowerCase()} records created on/after ${STAGE_2F_CUTOVER} use ${artefact.prefix}-{YYYY}-{SEQ}. ${historical.length} historical reference(s) preserved unchanged.`
+        : `Non-canonical post-cutover: ${newNon.slice(0, 5).map(r => r[artefact.column] || '(empty)').join(', ')}`,
+    });
+    idx += 1;
+  }
+
   return checks;
 }
+
 
 export function useIaNumberingHealth() {
   return useQuery({
