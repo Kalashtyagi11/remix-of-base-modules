@@ -131,6 +131,7 @@ export async function fetchClaimEvidence(claimId: string): Promise<BnClaimEviden
     .from('bn_claim_evidence')
     .select('*')
     .eq('claim_id', claimId)
+    .neq('status', 'DELETED')
     .order('entered_at', { ascending: false });
   if (error) throw error;
   return (data || []) as BnClaimEvidence[];

@@ -113,6 +113,20 @@ export function useWaiveEvidence() {
   });
 }
 
+export function useDeleteEvidence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ evidenceId, reason, userCode }: { evidenceId: string; reason: string; userCode: string }) =>
+      evidenceService.deleteEvidence(evidenceId, reason, userCode),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['bn', 'claim-evidence', data.claim_id] });
+      qc.invalidateQueries({ queryKey: ['bn', 'evidence-checklist', data.claim_id] });
+      qc.invalidateQueries({ queryKey: ['bn', 'evidence-audit', data.claim_id] });
+      qc.invalidateQueries({ queryKey: ['bn', 'evidence-complete', data.claim_id] });
+    },
+  });
+}
+
 export function useRequestMoreInfo() {
   const qc = useQueryClient();
   return useMutation({
