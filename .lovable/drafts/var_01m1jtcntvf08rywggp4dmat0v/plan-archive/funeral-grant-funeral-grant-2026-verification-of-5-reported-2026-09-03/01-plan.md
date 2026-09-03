@@ -2,13 +2,15 @@
 
 I checked each item against the live configuration, the official Funeral Grant page, the Board's own December 2023 press release, and the rule-evaluation code. Verdict per item:
 
-| # | Item | Your read | Verdict |
-|---|---|---|---|
-| 1 | Min contribution weeks = 50 | should be 26 | **Confirmed** — change to 26 |
-| 2 | Filing deadline = 90 days | should be 6 months | **Confirmed** — change to 6 months |
-| 3 | Age-3 amount = 550.00 | should be 500 | **Confirmed** — change to 500 |
-| 4 | No dependent-child age/status gate | missing | **Confirmed missing**; supporting data exists but is not wired |
-| 5 | Missing FG1 / birth cert / marriage cert | missing | **Confirmed**, plus a code-mismatch problem you did not report |
+
+| #   | Item                                     | Your read          | Verdict                                                        |
+| --- | ---------------------------------------- | ------------------ | -------------------------------------------------------------- |
+| 1   | Min contribution weeks = 50              | should be 26       | **Confirmed** — change to 26                                   |
+| 2   | Filing deadline = 90 days                | should be 6 months | **Confirmed** — change to 6 months                             |
+| 3   | Age-3 amount = 550.00                    | should be 500      | **Confirmed** — change to 500                                  |
+| 4   | No dependent-child age/status gate       | missing            | **Confirmed missing**; supporting data exists but is not wired |
+| 5   | Missing FG1 / birth cert / marriage cert | missing            | **Confirmed**, plus a code-mismatch problem you did not report |
+
 
 Safety context: this product version (`7591e864…`, v1, ACTIVE from 2026-09-01) currently has **zero claims**, so all corrections are configuration fixes with no historical decisions to preserve.
 

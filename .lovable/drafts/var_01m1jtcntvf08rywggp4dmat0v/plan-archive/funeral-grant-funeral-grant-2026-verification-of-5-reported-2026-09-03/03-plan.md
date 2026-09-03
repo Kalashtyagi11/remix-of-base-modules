@@ -1,3 +1,4 @@
+
 ## Item 1 — Minimum contribution weeks: 50 → 26
 
 Set `rule_definition.value` to 26 and correct the fail message (it currently hard-codes "50-week").
@@ -8,7 +9,6 @@ What is real, and worth fixing, is a **metadata divergence**: the `bn_eligibilit
 
 Second point, unchanged: the official page states **two** conditions (26 weeks of membership, 26 contributions actually paid). One rule covers both today. A distinct `resolveDeceasedContribPaidWeeks` resolver already exists, so splitting is cheap — but it is a scope decision, so I propose logging it as a follow-up rather than adding it here.
 
-
 ## Item 2 — Filing deadline: 90 days → 6 months
 
 **You are right about the file, and I had named the wrong one.** Traced it properly: `ruleEvaluator.ts` is imported only by `TestRulePanel.tsx` (and its diagnostic type by `RuleDiagnosticsPanel.tsx`) — config-time only. The real submitted-claim path is `ClaimRegistration.tsx` → `eligibilityEvaluator.ts` (also reached from `claimActionRunner.ts` for re-evaluation). The two are not independent, though: `eligibilityEvaluator.ts:35` imports `convertDays` from `ruleEvaluator.ts` and applies it at line 344 on the `DATE_DIFFERENCE` path, deliberately so the Test Rule button and the live claim agree. So the approximation `days / 30.4375` is in `ruleEvaluator.ts` but it *executes* on the real claim path through `eligibilityEvaluator.ts`.
@@ -16,10 +16,10 @@ Second point, unchanged: the official page states **two** conditions (26 weeks o
 That means the fix must land in `eligibilityEvaluator.ts` where the two dates are still in hand — `convertDays` receives only a day count, and no day count can express a calendar-month difference. Concretely: compute the month difference from the two dates at line 344 for `MONTHS`/`YEARS`, and keep `convertDays` for `DAYS`/`WEEKS`. `ruleEvaluator.ts` gets the same treatment so the Test Rule panel does not silently disagree with production.
 
 Proposal, in this order:
+
 1. Add real calendar arithmetic for `MONTHS` and `YEARS` on the `DATE_DIFFERENCE` path in **both** evaluators. Checked the blast radius: there are currently **zero** active `DATE_DIFFERENCE` rules using `MONTHS` or `YEARS` platform-wide (8 active rules, all `DAYS`, plus 5 with no unit set), so Funeral Grant is the first consumer and no existing product's behaviour changes.
 2. Set the rule to value 6, unit `MONTHS`, and correct the fail message (it currently says "3 months").
 3. Cover the change with tests at the boundaries: 31 Aug → 28/29 Feb, 31 Mar → 30 Sep, exactly-6-months, and one day past — run through the live evaluator, not the Test Rule panel.
-
 
 ## Item 3 — Age-3 amount: 550.00 → 500.00
 
@@ -56,7 +56,6 @@ My answers to the two judgement calls, as my proposed default behaviour:
 
 **(b) Deceased spouse/child absent from `ip_depend`.** Resolve to **null → review**, never false. A dependency that was never registered with the Board is a records gap, not evidence that the relationship did not exist, and auto-failing would deny a valid claim on data hygiene. The rule reports "insured member could not be determined from dependant records — verify against marriage/birth certificate and register the dependency", which lands the claim on an officer's desk with the resolving document already on the required-document list from Item 5. The rule must never silently pass in this state either — that is the SKN-INV vacuous-success trap.
 
-
 ### 4b — Which dependent child qualifies
 
 Nothing constrains who the deceased dependant may be, and the `OVER_9` band is open-ended, so a 40-year-old "dependent child" would be paid $1,600.
@@ -67,17 +66,18 @@ Nothing constrains who the deceased dependant may be, and the `OVER_9` band is o
 
 Note that `school_child` and `invalid` are point-in-time flags on the dependant record with no history, so a 20-year-old whose student flag was never updated will fail. That is a data-quality reality to state in the fail message, not something code can fix.
 
-
 ## Item 5 — Documents
 
 First, align the three existing rows to real catalogue codes (`DEATH_CERT`, `PROOF_RELATION`, and either keep the estimate or replace it with `FUNERAL_INVOICE_RECEIPT`). Then add, reusing catalogue entries that already exist — none of these need a new document type:
 
-| Add | Catalogue code | Level |
-|---|---|---|
-| FG1 claim form | `FUNERAL_CLAIM_FORM` | mandatory, blocks submission |
-| Deceased's birth certificate | `BIRTH_CERT` | mandatory |
-| Marriage certificate | `MARRIAGE_CERT` | conditional — uninsured-spouse claims only |
-| Funeral invoice / receipt | `FUNERAL_INVOICE_RECEIPT` | mandatory |
+
+| Add                          | Catalogue code            | Level                                      |
+| ---------------------------- | ------------------------- | ------------------------------------------ |
+| FG1 claim form               | `FUNERAL_CLAIM_FORM`      | mandatory, blocks submission               |
+| Deceased's birth certificate | `BIRTH_CERT`              | mandatory                                  |
+| Marriage certificate         | `MARRIAGE_CERT`           | conditional — uninsured-spouse claims only |
+| Funeral invoice / receipt    | `FUNERAL_INVOICE_RECEIPT` | mandatory                                  |
+
 
 On the conditional row: `bn_doc_requirement.condition_json` is stored and editable in the admin UI, but the evidence checklist in `src/services/bn/evidenceService.ts` does **not** evaluate it — it treats every MANDATORY row as blocking, so a MANDATORY `MARRIAGE_CERT` with a condition would block every funeral claim. **Taking your ruling:** register `MARRIAGE_CERT` at a non-blocking level with the condition recorded in `condition_json` and stated in the requirement description, and log the `evidenceService.ts` conditional-evaluation enhancement as a separate cross-product ticket. No problem with that from my side — it keeps this wave inside Funeral Grant and out of shared evidence code, and it fails in the safe direction: an officer sees the marriage certificate listed with its condition rather than a valid claim being blocked. The only cost is that the condition is advisory until the cross-product ticket lands, so an uninsured-spouse claim could be approved without the certificate if the officer overlooks it — worth naming in the requirement text.
 
