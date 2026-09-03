@@ -28,6 +28,7 @@ import {
   checkApprovalPreconditions,
   describeApprovalBlockers,
 } from './claims/approvalPreconditions';
+import { canPerform } from './bnActorService';
 
 const db = supabase as any;
 
