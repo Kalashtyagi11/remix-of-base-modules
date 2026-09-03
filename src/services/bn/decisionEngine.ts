@@ -255,8 +255,10 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
 
   if (updateErr) throw updateErr;
 
-  // The claim's new status decides which workbasket owns it next.
-  await routeClaimAfterStatusChange(claimId, performedBy);
+  // The claim's new status decides which workbasket owns it next. Routing is
+  // non-blocking, so its outcome is recorded on the claim event — otherwise a
+  // basket that failed to move leaves no trace outside the browser console.
+  const routing = await routeClaimAfterStatusChange(claimId, performedBy);
 
   // 10. Insert claim event
   await db.from('bn_claim_event').insert({
@@ -266,8 +268,15 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
     to_status: rule.to_status,
     notes: narrative || rule.action_label,
     performed_by: performedBy,
-    metadata: { decision_id: decision.id, reason_code_id: reasonCodeId },
+    metadata: {
+      decision_id: decision.id,
+      reason_code_id: reasonCodeId,
+      routing_outcome: routing?.outcome ?? 'NOT_ATTEMPTED',
+      routing_reason: routing?.reason ?? 'Routing threw before returning a result.',
+      routing_to_workbasket: routing?.workbasketName ?? null,
+    },
   });
+
 
   return decision as BnClaimDecision;
 }
