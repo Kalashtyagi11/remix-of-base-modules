@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog';
@@ -9,8 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import type { ExecuteBatchActionParams, BatchPaymentMethod } from '@/services/bn/batchOperationsService';
 import { useActorUserCode } from '@/hooks/bn/useActorUserCode';
+import { listChequeStock, type ChequeStock } from '@/services/bn/payment/chequeStockService';
 
 interface Props {
   open: boolean;
@@ -23,10 +25,37 @@ export const BatchCreateDialog: React.FC<Props> = ({ open, onClose, onAction, is
   // Writes must name a person, never the 'CURRENT_USER' placeholder.
   const { actor } = useActorUserCode();
 
+  const { data: stockData } = useQuery({
+    queryKey: ['bn-cheque-stock-create-dialog'],
+    queryFn: () => listChequeStock(),
+    enabled: open,
+  });
+
+  const activeBooks = useMemo(() => {
+    const all = (stockData || []) as ChequeStock[];
+    const seen = new Set<string>();
+    return all.filter((s) => {
+      if (s.status !== 'ACTIVE' || seen.has(s.bank_account_ref)) return false;
+      seen.add(s.bank_account_ref);
+      return true;
+    });
+  }, [stockData]);
+
+  const isChequeMethod = (m: BatchPaymentMethod) => m === 'CHEQUE' || m === 'MIXED';
+
   const [batchDate, setBatchDate] = useState<Date | undefined>(new Date());
   const [officeCode, setOfficeCode] = useState('HQ');
   const [paymentMethod, setPaymentMethod] = useState<BatchPaymentMethod>('MIXED');
+  const [bankAccountRef, setBankAccountRef] = useState<string>('');
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (activeBooks.length === 1 && !bankAccountRef) {
+      setBankAccountRef(activeBooks[0].bank_account_ref);
+    } else if (!isChequeMethod(paymentMethod)) {
+      setBankAccountRef('');
+    }
+  }, [activeBooks, paymentMethod, bankAccountRef]);
 
   const handleCreate = async () => {
     if (!batchDate) return;
@@ -36,10 +65,12 @@ export const BatchCreateDialog: React.FC<Props> = ({ open, onClose, onAction, is
       batchDate: batchDate.toISOString().slice(0, 10),
       officeCode,
       paymentMethod,
+      bankAccountRef: isChequeMethod(paymentMethod) ? bankAccountRef || undefined : undefined,
       notes: notes.trim() || undefined,
     });
     onClose();
     setNotes('');
+    setBankAccountRef('');
   };
 
   return (
@@ -79,6 +110,28 @@ export const BatchCreateDialog: React.FC<Props> = ({ open, onClose, onAction, is
               </SelectContent>
             </Select>
           </div>
+
+          {isChequeMethod(paymentMethod) && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Cheque Bank Account (optional)</Label>
+              {activeBooks.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  No active cheque stock. You can create the batch, but cheque numbers cannot be assigned until a book is registered.
+                </p>
+              ) : (
+                <Select value={bankAccountRef} onValueChange={setBankAccountRef}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Select active cheque book" /></SelectTrigger>
+                  <SelectContent>
+                    {activeBooks.map((book) => (
+                      <SelectItem key={book.bank_account_ref} value={book.bank_account_ref}>
+                        {book.bank_account_ref} — {book.bank_code || 'Book'} ({book.series_prefix || ''}{book.next_number.toLocaleString()} next)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <Label className="text-xs">Notes (optional)</Label>

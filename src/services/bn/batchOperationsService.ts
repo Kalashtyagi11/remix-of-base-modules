@@ -28,6 +28,22 @@ import { supabase } from '@/integrations/supabase/client';
 
 const db = supabase as any;
 
+async function currentUserIsAdmin(): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth?.user?.id;
+  if (!userId) {
+    const { data: session } = await supabase.auth.getSession();
+    userId = session?.session?.user?.id;
+  }
+  if (!userId) return false;
+  try {
+    const { data } = await (supabase.rpc as any)('is_admin', { _user_id: userId });
+    return !!data;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Types ──────────────────────────────────────────────────────────
 
 export type BatchStatus =
@@ -71,6 +87,7 @@ export interface BnPaymentBatch {
   payment_method: BatchPaymentMethod;
   status: BatchStatus;
   office_code: string;
+  bank_account_ref: string | null;
 
   // Counts & totals
   total_items: number;
@@ -274,6 +291,7 @@ export interface ExecuteBatchActionParams {
   removeItemId?: string;       // For REMOVE_PAYABLE
   paymentMethod?: BatchPaymentMethod;
   officeCode?: string;
+  bankAccountRef?: string;     // For CREATE (cheque batches)
   batchDate?: string;
   notes?: string;
 }
@@ -316,6 +334,7 @@ async function createBatch(params: ExecuteBatchActionParams): Promise<BnPaymentB
     payment_method: params.paymentMethod || 'MIXED',
     status: 'OPEN',
     office_code: params.officeCode || 'HQ',
+    bank_account_ref: params.bankAccountRef?.trim() || null,
     total_items: 0,
     total_amount: 0,
     currency: 'XCD',
@@ -551,7 +570,12 @@ async function validateBatch(batchId: string, userCode: string): Promise<BatchVa
 async function approveBatch(batchId: string, userCode: string, narrative?: string): Promise<void> {
   const batch = await fetchBatchDetail(batchId);
   if (batch.status !== 'VALIDATED') throw new Error('Batch must be VALIDATED before approval');
-  if (batch.created_by === userCode) throw new Error('Batch cannot be approved by creator (maker-checker)');
+
+  const makerCheckerViolated = batch.created_by === userCode;
+  const adminExempt = makerCheckerViolated ? await currentUserIsAdmin() : false;
+  if (makerCheckerViolated && !adminExempt) {
+    throw new Error('Batch cannot be approved by creator (maker-checker)');
+  }
 
   await db.from('bn_payment_batch').update({
     status: 'APPROVED',
@@ -559,7 +583,10 @@ async function approveBatch(batchId: string, userCode: string, narrative?: strin
     approved_at: new Date().toISOString(),
   }).eq('id', batchId);
 
-  await logBatchEvent(batchId, null, 'APPROVE', userCode, narrative || 'Batch approved for release', {});
+  await logBatchEvent(batchId, null, 'APPROVE', userCode, narrative || 'Batch approved for release', {
+    maker_checker_violated: makerCheckerViolated,
+    admin_exempt: adminExempt,
+  });
 }
 
 // ─── Release Batch ──────────────────────────────────────────────────
