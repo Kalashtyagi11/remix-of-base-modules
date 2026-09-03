@@ -332,40 +332,67 @@ export async function fetchPostIssueSummary(batchId?: string): Promise<PostIssue
 
 // ─── Generate Post-Issue Tasks from Issued Records ──────────────────
 
-export async function generatePostIssueTasks(batchId: string, userCode: string): Promise<number> {
-  // Fetch issued records for this batch
-  const { data: issueRecords, error } = await db
-    .from('bn_issue_record')
-    .select('*')
-    .eq('batch_id', batchId)
-    .eq('status', 'ISSUED');
+export interface GeneratePostIssueTasksOptions {
+  /** Restrict generation to a single issued payment. */
+  issueRecordId?: string;
+  /** Generate for every issued record that has no checklist yet (repair/backfill). */
+  allMissing?: boolean;
+  /** Do not throw when the scope contains no issued records. */
+  quiet?: boolean;
+}
 
+/**
+ * Builds the post-issue checklist for issued payments.
+ *
+ * Idempotent: an issue record that already has tasks is skipped, so re-issuing,
+ * repairing, or backfilling never duplicates work items.
+ */
+export async function generatePostIssueTasks(
+  batchId: string | null,
+  userCode: string,
+  options: GeneratePostIssueTasksOptions = {},
+): Promise<number> {
+  let recordQuery = db.from('bn_issue_record').select('*').eq('status', 'ISSUED');
+  if (options.issueRecordId) recordQuery = recordQuery.eq('id', options.issueRecordId);
+  else if (!options.allMissing) recordQuery = recordQuery.eq('batch_id', batchId);
+
+  const { data: issueRecords, error } = await recordQuery;
   if (error) throw error;
-  if (!issueRecords?.length) throw new Error('No issued records in batch');
+  if (!issueRecords?.length) {
+    if (options.quiet || options.allMissing) return 0;
+    throw new Error('No issued records in batch');
+  }
+
+  // Idempotency: drop records that already carry a checklist.
+  const { data: existingTasks } = await db
+    .from('bn_post_issue_task')
+    .select('issue_record_id')
+    .in('issue_record_id', issueRecords.map((r: any) => r.id));
+  const alreadyDone = new Set((existingTasks || []).map((t: any) => t.issue_record_id));
+  const pendingRecords = issueRecords.filter((r: any) => !alreadyDone.has(r.id));
+  if (!pendingRecords.length) return 0;
 
   const tasks: any[] = [];
 
-  for (const record of issueRecords) {
+  for (const record of pendingRecords) {
     // Fetch instruction for context
     const { data: instr } = await db
       .from('bn_payment_instruction')
       .select('*')
       .eq('id', record.instruction_id)
-      .single();
+      .maybeSingle();
 
     // Fetch entitlement for context
-    const { data: entitlement } = await db
-      .from('bn_entitlement')
-      .select('*')
-      .eq('id', instr?.entitlement_id)
-      .single();
+    const { data: entitlement } = instr?.entitlement_id
+      ? await db.from('bn_entitlement').select('*').eq('id', instr.entitlement_id).maybeSingle()
+      : { data: null };
 
     const ctx: TaskContext = {
       instructionType: record.instruction_type,
       targetTable: record.target_table,
       isFinalPayment: !!(entitlement?.total_entitlement &&
         (entitlement.amount_paid || 0) + record.amount >= entitlement.total_entitlement),
-      isRecurring: instr?.payment_frequency !== 'ONE_TIME',
+      isRecurring: (instr?.frequency ?? instr?.payment_frequency) !== 'ONE_TIME',
       hasSurvivor: !!record.survivor_id,
       isHolding: record.target_table === 'cl_cheques_holding',
     };
@@ -374,7 +401,7 @@ export async function generatePostIssueTasks(batchId: string, userCode: string):
       if (def.appliesTo(ctx)) {
         tasks.push({
           issue_record_id: record.id,
-          batch_id: batchId,
+          batch_id: record.batch_id ?? batchId,
           task_type: def.type,
           task_order: def.order,
           status: 'PENDING',
@@ -397,13 +424,48 @@ export async function generatePostIssueTasks(batchId: string, userCode: string):
   }
 
   await logPostIssueEvent(batchId, null, 'GENERATE', userCode,
-    `Generated ${tasks.length} post-issue tasks for ${issueRecords.length} issued records`, {
+    `Generated ${tasks.length} post-issue tasks for ${pendingRecords.length} issued records`, {
       task_count: tasks.length,
-      record_count: issueRecords.length,
+      record_count: pendingRecords.length,
     });
 
   return tasks.length;
 }
+
+/**
+ * Called from the issue flows. Never throws — an issued payment must not be
+ * rolled back because its checklist could not be created.
+ */
+export async function ensurePostIssueTasks(
+  batchId: string | null,
+  userCode: string,
+  options: GeneratePostIssueTasksOptions = {},
+): Promise<number> {
+  try {
+    return await generatePostIssueTasks(batchId, userCode, { ...options, quiet: true });
+  } catch (err) {
+    console.error('[postIssue] checklist generation failed', err);
+    return 0;
+  }
+}
+
+/** Issued payments that still have no checklist (drives the repair action). */
+export async function countIssuedRecordsMissingTasks(): Promise<number> {
+  const { data: records } = await db.from('bn_issue_record').select('id').eq('status', 'ISSUED');
+  if (!records?.length) return 0;
+  const { data: tasks } = await db
+    .from('bn_post_issue_task')
+    .select('issue_record_id')
+    .in('issue_record_id', records.map((r: any) => r.id));
+  const done = new Set((tasks || []).map((t: any) => t.issue_record_id));
+  return records.filter((r: any) => !done.has(r.id)).length;
+}
+
+/** Repair/backfill: build the checklist for every issued payment that lacks one. */
+export async function generateMissingPostIssueTasks(userCode: string): Promise<number> {
+  return generatePostIssueTasks(null, userCode, { allMissing: true });
+}
+
 
 // ─── Execute Task ───────────────────────────────────────────────────
 
