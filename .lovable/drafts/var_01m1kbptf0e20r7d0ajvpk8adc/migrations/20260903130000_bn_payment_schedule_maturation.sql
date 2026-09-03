@@ -111,7 +111,7 @@ BEGIN
       RETURN NEXT; CONTINUE;
     END IF;
 
-    SELECT COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.first_name, m.last_name)), ''), r.ssn)
+    SELECT COALESCE(NULLIF(TRIM(CONCAT_WS(' ', m.firstname, m.surname)), ''), r.ssn)
       INTO v_payee
     FROM au_ip_master m WHERE m.ssn = r.ssn LIMIT 1;
 
