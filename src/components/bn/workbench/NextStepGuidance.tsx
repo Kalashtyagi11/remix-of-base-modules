@@ -334,7 +334,7 @@ export const NextStepGuidance: React.FC<Props> = ({
     }
 
     return null;
-  }, [status, hasEligibilityPass, hasCalculation, downstream, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, userCodeLoading]);
+  }, [status, hasEligibilityPass, hasCalculation, downstream, basket, paymentAction, submitMut.isPending, approveMut.isPending, generateMut.isPending, awardMut.isPending, handoffMut.isPending, userCodeLoading]);
 
   if (!step) return null;
 
