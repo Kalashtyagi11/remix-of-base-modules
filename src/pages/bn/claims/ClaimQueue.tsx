@@ -352,7 +352,7 @@ export default function ClaimQueue() {
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>{myQueue.map(item => renderClaimRow(item))}</TableBody>
+                <TableBody>{filteredMyQueue.map(item => renderClaimRow(item))}</TableBody>
               </Table>
             </CardContent>
           </Card>
