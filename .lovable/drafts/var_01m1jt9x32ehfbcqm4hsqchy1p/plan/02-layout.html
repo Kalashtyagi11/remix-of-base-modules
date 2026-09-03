@@ -1,0 +1,55 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans);">
+  <!-- basket card header -->
+  <rect x="20" y="10" width="600" height="34" rx="8" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+  <text x="36" y="32" font-size="14" font-weight="480" fill="hsl(var(--foreground))">Intake Review · BN_INTAKE_OFFICER</text>
+
+  <!-- filter bar (accent: the change) -->
+  <rect x="20" y="54" width="600" height="44" rx="8" fill="hsl(var(--accent))" stroke="hsl(var(--accent-foreground))" stroke-width="1" stroke-dasharray="4 3"/>
+  <rect x="32" y="66" width="200" height="20" rx="6" fill="hsl(var(--card))" stroke="hsl(var(--border))"/>
+  <text x="42" y="80" font-size="12" fill="hsl(var(--muted-foreground))">Search claim no / SSN / officer</text>
+  <rect x="244" y="66" width="100" height="20" rx="6" fill="hsl(var(--card))" stroke="hsl(var(--border))"/>
+  <text x="254" y="80" font-size="12" fill="hsl(var(--muted-foreground))">Status ▾</text>
+  <rect x="354" y="66" width="100" height="20" rx="6" fill="hsl(var(--card))" stroke="hsl(var(--border))"/>
+  <text x="364" y="80" font-size="12" fill="hsl(var(--muted-foreground))">Priority ▾</text>
+  <rect x="464" y="66" width="100" height="20" rx="6" fill="hsl(var(--card))" stroke="hsl(var(--border))"/>
+  <text x="474" y="80" font-size="12" fill="hsl(var(--muted-foreground))">Assignment ▾</text>
+  <rect x="572" y="66" width="40" height="20" rx="6" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="580" y="80" font-size="12" fill="hsl(var(--muted-foreground))">Clear</text>
+
+  <!-- table header -->
+  <line x1="20" y1="126" x2="620" y2="126" stroke="hsl(var(--border))"/>
+  <text x="32" y="118" font-size="12" fill="hsl(var(--muted-foreground))">Claim</text>
+  <text x="200" y="118" font-size="12" fill="hsl(var(--muted-foreground))">SSN</text>
+  <text x="290" y="118" font-size="12" fill="hsl(var(--muted-foreground))">Status</text>
+  <text x="420" y="118" font-size="12" fill="hsl(var(--muted-foreground))">Priority</text>
+  <text x="500" y="118" font-size="12" fill="hsl(var(--muted-foreground))">Due</text>
+  <text x="566" y="118" font-size="12" fill="hsl(var(--muted-foreground))">Assigned</text>
+
+  <!-- matching rows -->
+  <text x="32" y="152" font-size="12" fill="hsl(var(--foreground))">BN-20260827-44372</text>
+  <rect x="196" y="140" width="50" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="286" y="140" width="60" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="416" y="140" width="30" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="496" y="140" width="56" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="566" y="140" width="50" height="14" rx="3" fill="hsl(var(--muted))"/>
+
+  <text x="32" y="182" font-size="12" fill="hsl(var(--foreground))">BN-20260827-09805</text>
+  <rect x="196" y="170" width="50" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="286" y="170" width="60" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="416" y="170" width="30" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="496" y="170" width="56" height="14" rx="3" fill="hsl(var(--muted))"/>
+  <rect x="566" y="170" width="50" height="14" rx="3" fill="hsl(var(--muted))"/>
+
+  <!-- filtered-out rows shown dashed -->
+  <g opacity="0.45">
+    <line x1="20" y1="205" x2="620" y2="205" stroke="hsl(var(--muted-foreground))" stroke-dasharray="4 3"/>
+    <line x1="20" y1="225" x2="620" y2="225" stroke="hsl(var(--muted-foreground))" stroke-dasharray="4 3"/>
+    <line x1="20" y1="245" x2="620" y2="245" stroke="hsl(var(--muted-foreground))" stroke-dasharray="4 3"/>
+    <text x="240" y="230" font-size="12" fill="hsl(var(--muted-foreground))">rows not matching the filter are hidden</text>
+  </g>
+
+  <!-- count note -->
+  <circle cx="30" cy="276" r="9" fill="hsl(var(--accent))"/>
+  <text x="26" y="280" font-size="11" fill="hsl(var(--accent-foreground))">1</text>
+  <text x="48" y="280" font-size="12" fill="hsl(var(--muted-foreground))">Result count under the bar: "Showing 2 of 45 claims" · filters reset when the basket changes</text>
+</svg>
