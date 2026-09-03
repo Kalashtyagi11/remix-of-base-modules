@@ -207,6 +207,55 @@ export const NextStepGuidance: React.FC<Props> = ({
     onError: (e: any) => toast.error('Hand-off failed', { description: e?.message }),
   }, 'Sending to payment...');
 
+  // Does the basket that owns the claim match the one its status implies?
+  // Routing after a status change is deliberately non-blocking, so a claim can
+  // keep its old basket without anything failing. Surface it rather than hide it.
+  const disposition = stepForClaimStatus(status);
+  const expectedCodes =
+    disposition?.kind === 'STEP' ? expectedBasketCodesForStage(disposition.step) : [];
+  const expectedCode = expectedCodes[0] ?? null;
+
+  const { data: expectedBasket } = useQuery({
+    queryKey: ['bn', 'expected-basket', expectedCode],
+    enabled: !!expectedCode,
+    queryFn: async () => {
+      const { data } = await db
+        .from('bn_workbasket')
+        .select('basket_code, basket_name')
+        .eq('basket_code', expectedCode)
+        .eq('is_active', true)
+        .maybeSingle();
+      return data ?? null;
+    },
+  });
+
+  const basketMismatch = useMemo(() => {
+    if (!expectedCode || !basket?.code) return null;
+    if (basket.code === expectedCode) return null;
+    return {
+      expectedCode,
+      expectedName: expectedBasket?.basket_name ?? expectedCode,
+    };
+  }, [expectedCode, basket?.code, expectedBasket]);
+
+  // Re-runs the same routing service every status transition uses. No new rule,
+  // status or table — it simply reapplies the basket the status already implies.
+  const rerouteMut = useBlockingMutation({
+    mutationFn: async () => {
+      const { routeClaimToWorkbasket } = await import('@/services/bn/workflow/routeClaimToWorkbasket');
+      const res = await routeClaimToWorkbasket(claimId, userCode!);
+      if (res.outcome !== 'MOVED' && res.outcome !== 'ASSIGNED') {
+        throw new Error(res.reason || `Routing returned ${res.outcome}.`);
+      }
+      return res;
+    },
+    onSuccess: (r: any) => {
+      toast.success(`Claim moved to ${r?.workbasketName ?? 'the correct basket'}`);
+      invalidate();
+    },
+    onError: (e: any) => toast.error('Could not move the claim', { description: e?.message }),
+  }, 'Moving claim to the correct basket...');
+
 
   const step = useMemo(() => {
     // Blocked states first
