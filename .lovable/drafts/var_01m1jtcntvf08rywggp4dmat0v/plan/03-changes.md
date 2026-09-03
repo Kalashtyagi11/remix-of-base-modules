@@ -11,12 +11,15 @@ Second point, unchanged: the official page states **two** conditions (26 weeks o
 
 ## Item 2 — Filing deadline: 90 days → 6 months
 
-Your instinct about month-end boundaries is right and it matters here. The evaluator (`src/services/bn/eligibility/ruleEvaluator.ts`) converts a `MONTHS` unit as `days / 30.4375`, so "6 MONTHS" today means roughly 182.6 days, not a true calendar-month difference. A death on 31 August with a claim on 28 February would be inside 6 calendar months but could read as outside on the approximation, or vice versa.
+**You are right about the file, and I had named the wrong one.** Traced it properly: `ruleEvaluator.ts` is imported only by `TestRulePanel.tsx` (and its diagnostic type by `RuleDiagnosticsPanel.tsx`) — config-time only. The real submitted-claim path is `ClaimRegistration.tsx` → `eligibilityEvaluator.ts` (also reached from `claimActionRunner.ts` for re-evaluation). The two are not independent, though: `eligibilityEvaluator.ts:35` imports `convertDays` from `ruleEvaluator.ts` and applies it at line 344 on the `DATE_DIFFERENCE` path, deliberately so the Test Rule button and the live claim agree. So the approximation `days / 30.4375` is in `ruleEvaluator.ts` but it *executes* on the real claim path through `eligibilityEvaluator.ts`.
+
+That means the fix must land in `eligibilityEvaluator.ts` where the two dates are still in hand — `convertDays` receives only a day count, and no day count can express a calendar-month difference. Concretely: compute the month difference from the two dates at line 344 for `MONTHS`/`YEARS`, and keep `convertDays` for `DAYS`/`WEEKS`. `ruleEvaluator.ts` gets the same treatment so the Test Rule panel does not silently disagree with production.
 
 Proposal, in this order:
-1. Add real calendar arithmetic for `MONTHS` and `YEARS` in the `DATE_DIFFERENCE` path so the comparison is a month-count difference with day-of-month handling, rather than an average-length divide. `DAYS` and `WEEKS` behaviour is untouched.
+1. Add real calendar arithmetic for `MONTHS` and `YEARS` on the `DATE_DIFFERENCE` path in **both** evaluators. Checked the blast radius: there are currently **zero** active `DATE_DIFFERENCE` rules using `MONTHS` or `YEARS` platform-wide (8 active rules, all `DAYS`, plus 5 with no unit set), so Funeral Grant is the first consumer and no existing product's behaviour changes.
 2. Set the rule to value 6, unit `MONTHS`, and correct the fail message (it currently says "3 months").
-3. Cover the change with tests at the boundaries: 31 Aug → 28/29 Feb, 31 Mar → 30 Sep, exactly-6-months, and one day past.
+3. Cover the change with tests at the boundaries: 31 Aug → 28/29 Feb, 31 Mar → 30 Sep, exactly-6-months, and one day past — run through the live evaluator, not the Test Rule panel.
+
 
 ## Item 3 — Age-3 amount: 550.00 → 500.00
 
