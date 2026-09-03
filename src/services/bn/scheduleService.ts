@@ -631,7 +631,7 @@ export async function executeScheduleRowAction(params: ExecuteScheduleActionPara
 
   const { data: row, error: fetchErr } = await db
     .from('bn_payment_schedule')
-    .select('id, status, claim_id, entitlement_id, ssn')
+    .select('id, status, claim_id, entitlement_id, ssn, bn_award_id')
     .eq('id', rowId)
     .single();
   if (fetchErr || !row) throw new Error('Schedule row not found');
@@ -639,6 +639,20 @@ export async function executeScheduleRowAction(params: ExecuteScheduleActionPara
   if (!actionDef.fromStatuses.includes(row.status)) {
     throw new Error(`Cannot ${action} from status ${row.status}`);
   }
+
+  // Instruction generation is a governed server operation — it creates the
+  // payable and links it back to the row. Never a status-only flip.
+  if (action === 'GENERATE_INSTRUCTION') {
+    const result = await runScheduleMaturation({ awardId: row.bn_award_id, performedBy });
+    const outcome = result.find(o => o.schedule_id === rowId);
+    if (!outcome) throw new Error('Row was not eligible for instruction generation');
+    if (outcome.outcome === 'SKIPPED' && outcome.reason !== 'ALREADY_PAYABLE') {
+      throw new Error(`Instruction not generated: ${outcome.reason}`);
+    }
+    return { success: true, newStatus: 'GENERATED' };
+  }
+
+
   if (actionDef.requiresNarrative && !narrative?.trim()) throw new Error('Narrative required');
   if (actionDef.requiresReasonCode && !reasonCodeId) throw new Error('Reason code required');
 
