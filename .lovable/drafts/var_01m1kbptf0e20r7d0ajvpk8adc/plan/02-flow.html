@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" width="640" height="300">
+<style>
+text{font-family:var(--font-sans);fill:hsl(var(--foreground))}
+.s{font-size:12px;fill:hsl(var(--muted-foreground))}
+.b{font-size:14px;font-weight:480}
+.m{font-family:var(--font-mono);font-size:11px;fill:hsl(var(--muted-foreground))}
+rect{fill:none;stroke:hsl(var(--muted-foreground));stroke-width:1}
+line,path{stroke:hsl(var(--muted-foreground));stroke-width:1;fill:none}
+.acc{stroke:hsl(var(--accent-foreground))}
+</style>
+<defs>
+<marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+<path d="M0,0 L6,3 L0,6" stroke="hsl(var(--muted-foreground))" fill="none"/></marker>
+<marker id="b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+<path d="M0,0 L6,3 L0,6" stroke="hsl(var(--accent-foreground))" fill="none"/></marker>
+</defs>
+
+<text x="16" y="24" class="b">Today</text>
+<rect x="16" y="36" width="130" height="44" rx="8"/>
+<text x="81" y="63" text-anchor="middle" class="b">Batch Issue</text>
+<line x1="146" y1="58" x2="196" y2="58" marker-end="url(#a)"/>
+<rect x="200" y="36" width="140" height="44" rx="8"/>
+<text x="270" y="56" text-anchor="middle" class="b">Cheque register</text>
+<text x="270" y="72" text-anchor="middle" class="m">FCB2000001</text>
+<path d="M340,58 L390,58" stroke-dasharray="4 3" marker-end="url(#a)"/>
+<rect x="394" y="36" width="150" height="44" rx="8" stroke-dasharray="4 3"/>
+<text x="469" y="63" text-anchor="middle" class="s">no issue record</text>
+<text x="560" y="63" class="s">→ screens empty</text>
+
+<line x1="16" y1="110" x2="624" y2="110" stroke="hsl(var(--border))"/>
+
+<text x="16" y="146" class="b">After the fix</text>
+<rect x="16" y="158" width="130" height="44" rx="8"/>
+<text x="81" y="185" text-anchor="middle" class="b">Batch Issue</text>
+<line x1="146" y1="180" x2="196" y2="180" marker-end="url(#b)" class="acc"/>
+<rect x="200" y="158" width="140" height="44" rx="8" class="acc"/>
+<text x="270" y="178" text-anchor="middle" class="b">Issue record</text>
+<text x="270" y="194" text-anchor="middle" class="m">status ISSUED</text>
+<line x1="340" y1="180" x2="390" y2="180" marker-end="url(#a)"/>
+<rect x="394" y="158" width="140" height="44" rx="8"/>
+<text x="464" y="185" text-anchor="middle" class="b">Cheque register</text>
+
+<path d="M270,202 L270,240 L120,240" marker-end="url(#a)"/>
+<rect x="16" y="248" width="200" height="36" rx="8"/>
+<text x="116" y="271" text-anchor="middle" class="s">Payment Issue · /bn/issue</text>
+<path d="M270,202 L270,240 L420,240" marker-end="url(#a)"/>
+<rect x="330" y="248" width="200" height="36" rx="8"/>
+<text x="430" y="271" text-anchor="middle" class="s">Post-Issue Review</text>
+</svg>
