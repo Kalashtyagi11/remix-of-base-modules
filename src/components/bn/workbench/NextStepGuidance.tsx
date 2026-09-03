@@ -76,13 +76,47 @@ export const NextStepGuidance: React.FC<Props> = ({
     queryFn: () => fetchDownstream(claimId),
   });
 
+  // Which basket owns the claim right now — an officer looking at Award Setup
+  // could not otherwise tell that the claim has not been handed to Payment.
+  const { data: basket } = useQuery({
+    queryKey: ['bn', 'next-step-basket', claimId, status],
+    queryFn: async () => {
+      const { data } = await db
+        .from('bn_claim_queue_assignment')
+        .select('workbasket_id, bn_workbasket(basket_code, basket_name)')
+        .eq('claim_id', claimId)
+        .eq('is_active', true)
+        .order('assigned_at', { ascending: false })
+        .limit(1);
+      const row = (data ?? [])[0];
+      return row?.bn_workbasket
+        ? { code: row.bn_workbasket.basket_code as string, name: row.bn_workbasket.basket_name as string }
+        : null;
+    },
+  });
+
+  // The governed AWARD_SETUP → PAYMENT_QUEUE hand-off. Reuses the configured
+  // transition rule; no new status, rule or table is introduced here.
+  const { roles: authRoles } = useSupabaseAuth();
+  const userRoles = authRoles && authRoles.length > 0 ? authRoles : [];
+  const { data: actions } = useBnAvailableActions(claimId, userRoles);
+  const paymentAction = useMemo(
+    () => (actions ?? []).find((a: any) => a?.rule?.to_status === 'PAYMENT_QUEUE') ?? null,
+    [actions],
+  );
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['bn', 'claim', claimId] });
     qc.invalidateQueries({ queryKey: ['bn', 'next-step-downstream', claimId] });
+    qc.invalidateQueries({ queryKey: ['bn', 'next-step-basket', claimId] });
+    qc.invalidateQueries({ queryKey: ['bn', 'available-actions', claimId] });
+    qc.invalidateQueries({ queryKey: ['bn', 'claim-events', claimId] });
+    qc.invalidateQueries({ queryKey: ['bn', 'queue'] });
     qc.invalidateQueries({ queryKey: ['bn', 'payables'] });
     qc.invalidateQueries({ queryKey: ['bn', 'entitlements'] });
     qc.invalidateQueries({ queryKey: ['bn', 'awards'] });
   };
+
 
   /**
    * Four different situations used to produce one message, so an officer could
