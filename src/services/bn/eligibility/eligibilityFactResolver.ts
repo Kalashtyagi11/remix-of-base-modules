@@ -1069,6 +1069,95 @@ const RESOLVERS: Record<string, ResolverFn> = {
     return relationships.some((r) => QUALIFYING.has(r));
   },
 
+  /**
+   * Funeral Grant — contribution weeks of the insured member whose record
+   * governs the claim (the deceased themselves, or the insured person the
+   * deceased was a dependant of). Replaces the use of
+   * `fg.deceased_contribution_weeks` on FG_MIN_CONTRIBUTION, which tested the
+   * wrong person for spouse and dependent-child deaths. Funeral Grant only —
+   * the deceased-contribution resolvers used by Survivors and Death Benefit
+   * are untouched.
+   */
+  resolveFgQualifyingContributionWeeks: async (ctx) =>
+    resolveQualifyingContributionWeeks(ctx),
+
+  /**
+   * Funeral Grant — is the deceased dependant an eligible dependent child?
+   * Under 16; or under 25 in full-time education; or an invalid. Returns null
+   * (review) when the deceased is not linked as a dependant at all, never a
+   * silent pass. `school_child` and `invalid` are point-in-time flags with no
+   * history, so a stale student flag will read false — a data-quality reality
+   * for the officer, not something code can infer.
+   */
+  resolveFgDependentChildQualifies: async (ctx) => {
+    const deceasedSsn = await resolveDeceasedSsn(ctx);
+    if (!deceasedSsn) return null;
+    const links = await loadDependantLinks(deceasedSsn);
+    const childLinks = links.filter((l) => CHILD_RELATIONS.has(l.relation));
+    if (childLinks.length === 0) return null; // not a dependent-child claim, or records gap
+    const deathDate =
+      childLinks.find((l) => l.dateOfDeath)?.dateOfDeath ??
+      (ctx.claimId
+        ? ((await db.from('bn_claim').select('death_date').eq('id', ctx.claimId).maybeSingle())
+            .data as any)?.death_date ?? null
+        : null);
+    return childLinks.some((l) => {
+      if (l.invalid) return true;
+      if (!l.dob || !deathDate) return false;
+      const age = yearsBetween(l.dob, String(deathDate).slice(0, 10));
+      if (age < 16) return true;
+      return age < 25 && l.schoolChild;
+    });
+  },
+
+  /**
+   * Funeral Grant — the statutory claimant test is financial, not familial:
+   * the grant is payable to whoever met the funeral expenses, or gave the
+   * Director a written undertaking to meet them. Reads the intake declaration
+   * plus the funeral invoice/receipt evidence.
+   *
+   * true  — expenses met (invoice/receipt on the claim) or an undertaking recorded
+   * null  — claimed but neither proof present yet → officer review
+   * false — the claimant explicitly declines both limbs
+   */
+  resolveFgClaimantCostResponsibility: async (ctx) => {
+    if (!ctx.claimId) return null;
+    const { data: claim } = await db
+      .from('bn_claim')
+      .select('form_payload')
+      .eq('id', ctx.claimId)
+      .maybeSingle();
+    const payload = ((claim as any)?.form_payload ?? {}) as Record<string, unknown>;
+    const facts = (payload.benefit_facts ?? {}) as Record<string, unknown>;
+    const basis = String(
+      (payload.funeral_cost_responsibility ?? facts.funeral_cost_responsibility ?? '') as string,
+    )
+      .trim()
+      .toUpperCase();
+    const undertakingRef = String(
+      (payload.funeral_undertaking_reference ?? facts.funeral_undertaking_reference ?? '') as string,
+    ).trim();
+
+    if (basis === 'NONE' || basis === 'DECLINED') return false;
+    if (basis === 'UNDERTAKING_GIVEN') return undertakingRef.length > 0 ? true : null;
+
+    const { data: docs } = await db
+      .from('bn_claim_document')
+      .select('document_type_code')
+      .eq('claim_id', ctx.claimId)
+      .limit(100);
+    const hasInvoice =
+      Array.isArray(docs) &&
+      (docs as any[]).some((d) =>
+        String(d.document_type_code ?? '').toUpperCase().includes('FUNERAL_INVOICE'),
+      );
+    if (basis === 'EXPENSES_MET') return hasInvoice ? true : null;
+    // No declaration captured yet — evidence alone can still satisfy it.
+    return hasInvoice ? true : null;
+  },
+
+
+
   resolveSpouseRelationshipValid: async (ctx) => {
     if (!ctx.claimId) return null;
     const { data } = await db
