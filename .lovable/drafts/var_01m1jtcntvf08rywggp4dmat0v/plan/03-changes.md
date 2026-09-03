@@ -47,9 +47,12 @@ neither resolvable               → null  →  rule reports NOT_IMPLEMENTED / r
 
 Then add `fg.qualifying_contribution_weeks` on top of it (same lifetime `computeContributionTotals` logic as today, just keyed on the resolved insured SSN) and repoint `FG_MIN_CONTRIBUTION` at that fact instead of `fg.deceased_contribution_weeks`. For an insured-person death the two are identical, so nothing about that path changes.
 
-Two judgement calls I want your ruling on rather than deciding myself:
-- If the deceased dependant has more than one `ip_depend` row (dependant of two insured parents), do we take the first qualifying insured record, or the best one, or flag for manual review? I lean to: test each and pass if any parent qualifies, recording which was used.
-- If the deceased spouse/child is not in `ip_depend` at all — a real gap for a marriage never registered with the Board — the claim goes to review with the marriage certificate as the resolving evidence, rather than auto-failing.
+My answers to the two judgement calls, as my proposed default behaviour:
+
+**(a) Multiple qualifying insured parents.** Evaluate every `ip_depend` row matching the deceased and pass if **any** linked insured person meets the 26-week test — the statute asks whether the child was the dependant of an insured member, not of a specific one, and picking "the first row" would make the outcome depend on arbitrary row order. The resolver returns the SSN that satisfied the test, and the calculation trace records both the chosen SSN and how many candidates were considered, so an officer can see which record carried the claim. If none of the parents qualifies, the fail message names the count considered rather than one SSN.
+
+**(b) Deceased spouse/child absent from `ip_depend`.** Resolve to **null → review**, never false. A dependency that was never registered with the Board is a records gap, not evidence that the relationship did not exist, and auto-failing would deny a valid claim on data hygiene. The rule reports "insured member could not be determined from dependant records — verify against marriage/birth certificate and register the dependency", which lands the claim on an officer's desk with the resolving document already on the required-document list from Item 5. The rule must never silently pass in this state either — that is the SKN-INV vacuous-success trap.
+
 
 ### 4b — Which dependent child qualifies
 
