@@ -102,7 +102,6 @@ export function AuditWorkingPapersTab({ auditId }: AuditWorkingPapersTabProps) {
       return;
     }
 
-    const workingPaperId = form.reference_number.trim() || `WP-${Date.now().toString(36).toUpperCase()}`;
     setUploading(true);
 
     let paperRow: any = null;
@@ -113,7 +112,6 @@ export function AuditWorkingPapersTab({ auditId }: AuditWorkingPapersTabProps) {
       // 1. Working Paper first — a failure here must leave no orphan attachment.
       paperRow = await create.mutateAsync({
         title: form.title.trim(),
-        working_paper_id: workingPaperId,
         description: form.description.trim() || null,
         audit_area: form.paper_type.trim() || 'Analysis',
         engagement_id: auditId,
@@ -130,9 +128,8 @@ export function AuditWorkingPapersTab({ auditId }: AuditWorkingPapersTabProps) {
         const { data: evRow, error: evErr } = await supabase
           .from('ia_evidence')
           .insert({
-            evidence_id: `WP-EV-${Date.now().toString(36).toUpperCase()}-${evidenceIds.length + 1}`,
             description: `Working paper attachment — ${form.title.trim()}`,
-            reference_no: workingPaperId,
+            reference_no: paperRow.working_paper_id,
             engagement_id: auditId,
             file_name: uploaded.originalName,
             file_url: uploaded.path,
@@ -243,7 +240,7 @@ export function AuditWorkingPapersTab({ auditId }: AuditWorkingPapersTabProps) {
           <CardContent className="p-4 space-y-3">
             <div className="grid grid-cols-3 gap-3">
               <div><Label>Title *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Working paper title" /></div>
-              <div><Label>Reference #</Label><Input value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="e.g. WP-001" /></div>
+              <div><Label>Reference #</Label><Input value="Assigned automatically on save" disabled className="bg-muted" /></div>
               <div><Label>Type</Label><Input value={form.paper_type} onChange={e => setForm(f => ({ ...f, paper_type: e.target.value }))} placeholder="Analysis, Walkthrough, etc." /></div>
             </div>
             <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>

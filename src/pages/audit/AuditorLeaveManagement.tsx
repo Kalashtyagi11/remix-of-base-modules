@@ -59,7 +59,6 @@ export default function AuditorLeaveManagement() {
     mutations.create.mutate({
       ...form,
       status: 'Pending',
-      request_id: `LR-${Date.now().toString(36).toUpperCase()}`,
       created_by: userCode,
     });
     setDialogOpen(false);

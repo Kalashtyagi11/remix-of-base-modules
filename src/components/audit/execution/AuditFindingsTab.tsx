@@ -51,12 +51,10 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const generateFindingId = () => `FND-${Date.now().toString(36).toUpperCase().slice(-6)}`;
-
   const closeForm = () => { setFormMode(null); setEditRecord(null); };
 
   const openCreate = () => {
-    setForm({ ...emptyForm, finding_id: generateFindingId() });
+    setForm({ ...emptyForm });
     setFormMode('create');
     setEditRecord(null);
     setAdvancedOpen(false);
@@ -83,7 +81,7 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
       return;
     }
     const payload = {
-      title: form.title, finding_id: form.finding_id, condition: form.condition, criteria: form.criteria || null,
+      title: form.title, condition: form.condition, criteria: form.criteria || null,
       cause: form.cause || null, effect: form.effect || null, risk_rating: form.risk_rating,
       recommendation: form.recommendation || null, status: form.status, impact_area: form.impact_area || null,
       owner_role: form.owner_role || null, preventive_action: form.preventive_action || null,
@@ -301,7 +299,7 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
             </div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Core Information</p>
             <div className="grid grid-cols-3 gap-4">
-              <div><Label>Finding ID</Label><Input value={form.finding_id} disabled className="bg-muted" /></div>
+              <div><Label>Finding ID</Label><Input value={form.finding_id || 'Assigned automatically on save'} disabled className="bg-muted" /></div>
               <div><Label>Title *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} disabled={formMode === 'view'} /></div>
               <div><Label>Risk Rating *</Label>
                 <Select value={form.risk_rating} onValueChange={v => setForm(f => ({ ...f, risk_rating: v }))} disabled={formMode === 'view'}>
