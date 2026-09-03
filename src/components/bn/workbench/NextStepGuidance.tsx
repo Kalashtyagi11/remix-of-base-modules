@@ -277,15 +277,43 @@ export const NextStepGuidance: React.FC<Props> = ({
       };
     }
 
+    // Award Setup: the money is ready, but the claim still sits in the Award
+    // Setup basket until the governed hand-off is executed.
+    if (status === 'AWARD_SETUP' && paymentAction) {
+      const where = basket?.name ? `It is currently in the ${basket.name} basket. ` : '';
+      if (paymentAction.blocked) {
+        return {
+          tone: 'blocked' as const,
+          title: 'Hand-off to Payment not available to you',
+          body: `${where}${paymentAction.blockedReason ?? 'This action is restricted.'}`,
+          actionLabel: 'Open Payables Queue',
+          onAction: () => navigate('/bn/payables'),
+        };
+      }
+      return {
+        tone: 'action' as const,
+        title: 'Award set up — send the claim to Payment',
+        body:
+          `${where}The payment instruction is already in the Payables Queue; ` +
+          `use ${paymentAction.rule.action_label || 'Send to Payment'} to move the claim itself into Payment Preparation.`,
+        actionLabel: paymentAction.rule.action_label || 'Send to Payment',
+        onAction: () => { if (guard()) handoffMut.mutate(); },
+        pending: handoffMut.isPending || userCodeLoading,
+        secondaryLabel: 'Open Payables Queue',
+        onSecondary: () => navigate('/bn/payables'),
+      };
+    }
+
     if (downstream?.hasPayable && ['PAYMENT_QUEUE', 'AWARD_SETUP', 'IN_PAYMENT', 'APPROVED'].includes(status)) {
       return {
         tone: 'success' as const,
         title: 'Payment instruction created',
-        body: 'Continue in the Payables Queue to schedule, batch and issue payment.',
+        body: `${basket?.name ? `Claim is in the ${basket.name} basket. ` : ''}Continue in the Payables Queue to schedule, batch and issue payment.`,
         actionLabel: 'Open Payables Queue',
         onAction: () => navigate('/bn/payables'),
       };
     }
+
 
     if (downstream?.hasEntitlement && !downstream?.hasPayable) {
       return {
