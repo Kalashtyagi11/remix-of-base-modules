@@ -439,6 +439,23 @@ export async function approveClaim(
     .single();
   if (!claim) throw new Error('Claim not found');
 
+  // The approval gate. This entry point used to write the decision, set the
+  // claim APPROVED and orchestrate the payable without ever reading the
+  // evidence checklist, so a claim with an outstanding MANDATORY document
+  // (BN-20260903-07443, DOC-002 Birth Certificate) was approved and paid.
+  // Every approval entry point now refuses on the same conditions, before
+  // anything is written — including the recommendation path below, so a
+  // non-compliant claim cannot even be recommended upward.
+  const pre = await checkApprovalPreconditions(claimId, performedBy, {
+    reasonCode: reasonCodeId ?? null,
+    narrative: narrative ?? null,
+  });
+  if (!pre.ok) {
+    throw new Error(describeApprovalBlockers(pre.blockers));
+  }
+
+
+
   // Pull latest calculated amount for level threshold matching.
   const { data: calcRows } = await db
     .from('bn_claim_calculation')
