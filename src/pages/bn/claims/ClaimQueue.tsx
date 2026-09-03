@@ -413,12 +413,74 @@ export default function ClaimQueue() {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Filter bar — narrows the loaded basket client-side */}
+                  {!queueLoading && queueClaims.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative min-w-[220px] flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={searchText}
+                          onChange={(e) => setSearchText(e.target.value)}
+                          placeholder="Search claim no, SSN or officer…"
+                          className="pl-8"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          {statusOptions.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {(BN_CLAIM_STATUS_LABELS as any)[s] || s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All priorities</SelectItem>
+                          <SelectItem value="high">High (P1–P2)</SelectItem>
+                          <SelectItem value="normal">Normal (P3–P4)</SelectItem>
+                          <SelectItem value="low">Low (P5+)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Assignment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          <SelectItem value="mine">Assigned to me</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {filtersActive && (
+                        <Button size="sm" variant="ghost" onClick={clearFilters}>
+                          <X className="mr-1 h-3 w-3" /> Clear
+                        </Button>
+                      )}
+                      {filtersActive && (
+                        <span className="text-xs text-muted-foreground">
+                          Showing {filteredQueueClaims.length} of {queueClaims.length} claims
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {queueLoading ? (
                     <p className="text-sm text-muted-foreground">Loading...</p>
                   ) : queueClaims.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No claims currently in {selected?.basket_name || 'this queue'}.
+                    </p>
+                  ) : filteredQueueClaims.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No claims match the current filters.
                     </p>
                   ) : (
                     <Table>
@@ -433,7 +495,7 @@ export default function ClaimQueue() {
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{queueClaims.map(item => renderClaimRow(item))}</TableBody>
+                      <TableBody>{filteredQueueClaims.map(item => renderClaimRow(item))}</TableBody>
                     </Table>
                   )}
                 </CardContent>
