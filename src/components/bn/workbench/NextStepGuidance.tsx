@@ -419,8 +419,40 @@ export const NextStepGuidance: React.FC<Props> = ({
       };
     }
 
-    // Payment issue desk: preparation is done, the instrument is issued here.
+    // Payment issue desk. The claim is with the issuing desk, but it only
+    // appears on the Payment Issue screen once its payable has been batched,
+    // validated, approved, released and prepared for issue — guide the officer
+    // to the true next step instead of an empty issue screen.
     if (status === 'IN_PAYMENT') {
+      const ready = downstream?.issueReadiness;
+      if (ready === 'none') {
+        return {
+          tone: 'action' as const,
+          title: 'Ready to batch for payment',
+          body:
+            `${basket?.name ? `Claim is in the ${basket.name} basket. ` : ''}` +
+            'The payable must be added to a batch, validated, approved and released before it appears in Payment Issue.',
+          actionLabel: 'Open Payables Queue',
+          onAction: () => navigate('/bn/payables'),
+          secondaryLabel: 'Open Batch Operations',
+          onSecondary: () => navigate('/bn/batch'),
+        };
+      }
+      if (ready === 'in_batch' || ready === 'released') {
+        return {
+          tone: 'info' as const,
+          title: ready === 'released' ? 'Batch released — prepare issue' : 'Payable is in a batch',
+          body:
+            `${basket?.name ? `Claim is in the ${basket.name} basket. ` : ''}` +
+            (ready === 'released'
+              ? 'The batch is released. Prepare issue from Batch Operations so the payable appears in Payment Issue.'
+              : `The batch is ${downstream?.batchStatus?.replace(/_/g, ' ').toLowerCase() ?? 'in progress'}. It must be validated, approved and released before issue.`),
+          actionLabel: 'Open Batch Operations',
+          onAction: () => navigate('/bn/batch'),
+          secondaryLabel: 'Open Payables Queue',
+          onSecondary: () => navigate('/bn/payables'),
+        };
+      }
       return {
         tone: 'success' as const,
         title: 'With the Payment Issue desk',
