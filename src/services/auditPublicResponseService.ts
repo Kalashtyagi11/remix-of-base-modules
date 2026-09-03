@@ -11,7 +11,8 @@ import type {
   SubmitFindingResponseInput,
   SubmitFindingDisputeInput,
 } from '@/types/auditPublicSubmissions';
-import { notifySubmissionReceived } from './auditPublicSubmissionNotifyService';
+import { notifySubmissionReceived, notifySubmissionLinked } from './auditPublicSubmissionNotifyService';
+import { linkResponseSubmission, linkDisputeSubmission } from './auditPublicSubmissionLinkService';
 import {
   loadAcknowledgmentSnapshot,
   recordOnlineResponseSubmission,
@@ -267,8 +268,6 @@ export async function updateResponseSubmissionStatus(
   if (error) throw error;
 
   if (status === 'ACCEPTED' && updated && !updated.linked_response_id) {
-    const { linkResponseSubmission } = await import('./auditPublicSubmissionLinkService');
-    const { notifySubmissionLinked } = await import('./auditPublicSubmissionNotifyService');
     try {
       const linkedId = await linkResponseSubmission(updated as FindingResponseSubmission, { userCode: reviewedBy });
       notifySubmissionLinked(updated.inspection_id, {
@@ -302,8 +301,6 @@ export async function updateDisputeSubmissionStatus(
   if (error) throw error;
 
   if (status === 'UPHELD' && updated && !updated.linked_dispute_id) {
-    const { linkDisputeSubmission } = await import('./auditPublicSubmissionLinkService');
-    const { notifySubmissionLinked } = await import('./auditPublicSubmissionNotifyService');
     try {
       const linkedId = await linkDisputeSubmission(updated as FindingDisputeSubmission, { userCode: reviewedBy });
       notifySubmissionLinked(updated.inspection_id, {

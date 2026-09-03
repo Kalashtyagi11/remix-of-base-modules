@@ -72,3 +72,8 @@
 - [x] AMND-01 amendment policy seed trigger + backfill (staged migration, applies on accept)
 - [x] AMND-02 banner shows the computed locked reason
 - [ ] SAP-SANCHIT v4 config corrections (reported, not auto-applied)
+
+## Benefits — Award Setup hand-off guard (Sep 3)
+- [x] Block "Send to Payment" (action layer + execution) when the claim has no award record
+- [x] Staged database guard on AWARD_SETUP → PAYMENT_QUEUE
+- [x] Fix preview build failure: mixed static/dynamic imports (identityService, auditPublicResponseService)

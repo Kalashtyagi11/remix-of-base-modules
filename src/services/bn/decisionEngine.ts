@@ -43,14 +43,17 @@ export async function getAvailableTransitions(
   if (rulesErr) throw rulesErr;
 
   // 3. Check preconditions in parallel
-  const [eligResults, calcResults, evidenceComplete] = await Promise.all([
+  const [eligResults, calcResults, evidenceComplete, awardResults] = await Promise.all([
     db.from('bn_claim_eligibility').select('overall_result').eq('claim_id', claimId).order('check_date', { ascending: false }).limit(1),
     db.from('bn_claim_calculation').select('id').eq('claim_id', claimId).limit(1),
     isEvidenceComplete(claimId),
+    db.from('bn_award').select('id').eq('bn_claim_id', claimId).limit(1),
   ]);
 
   const hasEligibilityPass = eligResults.data?.[0]?.overall_result === true;
   const hasCalculation = (calcResults.data?.length || 0) > 0;
+  const hasAward = (awardResults.data?.length || 0) > 0;
+
 
   // 4. Evaluate each rule
   return (rules || []).map((rule: BnClaimTransitionRule) => {
@@ -85,9 +88,16 @@ export async function getAvailableTransitions(
       return { rule, blocked: true, blockedReason: 'All mandatory documents must be verified first' };
     }
 
+    // Award Setup → Payment hand-off cannot happen without an award record:
+    // the payment schedule is built from the award.
+    if (rule.from_status === 'AWARD_SETUP' && rule.to_status === 'PAYMENT_QUEUE' && !hasAward) {
+      return { rule, blocked: true, blockedReason: 'Award record must be created first' };
+    }
+
     return { rule, blocked: false, blockedReason: null };
   }).filter(Boolean) as BnAvailableAction[];
 }
+
 
 // ── Execute a transition ──
 
@@ -145,10 +155,26 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
   }
 
 
+
+  // 3b. Award Setup → Payment Queue requires an award record.
+  if (rule.from_status === 'AWARD_SETUP' && rule.to_status === 'PAYMENT_QUEUE') {
+    const { data: awardRows } = await db
+      .from('bn_award')
+      .select('id')
+      .eq('bn_claim_id', claimId)
+      .limit(1);
+    if (!awardRows || awardRows.length === 0) {
+      throw new Error(
+        'This claim has no award record, so a payment schedule cannot be generated. Create the award before sending it to Payment.',
+      );
+    }
+  }
+
   // 4. Validate reason if required
   if (rule.requires_reason && !reasonCodeId) {
     throw new Error('A reason code is required for this action');
   }
+
 
   // 5. Validate narrative if required
   if (rule.requires_narrative && (!narrative || !narrative.trim())) {
