@@ -32,7 +32,7 @@ import { type EligibilityOperator } from './fieldRegistry';
 import { resolveField, type FieldResolutionContext } from './fieldResolver';
 import { canonicalOperator, evaluateOperator } from './operatorEvaluator';
 import { resolveFact } from './eligibilityFactResolver';
-import { convertDays } from './ruleEvaluator';
+import { dateDifferenceInUnit } from './ruleEvaluator';
 import {
   renderRuleMessage,
   type MessageContext,
