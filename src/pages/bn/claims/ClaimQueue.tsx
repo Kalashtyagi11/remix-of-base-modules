@@ -66,6 +66,59 @@ export default function ClaimQueue() {
   const pickClaim = usePickBnClaim();
   const releaseClaim = useReleaseBnClaim();
 
+  // ─── Queue filters (client-side over the loaded basket) ─────────
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [assignmentFilter, setAssignmentFilter] = useState<string>('all');
+
+  const clearFilters = () => {
+    setSearchText('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setAssignmentFilter('all');
+  };
+  const filtersActive =
+    searchText.trim() !== '' || statusFilter !== 'all' || priorityFilter !== 'all' || assignmentFilter !== 'all';
+
+  const matchesSearch = (item: BnClaimQueueAssignment) => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return true;
+    const claim = item.bn_claim;
+    return (
+      (claim?.claim_number ?? '').toLowerCase().includes(q) ||
+      (claim?.ssn ?? '').toLowerCase().includes(q) ||
+      (item.assigned_to ?? '').toLowerCase().includes(q)
+    );
+  };
+
+  const filteredQueueClaims = useMemo(() => {
+    return queueClaims.filter((item) => {
+      if (!matchesSearch(item)) return false;
+      const claim = item.bn_claim;
+      if (statusFilter !== 'all' && claim?.status !== statusFilter) return false;
+      if (priorityFilter !== 'all') {
+        const p = item.priority ?? 5;
+        if (priorityFilter === 'high' && p > 2) return false;
+        if (priorityFilter === 'normal' && (p <= 2 || p > 4)) return false;
+        if (priorityFilter === 'low' && p <= 4) return false;
+      }
+      if (assignmentFilter === 'unassigned' && item.assigned_to) return false;
+      if (assignmentFilter === 'mine' && item.assigned_to !== userCode) return false;
+      return true;
+    });
+  }, [queueClaims, searchText, statusFilter, priorityFilter, assignmentFilter, userCode]);
+
+  const filteredMyQueue = useMemo(() => myQueue.filter(matchesSearch), [myQueue, searchText]);
+
+  const statusOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(queueClaims.map((i) => i.bn_claim?.status).filter(Boolean) as string[]),
+      ).sort(),
+    [queueClaims],
+  );
+
   const roleNames = useMemo(
     () => Array.from(new Set(myRoles.map((r) => r.role_name))).sort(),
     [myRoles],
