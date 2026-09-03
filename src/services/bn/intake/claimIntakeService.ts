@@ -270,6 +270,32 @@ export async function submitClaimApplication(
     console.warn('[claimIntake] Funeral Grant fact persistence error (non-fatal):', factErr);
   }
 
+  // Promote every captured benefit fact into the claim's benefit detail
+  // record. Previously the facts were only archived inside
+  // bn_claim_application.raw_application_json, so the Claim Workbench
+  // "Benefit-Specific Details" section — which reads bn_claim_detail first —
+  // rendered blank for every claim. The raw application JSON is left
+  // untouched: the citizen-submitted record stays immutable.
+  try {
+    const facts = (input.formPayload as { benefit_facts?: Record<string, unknown> } | undefined)
+      ?.benefit_facts ?? {};
+    const meaningful = Object.fromEntries(
+      Object.entries(facts).filter(
+        ([, v]) => v !== undefined && v !== null && v !== '',
+      ),
+    );
+    if (Object.keys(meaningful).length > 0) {
+      const { error: detailErr } = await db
+        .from('bn_claim_detail')
+        .upsert({ claim_id: claimId, detail_json: meaningful }, { onConflict: 'claim_id' });
+      if (detailErr) throw detailErr;
+    }
+  } catch (detailErr) {
+    console.warn('[claimIntake] Benefit detail persistence error (non-fatal):', detailErr);
+  }
+
+
+
   // BUG-33 — a claim must never be left without an owner. The workbasket is
   // resolved below whether or not a workflow can be started; if no workflow
   // starts, the claim is assigned to that workbasket directly rather than the

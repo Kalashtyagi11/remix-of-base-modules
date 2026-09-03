@@ -7,8 +7,13 @@
  *
  * Channel visibility is encoded per field via `visibleForChannels`.
  */
+import {
+  BENEFIT_DETAIL_SECTION_CODE,
+  getCategoryDetailFields,
+} from './benefitDetailFields';
 
 export type FormChannel = 'INTERNAL' | 'ASSISTED_OFFLINE' | 'PUBLIC';
+
 
 export type FieldType =
   | 'TEXT'
@@ -275,3 +280,47 @@ export function getDefaultFieldsForBenefit(benefitKey: string): FormFieldDef[] {
     (a, b) => a.sort_order - b.sort_order,
   );
 }
+
+/**
+ * Canonical category detail fields expressed as form fields, so the intake
+ * wizard and the Claim Workbench speak the same vocabulary.
+ */
+export function getCategoryFactFields(category?: string | null): FormFieldDef[] {
+  return getCategoryDetailFields(category).map((f, index) => ({
+    field_code: f.key,
+    field_label: f.label,
+    field_type: (f.type === 'date'
+      ? 'DATE'
+      : f.type === 'number'
+        ? 'NUMBER'
+        : f.type === 'checkbox'
+          ? 'CHECKBOX'
+          : 'TEXT') as FieldType,
+    section_code: BENEFIT_DETAIL_SECTION_CODE,
+    is_required: f.required,
+    visibleForChannels: ALL,
+    sort_order: (index + 1) * 10,
+  }));
+}
+
+/**
+ * Benefit-specific fact fields for a product.
+ *
+ * Resolution order:
+ *   1. the benefit catalogue, when the product code resolves to a known key
+ *   2. the canonical category field vocabulary (shared with the workbench)
+ *
+ * The category fallback exists because product codes such as `ASST_PENSION`
+ * carry no recognisable benefit token; without it the intake wizard rendered
+ * no fields at all and the claim was registered with no benefit facts.
+ */
+export function getBenefitFactFields(
+  benefitCode?: string | null,
+  category?: string | null,
+): FormFieldDef[] {
+  const key = normalizeBenefitKey(benefitCode);
+  const specific = key ? BENEFIT_FIELDS[key] ?? [] : [];
+  if (specific.length > 0) return specific;
+  return getCategoryFactFields(category);
+}
+
