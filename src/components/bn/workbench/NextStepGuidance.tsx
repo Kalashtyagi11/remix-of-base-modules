@@ -434,8 +434,8 @@ export const NextStepGuidance: React.FC<Props> = ({
             'The payable must be added to a batch, validated, approved and released before it appears in Payment Issue.',
           actionLabel: 'Open Payables Queue',
           onAction: () => navigate('/bn/payables'),
-          secondaryLabel: 'Open Batch Operations',
-          onSecondary: () => navigate('/bn/batch'),
+          secondaryLabel: 'Open Payment Schedules',
+          onSecondary: () => navigate('/bn/schedules'),
         };
       }
       if (ready === 'in_batch' || ready === 'released') {
@@ -448,7 +448,7 @@ export const NextStepGuidance: React.FC<Props> = ({
               ? 'The batch is released. Prepare issue from Batch Operations so the payable appears in Payment Issue.'
               : `The batch is ${downstream?.batchStatus?.replace(/_/g, ' ').toLowerCase() ?? 'in progress'}. It must be validated, approved and released before issue.`),
           actionLabel: 'Open Batch Operations',
-          onAction: () => navigate('/bn/batch'),
+          onAction: () => navigate('/bn/batches'),
           secondaryLabel: 'Open Payables Queue',
           onSecondary: () => navigate('/bn/payables'),
         };
