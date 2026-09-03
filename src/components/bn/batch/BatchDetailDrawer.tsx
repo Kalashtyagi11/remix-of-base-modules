@@ -174,7 +174,15 @@ export const BatchDetailDrawer: React.FC<Props> = ({ batchId, open, onClose, onA
                             <TableCell className="text-right font-mono text-xs">
                               {formatNumber(item.amount, 2)}
                             </TableCell>
-                            <TableCell><BnStatusBadge status={item.item_status} size="sm" /></TableCell>
+                            <TableCell>
+                              <BnStatusBadge status={item.item_status} size="sm" />
+                              {item.item_status === 'ISSUE_FAILED' && (item as any).issue_error && (
+                                <div className="mt-1 text-[10px] leading-tight text-destructive max-w-[220px]">
+                                  {(item as any).issue_error}
+                                </div>
+                              )}
+                            </TableCell>
+
                             {canRemove && (
                               <TableCell>
                                 {!['ISSUED', 'REMOVED'].includes(item.item_status) && (
