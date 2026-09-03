@@ -186,6 +186,23 @@ export const NextStepGuidance: React.FC<Props> = ({
     onError: (e: any) => toast.error('Award creation failed', { description: e?.message }),
   }, 'Creating award...');
 
+  // Hands the claim itself over to Payment Preparation. The payment
+  // instruction already lives in the Payables Queue; this moves the claim.
+  const handoffMut = useBlockingMutation({
+    mutationFn: async () => {
+      if (!paymentAction) throw new Error('No hand-off action is configured from this status.');
+      return executeTransition({
+        claimId,
+        actionCode: paymentAction.rule.action_code,
+        ruleId: paymentAction.rule.id,
+        performedBy: userCode!,
+      });
+    },
+    onSuccess: () => { toast.success('Claim sent to Payment Preparation'); invalidate(); },
+    onError: (e: any) => toast.error('Hand-off failed', { description: e?.message }),
+  }, 'Sending to payment...');
+
+
   const step = useMemo(() => {
     // Blocked states first
     if (!hasEligibilityPass && !['APPROVED', 'AWARD_SETUP', 'IN_PAYMENT', 'PAYMENT_QUEUE', 'DENIED', 'CLOSED'].includes(status)) {
