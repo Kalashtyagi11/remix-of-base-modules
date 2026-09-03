@@ -548,6 +548,6 @@ export const CLAIM_TRANSITIONS: ClaimTransition[] = [
 export function getAvailableTransitions(currentStatus: string, userRoles: string[]): ClaimTransition[] {
   return CLAIM_TRANSITIONS.filter(t =>
     t.fromStatuses.includes(currentStatus) &&
-    t.requiredRoles.some(r => userRoles.includes(r))
+    canPerform(t.requiredRoles, userRoles)
   );
 }
