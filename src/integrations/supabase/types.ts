@@ -75146,6 +75146,162 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_archive_engagement_execution_log: {
+        Row: {
+          archived_at: string
+          created_at: string | null
+          engagement_id: string
+          event_description: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          old_status: string | null
+          performed_at: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string | null
+          engagement_id: string
+          event_description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string | null
+          engagement_id?: string
+          event_description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Relationships: []
+      }
+      ia_archive_plan_change_log: {
+        Row: {
+          after_state: Json | null
+          archived_at: string
+          before_state: Json | null
+          change_classification: string | null
+          change_date: string | null
+          change_type: string
+          changed_by: string | null
+          created_at: string | null
+          description: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          plan_id: string
+          requires_reapproval: boolean | null
+          version_number: number | null
+        }
+        Insert: {
+          after_state?: Json | null
+          archived_at?: string
+          before_state?: Json | null
+          change_classification?: string | null
+          change_date?: string | null
+          change_type: string
+          changed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          plan_id: string
+          requires_reapproval?: boolean | null
+          version_number?: number | null
+        }
+        Update: {
+          after_state?: Json | null
+          archived_at?: string
+          before_state?: Json | null
+          change_classification?: string | null
+          change_date?: string | null
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          plan_id?: string
+          requires_reapproval?: boolean | null
+          version_number?: number | null
+        }
+        Relationships: []
+      }
+      ia_archive_report_versions: {
+        Row: {
+          archived_at: string
+          change_summary: string | null
+          content: Json
+          content_hash: string | null
+          created_at: string
+          created_by: string | null
+          engagement_id: string | null
+          id: string
+          is_issued: boolean
+          issued_at: string | null
+          issued_by: string | null
+          report_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version_label: string | null
+          version_number: number
+        }
+        Insert: {
+          archived_at?: string
+          change_summary?: string | null
+          content?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string | null
+          id?: string
+          is_issued?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          report_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_label?: string | null
+          version_number: number
+        }
+        Update: {
+          archived_at?: string
+          change_summary?: string | null
+          content?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string | null
+          id?: string
+          is_issued?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          report_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_label?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
       ia_audit_checklists: {
         Row: {
           audit_id: string
@@ -132962,6 +133118,7 @@ export type Database = {
         Args: { p_notes?: string; p_plan_id: string }
         Returns: Json
       }
+      ia_test_estate_purge: { Args: { p_confirm: string }; Returns: Json }
       ia_transition_execution_status: {
         Args: {
           p_engagement_id: string
