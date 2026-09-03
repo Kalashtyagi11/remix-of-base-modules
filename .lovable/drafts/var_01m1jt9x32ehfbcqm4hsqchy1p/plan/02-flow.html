@@ -1,0 +1,45 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans)">
+  <defs>
+    <marker id="ch" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <g stroke="hsl(var(--muted-foreground))" stroke-width="1" fill="none">
+    <rect x="16" y="60" width="150" height="56" rx="8"/>
+    <rect x="216" y="60" width="150" height="56" rx="8"/>
+    <rect x="416" y="60" width="150" height="56" rx="8"/>
+  </g>
+  <g fill="hsl(var(--foreground))" style="font-size:14px;font-weight:480" text-anchor="middle">
+    <text x="91" y="83">Award Setup</text>
+    <text x="291" y="83">Payment Preparation</text>
+    <text x="491" y="83">Payment Issue</text>
+  </g>
+  <g fill="hsl(var(--muted-foreground))" style="font-size:12px" text-anchor="middle">
+    <text x="91" y="103">AWARD_SETUP</text>
+    <text x="291" y="103">PAYMENT_QUEUE</text>
+    <text x="491" y="103">IN_PAYMENT</text>
+  </g>
+
+  <line x1="166" y1="88" x2="214" y2="88" stroke="hsl(var(--muted-foreground))" marker-end="url(#ch)"/>
+  <line x1="366" y1="88" x2="414" y2="88" stroke="hsl(var(--accent-foreground))" marker-end="url(#ch)"/>
+  <g fill="hsl(var(--muted-foreground))" style="font-size:12px" text-anchor="middle">
+    <text x="190" y="52" style="paint-order:stroke" stroke="hsl(var(--background))" stroke-width="3">Send to Payment</text>
+  </g>
+  <text x="390" y="52" text-anchor="middle" style="font-size:12px;paint-order:stroke" stroke="hsl(var(--background))" stroke-width="3" fill="hsl(var(--accent-foreground))">Begin Payment</text>
+
+  <rect x="392" y="132" width="198" height="34" rx="17" fill="none" stroke="hsl(var(--accent-foreground))"/>
+  <text x="491" y="154" text-anchor="middle" style="font-size:12px" fill="hsl(var(--accent-foreground))">basket move is automatic</text>
+
+  <g>
+    <circle cx="28" cy="205" r="10" fill="hsl(var(--accent))"/>
+    <text x="28" y="209" text-anchor="middle" style="font-size:12px" fill="hsl(var(--accent-foreground))">1</text>
+    <text x="48" y="209" style="font-size:12px" fill="hsl(var(--muted-foreground))">This claim: status is IN_PAYMENT but the active basket is still Payment Preparation.</text>
+    <circle cx="28" cy="235" r="10" fill="hsl(var(--accent))"/>
+    <text x="28" y="239" text-anchor="middle" style="font-size:12px" fill="hsl(var(--accent-foreground))">2</text>
+    <text x="48" y="239" style="font-size:12px" fill="hsl(var(--muted-foreground))">The re-route ran silently and declined; nothing recorded why.</text>
+    <circle cx="28" cy="265" r="10" fill="hsl(var(--accent))"/>
+    <text x="28" y="269" text-anchor="middle" style="font-size:12px" fill="hsl(var(--accent-foreground))">3</text>
+    <text x="48" y="269" style="font-size:12px" fill="hsl(var(--muted-foreground))">Next step after Payment Issue: generate the cheque / EFT, then Post-Issue Review.</text>
+  </g>
+</svg>
