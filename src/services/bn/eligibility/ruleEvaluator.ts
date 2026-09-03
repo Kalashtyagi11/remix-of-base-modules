@@ -38,12 +38,8 @@ export interface RuleDiagnostic {
   message: string;
 }
 
-function daysBetween(a: string | null | undefined, b: string | null | undefined): number | null {
-  if (!a || !b) return null;
-  const ms = Date.parse(b) - Date.parse(a);
-  if (!Number.isFinite(ms)) return null;
-  return Math.floor(ms / 86_400_000);
-}
+
+
 
 /** Exported so `eligibilityEvaluator.ts` converts DATE_DIFFERENCE days using the same factors. */
 export function convertDays(days: number, unit: BnEligibilityRule['unit']): number {
