@@ -705,7 +705,65 @@ export async function executeScheduleRowAction(params: ExecuteScheduleActionPara
 }
 
 
+// ─── Schedule Maturation ────────────────────────────────────────────
+
+export type ScheduleMaturationOutcome = 'MATURED' | 'GENERATED' | 'SKIPPED';
+
+export interface ScheduleMaturationResultRow {
+  schedule_id: string | null;
+  claim_number: string | null;
+  due_date: string | null;
+  outcome: ScheduleMaturationOutcome;
+  reason: string | null;
+  instruction_id: string | null;
+}
+
+export interface RunScheduleMaturationParams {
+  /** Restrict the run to a single award (used by row-level Generate Instruction). */
+  awardId?: string | null;
+  asOf?: string;
+  performedBy?: string;
+}
+
+/**
+ * Promotes PROJECTED rows whose due date has arrived to DUE and generates the
+ * payment instruction for every DUE/ARREARS row, linking it back to the row.
+ *
+ * Runs server-side (SECURITY DEFINER) and is idempotent: a period that already
+ * has a live instruction is reconciled, never paid twice. The same function is
+ * executed daily by the scheduled job.
+ */
+export async function runScheduleMaturation(
+  params: RunScheduleMaturationParams = {},
+): Promise<ScheduleMaturationResultRow[]> {
+  const { data, error } = await (supabase.rpc as any)('bn_mature_payment_schedule', {
+    p_as_of: params.asOf ?? toStorageDate(new Date()),
+    p_award_id: params.awardId ?? null,
+    p_performed_by: params.performedBy || 'SYSTEM',
+  });
+  if (error) throw error;
+  return (data ?? []) as ScheduleMaturationResultRow[];
+}
+
+export interface ScheduleMaturationSummary {
+  matured: number;
+  generated: number;
+  skipped: number;
+  rows: ScheduleMaturationResultRow[];
+}
+
+export function summariseMaturation(rows: ScheduleMaturationResultRow[]): ScheduleMaturationSummary {
+  return {
+    matured: rows.filter(r => r.outcome === 'MATURED').length,
+    generated: rows.filter(r => r.outcome === 'GENERATED').length,
+    skipped: rows.filter(r => r.outcome === 'SKIPPED').length,
+    rows,
+  };
+}
+
+
 // ─── Schedule-Level Actions ─────────────────────────────────────────
+
 
 export async function suspendFutureRows(entitlementId: string, performedBy: string, narrative: string, reasonCodeId: string): Promise<number> {
   const today = toStorageDate(new Date());
