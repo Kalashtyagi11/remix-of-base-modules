@@ -1,7 +1,3 @@
--- Benefits: recurring payment schedule maturation
--- Additive: adds a governed maturation function + daily cron entry.
--- No table/column is dropped, renamed or retyped.
-
 CREATE OR REPLACE FUNCTION public.bn_mature_payment_schedule(
   p_as_of date DEFAULT CURRENT_DATE,
   p_award_id uuid DEFAULT NULL,
@@ -40,7 +36,7 @@ BEGIN
     RETURN;
   END IF;
 
-  -- ── 1. Maturation: PROJECTED -> DUE on/after due date ───────────────
+  -- 1. Maturation: PROJECTED -> DUE on/after due date
   FOR r IN
     SELECT s.id, s.claim_number, s.due_date
     FROM bn_payment_schedule s
@@ -63,7 +59,7 @@ BEGIN
     RETURN NEXT;
   END LOOP;
 
-  -- ── 2. Generation: DUE / ARREARS -> GENERATED with a payable ────────
+  -- 2. Generation: DUE / ARREARS -> GENERATED with a payable
   FOR r IN
     SELECT s.*, a.status AS award_status
     FROM bn_payment_schedule s
@@ -91,7 +87,6 @@ BEGIN
       outcome := 'SKIPPED'; reason := 'CLAIM_NOT_FOUND'; RETURN NEXT; CONTINUE;
     END IF;
 
-    -- Idempotency: a live instruction already covers this period.
     SELECT pi.id INTO v_dup
     FROM bn_payment_instruction pi
     WHERE pi.claim_id = r.claim_id
@@ -166,8 +161,6 @@ $fn$;
 REVOKE ALL ON FUNCTION public.bn_mature_payment_schedule(date, uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.bn_mature_payment_schedule(date, uuid, text) TO authenticated, service_role;
 
--- Daily maturation at 02:00 UTC (one run per day; max delay for a newly due
--- period is under 24h). Idempotent: re-running produces no duplicate payables.
 DO $cron$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN

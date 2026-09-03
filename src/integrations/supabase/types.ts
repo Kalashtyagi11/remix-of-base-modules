@@ -83426,7 +83426,7 @@ export type Database = {
           deb_crd_amount: number | null
           delivery_zone: string | null
           district: string | null
-          dob: string
+          dob: string | null
           email_addr: string | null
           employer_address: string | null
           employer_name: string | null
@@ -83469,7 +83469,7 @@ export type Database = {
           resident_addr2: string | null
           second_middle_name: string | null
           self_ref_no: string | null
-          sex: string
+          sex: string | null
           signature_location: string | null
           spouse_addr1: string | null
           spouse_addr2: string | null
@@ -83538,7 +83538,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83581,7 +83581,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -83650,7 +83650,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob?: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83693,7 +83693,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex?: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -125362,6 +125362,17 @@ export type Database = {
       bn_materialize_external_tasks: {
         Args: { p_claim_id: string }
         Returns: number
+      }
+      bn_mature_payment_schedule: {
+        Args: { p_as_of?: string; p_award_id?: string; p_performed_by?: string }
+        Returns: {
+          claim_number: string
+          due_date: string
+          instruction_id: string
+          outcome: string
+          reason: string
+          schedule_id: string
+        }[]
       }
       bn_means_activation_command_v1: {
         Args: {
