@@ -347,6 +347,12 @@ export const NextStepGuidance: React.FC<Props> = ({
       <AlertTitle>{step.title}</AlertTitle>
       <AlertDescription className="flex items-center justify-between gap-3 flex-wrap">
         <span>{step.body}</span>
+        <span className="flex items-center gap-2">
+        {('secondaryLabel' in step) && (step as any).secondaryLabel && (step as any).onSecondary && (
+          <Button variant="outline" size="sm" onClick={(step as any).onSecondary}>
+            {(step as any).secondaryLabel}
+          </Button>
+        )}
         {('actionLabel' in step) && step.actionLabel && step.onAction && (
           <BnBusyButton loading={('pending' in step) ? !!step.pending : false}
             size="sm"
@@ -368,6 +374,8 @@ export const NextStepGuidance: React.FC<Props> = ({
             <ArrowRight className="ml-1 h-3.5 w-3.5" />
           </BnBusyButton>
         )}
+        </span>
+
       </AlertDescription>
     </Alert>
   );
