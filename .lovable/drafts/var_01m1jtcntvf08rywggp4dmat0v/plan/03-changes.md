@@ -1,9 +1,13 @@
 ## Item 1 — Minimum contribution weeks: 50 → 26
 
-Set `rule_definition.value` to 26 and correct the fail message (it currently hard-codes "50-week"). I also want to flag a second, subtler problem in the same rule that your report did not cover:
+Set `rule_definition.value` to 26 and correct the fail message (it currently hard-codes "50-week").
 
-- The fact behind it, `fg.deceased_contribution_weeks`, is a **windowed** aggregate: it counts weeks with wages in the 156 weeks before the date of death. The statutory test is a lifetime one ("member for at least 26 contribution weeks and actually paid 26 contributions"), so a long-retired insured person with 800 lifetime weeks but nothing in the last 3 years would fail. I propose recording this as a separate finding and widening the window only after the business confirms the lifetime reading — it is not part of the number fix.
-- The official page states **two** conditions (26 weeks of membership, 26 contributions actually paid). Today one rule covers both. I propose keeping one rule for now and logging the split as a follow-up rather than inventing a membership-weeks fact that has no resolver.
+**Correction: you were right about the window, and I was wrong.** I had read the registry row, not the code. The runtime resolver at `src/services/bn/eligibility/eligibilityFactResolver.ts:433` is `deceasedWindowOrSnapshot(ctx, 'total', null)`, and the helper's `windowDays === null` branch returns the **lifetime** total from `computeContributionTotals` — no window is applied. So there is no 156-week restriction in behaviour, and the statutory lifetime reading is already satisfied.
+
+What is real, and worth fixing, is a **metadata divergence**: the `bn_eligibility_fact` row for `fg.deceased_contribution_weeks` carries `window_type = WEEKS`, `window_size = 156`, `window_anchor = claim.death_date`. Those columns are descriptive only — nothing reads them at evaluation time — but they document behaviour the resolver does not have, and they are what misled me. Proposal: clear those three columns on that row so the registry states the lifetime semantics the code actually implements.
+
+Second point, unchanged: the official page states **two** conditions (26 weeks of membership, 26 contributions actually paid). One rule covers both today. A distinct `resolveDeceasedContribPaidWeeks` resolver already exists, so splitting is cheap — but it is a scope decision, so I propose logging it as a follow-up rather than adding it here.
+
 
 ## Item 2 — Filing deadline: 90 days → 6 months
 
