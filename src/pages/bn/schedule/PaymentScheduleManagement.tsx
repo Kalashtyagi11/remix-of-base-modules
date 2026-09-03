@@ -95,10 +95,36 @@ export default function PaymentScheduleManagement() {
             records — issued payments persist in legacy payment tables (cl_cheques).
           </p>
         </div>
-        <Button onClick={() => setShowGenWizard(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Generate Schedule
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleRunMaturation} disabled={maturing} className="gap-2">
+            {maturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Run maturation now
+          </Button>
+          <Button onClick={() => setShowGenWizard(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Generate Schedule
+          </Button>
+        </div>
       </div>
+
+      {lastRun && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <div className="mb-1 font-medium">Last maturation run</div>
+          {lastRun.length === 0 ? (
+            <p className="text-muted-foreground">No rows were due — nothing to mature.</p>
+          ) : (
+            <ul className="space-y-0.5 text-muted-foreground">
+              {lastRun.slice(0, 20).map((r, i) => (
+                <li key={`${r.schedule_id ?? 'x'}-${i}`}>
+                  {r.claim_number ?? '—'} · {r.due_date ?? '—'} · <span className="font-medium">{r.outcome}</span>
+                  {r.reason ? ` (${r.reason})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
