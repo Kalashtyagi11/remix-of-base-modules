@@ -359,7 +359,7 @@ export function EvidenceChecklist({
       <Dialog open={!!reasonDialog} onOpenChange={(o) => { if (!o) { setReasonDialog(null); setReasonText(''); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{reasonDialog?.kind === 'PENDING' ? 'Mark Document Pending' : 'Waive Document Requirement'}</DialogTitle>
+            <DialogTitle>{reasonDialog?.kind === 'PENDING' ? 'Mark Document Pending' : reasonDialog?.kind === 'DELETE' ? 'Delete Document' : 'Waive Document Requirement'}</DialogTitle>
             <DialogDescription>
               {reasonDialog?.docName} — a reason is required and will be recorded in the audit trail.
             </DialogDescription>
