@@ -42,6 +42,8 @@ const exportColumns: ExportColumn[] = [
   { header: 'Recipient', key: 'recipient_name', width: 20 },
   { header: 'Template', key: 'template_name', width: 20 },
   { header: 'Acknowledged', key: 'acknowledged_at', width: 18 },
+  { header: 'Omni-Comms Request', key: 'omni_comms_request_id', width: 38 },
+  { header: 'Event Code', key: 'event_code', width: 42 },
 ];
 
 export default function CommunicationComplianceReport() {
@@ -202,13 +204,14 @@ export default function CommunicationComplianceReport() {
                   <TableHead>Status</TableHead>
                   <TableHead>Sent</TableHead>
                   <TableHead>Recipient</TableHead>
+                  <TableHead>Delivery Evidence</TableHead>
                   <TableHead>Template</TableHead>
                   <TableHead>Acknowledged</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {enriched.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No communication records found</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No communication records found</TableCell></TableRow>
                 ) : enriched.map((row: any) => (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium text-sm max-w-[200px] truncate">{row.engagement_title}</TableCell>
@@ -220,6 +223,20 @@ export default function CommunicationComplianceReport() {
                     </TableCell>
                     <TableCell className="text-xs">{row.sent_at ? formatDateForDisplay(row.sent_at) : '—'}</TableCell>
                     <TableCell className="text-xs">{row.recipient_name || '—'}</TableCell>
+                    {/* DEF-E3B-004 — a governed provider send is distinguishable
+                        from a locally recorded stage with no delivery evidence. */}
+                    <TableCell className="text-xs">
+                      {row.omni_comms_request_id ? (
+                        <span className="flex flex-col gap-0.5">
+                          <Badge className="text-[10px] bg-success/15 text-success w-fit">Governed delivery</Badge>
+                          <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[190px]">
+                            {row.event_code || 'event not recorded'}
+                          </span>
+                        </span>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px]">Recorded only — no provider evidence</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs max-w-[150px] truncate">{row.template_name || '—'}</TableCell>
                     <TableCell className="text-xs">{row.acknowledged_at ? formatDateForDisplay(row.acknowledged_at) : '—'}</TableCell>
                   </TableRow>

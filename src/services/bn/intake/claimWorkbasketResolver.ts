@@ -107,6 +107,9 @@ export const STEP_NAME_TO_BASKET_ROLE: Record<string, string> = {
   DECISION: 'BN_SUPERVISOR',
   AWARD_SETUP: 'BN_AWARD_OFFICER',
   PAYMENT: 'BN_PAYMENT_OFFICER',
+  // Same role as PAYMENT; the stage expectation below tells the two baskets
+  // (Payment Preparation vs Payment Issue) apart.
+  PAYMENT_ISSUE: 'BN_PAYMENT_OFFICER',
 };
 
 interface StepConfig {

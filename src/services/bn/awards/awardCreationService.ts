@@ -28,15 +28,39 @@ function addMonths(iso: string, months: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Statuses from which an award may still be created. The orchestrator flips a
+ * claim to AWARD_SETUP (and operations may push it further to PAYMENT_QUEUE /
+ * IN_PAYMENT) before anyone notices the award row is missing, so a strict
+ * `status === 'APPROVED'` guard would refuse every repair.
+ */
+const AWARDABLE_STATUSES = ['APPROVED', 'AWARD_SETUP', 'PAYMENT_QUEUE', 'IN_PAYMENT'];
+
+const PERIODIC_CATEGORIES = new Set([
+  'LONG_TERM', 'PENSION', 'SURVIVOR', 'INVALIDITY', 'NON_CONTRIBUTORY',
+]);
+
+export interface CreateAwardOptions {
+  /**
+   * Skip the product-shape test. Used by the post-approval orchestrator, which
+   * has already decided this claim is periodic and routed it to AWARD_SETUP.
+   */
+  force?: boolean;
+  /** Recorded on the award for traceability. */
+  source?: string;
+}
+
 export async function createAwardOnApproval(
   claimId: string,
   performedBy: string,
+  options: CreateAwardOptions = {},
 ): Promise<AwardCreationResult> {
   // Idempotency check
   const { data: existing } = await db
     .from('bn_award')
     .select('id, award_number')
     .eq('bn_claim_id', claimId)
+    .limit(1)
     .maybeSingle();
   if (existing) {
     return {
@@ -54,7 +78,10 @@ export async function createAwardOnApproval(
     .eq('id', claimId)
     .single();
   if (claimErr || !claim) return { created: false, reason: 'CLAIM_NOT_FOUND' };
-  if (claim.status !== 'APPROVED') return { created: false, reason: 'CLAIM_NOT_APPROVED' };
+  if (!AWARDABLE_STATUSES.includes(String(claim.status))) {
+    return { created: false, reason: `CLAIM_NOT_APPROVED:${claim.status}` };
+  }
+
 
   // Resolve product version with servicing config
   let pv: any = null;
@@ -78,22 +105,41 @@ export async function createAwardOnApproval(
     pv = data;
   }
 
-  const duration = pv?.benefit_duration_type ?? 'SHORT_TERM';
-  const rule = pv?.award_creation_rule ?? 'NONE';
-  if (duration !== 'LONG_TERM' || rule !== 'ON_APPROVAL') {
-    return { created: false, reason: 'PRODUCT_NOT_LONG_TERM' };
-  }
-
-  // Resolve benefit code from product
-  let benefitCode = claim.legacy_benefit_type || 'BN';
+  // Resolve product shape (category / payment type) and benefit code.
+  let product: any = null;
   if (claim.product_id) {
-    const { data: prod } = await db
+    const { data } = await db
       .from('bn_product')
-      .select('benefit_code')
+      .select('benefit_code, category, payment_type')
       .eq('id', claim.product_id)
       .maybeSingle();
-    if (prod?.benefit_code) benefitCode = prod.benefit_code;
+    product = data;
   }
+
+  /**
+   * The old gate demanded `benefit_duration_type = LONG_TERM` AND
+   * `award_creation_rule = ON_APPROVAL`. Nearly every product version carries
+   * `award_creation_rule = NONE`, so no award was ever created and periodic
+   * claims arrived in Payment Preparation with an entitlement but no award to
+   * schedule against. The award now follows the same periodic test the
+   * post-approval orchestrator uses to route the claim to AWARD_SETUP.
+   */
+  const duration = String(pv?.benefit_duration_type ?? '').toUpperCase();
+  const rule = String(pv?.award_creation_rule ?? 'NONE').toUpperCase();
+  const paymentType = String(product?.payment_type ?? '').toUpperCase();
+  const category = String(product?.category ?? '').toUpperCase();
+  const periodic =
+    paymentType === 'LUMP_SUM'
+      ? false
+      : paymentType === 'PERIODIC' || paymentType === 'BOTH' || PERIODIC_CATEGORIES.has(category);
+  const legacyLongTermRule = duration === 'LONG_TERM' && rule === 'ON_APPROVAL';
+
+  if (!options.force && !periodic && !legacyLongTermRule) {
+    return { created: false, reason: 'PRODUCT_NOT_AWARD_BEARING' };
+  }
+
+  const benefitCode = product?.benefit_code || claim.legacy_benefit_type || 'BN';
+
 
   // Latest calculation for base amount
   const { data: calc } = await db
@@ -108,7 +154,9 @@ export async function createAwardOnApproval(
   const baseAmount =
     calc?.monthly_rate ?? calc?.weekly_rate ?? calc?.lump_sum ?? null;
   const awardNumber = generateAwardNumber(benefitCode);
-  const startDate = (claim.decision_date as string | null) || new Date().toISOString().slice(0, 10);
+  // `decision_date` is a timestamptz; `bn_award.start_date` and
+  // `bn_payment_schedule.schedule_period` are dates, so normalise here.
+  const startDate = String(claim.decision_date ?? new Date().toISOString()).slice(0, 10);
 
   const { data: inserted, error: insErr } = await db
     .from('bn_award')
@@ -126,22 +174,31 @@ export async function createAwardOnApproval(
       frequency,
       entered_by: performedBy,
       modified_by: performedBy,
-      metadata: { source: 'claim_approval', product_version_id: pv?.id ?? null },
+      metadata: {
+        source: options.source ?? 'claim_approval',
+        product_version_id: pv?.id ?? null,
+        forced: !!options.force,
+      },
     })
+
     .select('id, award_number')
     .single();
   if (insErr || !inserted) return { created: false, reason: `INSERT_FAILED:${insErr?.message ?? 'unknown'}` };
 
-  // First payment schedule row (best effort)
+  // First payment schedule row (best effort). `schedule_period` is a date
+  // column, so it takes the full period start, not a YYYY-MM prefix.
   await db.from('bn_payment_schedule').insert({
     bn_award_id: inserted.id,
-    schedule_period: startDate.slice(0, 7),
+    schedule_period: startDate,
     due_date: startDate,
     gross_amount: Number(baseAmount ?? 0),
     net_amount: Number(baseAmount ?? 0),
     status: 'PENDING',
+    claim_id: claimId,
+    ssn: claim.ssn,
     entered_by: performedBy,
   } as any).then(() => undefined, () => undefined);
+
 
   // Survivor beneficiaries (best effort)
   const survivorPolicy = (pv?.survivor_beneficiary_policy ?? {}) as any;

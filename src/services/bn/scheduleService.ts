@@ -71,10 +71,16 @@ export type ScheduleGenerationMode = 'INITIAL' | 'REGENERATE' | 'CATCH_UP' | 'AR
 
 export interface BnPaymentScheduleRow {
   id: string;
+  bn_award_id: string;
   entitlement_id: string;
   claim_id: string;
   ssn: string;
   claim_number: string | null;
+
+  // Legacy required columns (mirrors of the modern fields)
+  schedule_period: string;
+  gross_amount: number;
+
 
   // Schedule definition
   sequence_number: number;
@@ -339,11 +345,53 @@ export const SCHEDULE_ROLE_MATRIX: Record<string, { canView: boolean; canAct: bo
   AUDITOR: { canView: true, canAct: false, actions: [] },
 };
 
+// ─── Award Resolution ───────────────────────────────────────────────
+
+/**
+ * Every payment schedule row belongs to an Award. Entitlements do not carry
+ * the award directly, so it is resolved through the entitlement's claim.
+ * Throws a business-worded error when the claim has no active award.
+ */
+export async function resolveAwardIdForEntitlement(entitlementId: string): Promise<string> {
+  const { data: ent, error: entErr } = await db
+    .from('bn_entitlement')
+    .select('claim_id')
+    .eq('id', entitlementId)
+    .maybeSingle();
+
+  if (entErr) throw entErr;
+  if (!ent?.claim_id) {
+    throw new Error('This entitlement is not linked to a claim, so no Award can be resolved.');
+  }
+
+  const { data: awards, error: awardErr } = await db
+    .from('bn_award')
+    .select('id, status, entered_at')
+    .eq('bn_claim_id', ent.claim_id)
+    .order('entered_at', { ascending: false })
+    .limit(20);
+
+  if (awardErr) throw awardErr;
+
+  const active = (awards ?? []).find((a: any) => ['ACTIVE', 'REINSTATED', 'SUSPENDED'].includes(a.status));
+  const chosen = active ?? (awards ?? [])[0];
+
+  if (!chosen) {
+    throw new Error('No active Award exists for this entitlement — approve the Award before generating a payment schedule.');
+  }
+
+  return chosen.id as string;
+}
+
 // ─── Schedule Generation Logic ──────────────────────────────────────
+
+
 
 export interface GenerateScheduleParams {
   entitlementId: string;
+  awardId: string;
   claimId: string;
+
   ssn: string;
   claimNumber: string | null;
   frequency: ScheduleFrequency;
@@ -390,21 +438,25 @@ function periodEndDate(periodStart: Date, frequency: ScheduleFrequency): Date {
 
 export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPaymentScheduleRow, 'id' | 'entered_at'>[] {
   const {
-    entitlementId, claimId, ssn, claimNumber, frequency,
+    entitlementId, awardId, claimId, ssn, claimNumber, frequency,
     startDate, endDate, weeklyRate, monthlyRate, totalEntitlement,
     maxPeriods = frequency === 'MONTHLY' ? 12 : 52,
     currency = 'XCD', mode, performedBy,
   } = params;
 
   const rows: Omit<BnPaymentScheduleRow, 'id' | 'entered_at'>[] = [];
+  const generatedAt = new Date().toISOString();
   const periodAmount = computePeriodAmount(frequency, weeklyRate, monthlyRate);
 
   if (frequency === 'ONE_TIME') {
     rows.push({
+      bn_award_id: awardId,
       entitlement_id: entitlementId,
       claim_id: claimId,
       ssn,
       claim_number: claimNumber,
+      schedule_period: startDate,
+      gross_amount: totalEntitlement,
       sequence_number: 1,
       frequency,
       period_start: startDate,
@@ -412,6 +464,7 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       due_date: startDate,
       amount: totalEntitlement,
       currency,
+
       rate_weekly: weeklyRate,
       rate_monthly: monthlyRate,
       rate_applied: totalEntitlement,
@@ -429,8 +482,8 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       arrears_to: null,
       arrears_periods: null,
       entered_by: performedBy,
-      modified_by: null,
-      modified_at: null,
+      modified_by: performedBy,
+      modified_at: generatedAt,
       legacy_schedule_ref: null,
     });
     return rows;
@@ -453,10 +506,13 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
     if (rowAmount <= 0) break;
 
     rows.push({
+      bn_award_id: awardId,
       entitlement_id: entitlementId,
       claim_id: claimId,
       ssn,
       claim_number: claimNumber,
+      schedule_period: toStorageDate(currentStart),
+      gross_amount: Math.round(rowAmount * 100) / 100,
       sequence_number: seq,
       frequency,
       period_start: toStorageDate(currentStart),
@@ -464,6 +520,7 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       due_date: toStorageDate(dueDate),
       amount: Math.round(rowAmount * 100) / 100,
       currency,
+
       rate_weekly: weeklyRate,
       rate_monthly: monthlyRate,
       rate_applied: periodAmount,
@@ -481,8 +538,8 @@ export function generateScheduleRows(params: GenerateScheduleParams): Omit<BnPay
       arrears_to: null,
       arrears_periods: null,
       entered_by: performedBy,
-      modified_by: null,
-      modified_at: null,
+      modified_by: performedBy,
+      modified_at: generatedAt,
       legacy_schedule_ref: null,
     });
 
@@ -722,8 +779,11 @@ export async function regenerateSchedule(
 
   if (!ent) throw new Error('Entitlement not found for regeneration');
 
+  const awardId = await resolveAwardIdForEntitlement(entitlementId);
+
   const newRows = generateScheduleRows({
     entitlementId,
+    awardId,
     claimId: ent.claim_id,
     ssn: ent.ssn,
     claimNumber: ent.bn_claim?.claim_number || ent.claim_number,
@@ -793,8 +853,11 @@ export async function generateArrearsRows(
 
   if (!ent) throw new Error('Entitlement not found');
 
+  const awardId = await resolveAwardIdForEntitlement(entitlementId);
+
   const arrearsRows = generateScheduleRows({
     entitlementId,
+    awardId,
     claimId: ent.claim_id,
     ssn: ent.ssn,
     claimNumber: ent.bn_claim?.claim_number || ent.claim_number,

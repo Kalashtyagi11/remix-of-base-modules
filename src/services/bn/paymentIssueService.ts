@@ -244,6 +244,16 @@ async function checkDuplicate(record: Partial<IssueRecord>): Promise<boolean> {
   return (data?.length || 0) > 0;
 }
 
+async function resolveSurvivorId(claimId: string): Promise<string | null> {
+  const { data } = await db
+    .from('bn_claim_participant')
+    .select('id')
+    .eq('claim_id', claimId)
+    .in('participant_role', ['SURVIVOR', 'DEPENDENT', 'BENEFICIARY'])
+    .limit(1);
+  return data?.[0]?.id ?? null;
+}
+
 // ─── Prepare Issue Records from Released Batch ──────────────────────
 
 export async function prepareIssueFromBatch(batchId: string, userCode: string): Promise<number> {
@@ -267,9 +277,13 @@ export async function prepareIssueFromBatch(batchId: string, userCode: string): 
       .eq('id', item.instruction_id)
       .single();
 
-    const hasSurvivor = !!(instr?.survivor_id);
+    // bn_payment_instruction has no survivor_id column; the survivor (if any)
+    // is resolved from the claim's participant record.
+    const survivorId = instr?.claim_id ? await resolveSurvivorId(instr.claim_id) : null;
+    const hasSurvivor = !!survivorId;
     const isHolding = !!(instr?.hold_reason);
     const targetTable = resolveTargetTable(item.instruction_type, hasSurvivor, isHolding);
+
 
     // Duplicate check
     const isDup = await checkDuplicate({
@@ -306,7 +320,7 @@ export async function prepareIssueFromBatch(batchId: string, userCode: string): 
       ssn: item.ssn,
       claim_number: item.claim_number,
       beneficiary_name: item.beneficiary_name,
-      survivor_id: instr?.survivor_id || null,
+      survivor_id: survivorId,
       amount: item.amount,
       currency: item.currency || 'XCD',
       issue_method: item.payment_method === 'DIRECT_DEPOSIT' ? 'DIRECT_DEPOSIT' : 'CHEQUE',
@@ -376,11 +390,16 @@ export async function executeIssue(issueIds: string[], userCode: string): Promis
         issued_at: new Date().toISOString(),
       }).eq('id', record.batch_item_id);
 
-      // Update instruction
-      await db.from('bn_payment_instruction').update({
+      // Update instruction. `payment_reference` is the real column on
+      // bn_payment_instruction — the previous `cl_cheque_no` write silently
+      // failed, leaving issued money with no trace on the claim.
+      const { error: linkErr } = await db.from('bn_payment_instruction').update({
         status: 'ISSUED_PENDING',
-        cl_cheque_no: writeResult.cheque_number || writeResult.dd_reference || null,
+        payment_reference: writeResult.cheque_number || writeResult.dd_reference || null,
+        paid_date: new Date().toISOString().slice(0, 10),
       }).eq('id', record.instruction_id);
+      if (linkErr) throw new Error(`Cheque written but payable back-link failed: ${linkErr.message}`);
+
 
       result.issued++;
       result.details.push({ id, ssn: record.ssn, status: 'ISSUED' });
@@ -431,50 +450,163 @@ interface LegacyWriteResult {
   dd_reference: string | null;
 }
 
-async function writeToLegacyTable(record: IssueRecord, userCode: string): Promise<LegacyWriteResult> {
-  const baseData: any = {
-    ssn: record.ssn,
-    claim_number: record.claim_number,
-    amount: record.amount,
-    currency: record.currency,
-    period_start: record.period_start,
-    period_end: record.period_end,
-    payment_type: record.instruction_type,
-    payment_method: record.issue_method,
-    batch_id: record.batch_id,
-    issued_by: userCode,
-    issued_date: new Date().toISOString(),
-    status: 'ISSUED',
-  };
+/**
+ * The legacy claims-side cheque tables use the PowerBuilder column vocabulary
+ * (claim_number / claim_seq / cheque_number / cheque_item / payment_amount /
+ * date_of_issue / date_period_*), NOT the modern bn_* names. Any write using
+ * modern names is rejected by the database, which is why no benefit payment had
+ * ever reached cl_cheques.
+ */
+async function nextChequeItem(claimNumber: string, claimSeq: number): Promise<number> {
+  const { data } = await db
+    .from('cl_cheques')
+    .select('cheque_item')
+    .eq('claim_number', claimNumber)
+    .eq('claim_seq', claimSeq)
+    .order('cheque_item', { ascending: false })
+    .limit(1);
+  return Number(data?.[0]?.cheque_item || 0) + 1;
+}
 
-  // Generate cheque number or DD reference
-  if (record.issue_method === 'CHEQUE') {
-    baseData.cheque_number = await generateChequeNumber();
-  } else {
-    baseData.dd_reference = await generateDDReference();
+/**
+ * Legacy cl_cheques.claim_number is varchar(11); modern BN claim numbers are
+ * longer. Each modern claim therefore gets a stable 11-character legacy
+ * reference, persisted on bn_claim.legacy_claim_ref so the same claim always
+ * maps to the same legacy key.
+ */
+async function resolveLegacyClaimNumber(record: IssueRecord): Promise<string> {
+  const modern = String(record.claim_number);
+  if (modern.length <= 11) return modern;
+
+  const { data: instr } = await db
+    .from('bn_payment_instruction')
+    .select('claim_id')
+    .eq('id', record.instruction_id)
+    .maybeSingle();
+  const claimId = instr?.claim_id;
+
+  if (claimId) {
+    const { data: claim } = await db
+      .from('bn_claim')
+      .select('legacy_claim_ref')
+      .eq('id', claimId)
+      .maybeSingle();
+    const existing = (claim?.legacy_claim_ref || '').trim();
+    if (existing && existing.length <= 11) return existing;
   }
 
-  // Route to correct table
+  const digits = modern.replace(/\D/g, '');
+  let base = Number(digits.slice(-9) || '0');
+  let candidate = '';
+  for (let attempt = 0; attempt < 25; attempt++) {
+    candidate = `BN${String((base + attempt) % 1_000_000_000).padStart(9, '0')}`;
+    const { data: clash } = await db
+      .from('cl_cheques')
+      .select('claim_number')
+      .eq('claim_number', candidate)
+      .limit(1);
+    const { data: refClash } = await db
+      .from('bn_claim')
+      .select('id')
+      .eq('legacy_claim_ref', candidate)
+      .limit(1);
+    if (!clash?.length && !refClash?.length) break;
+  }
+
+  if (claimId) {
+    await db.from('bn_claim').update({ legacy_claim_ref: candidate }).eq('id', claimId);
+  }
+  return candidate;
+}
+
+/** Legacy cheque_number is varchar(11); benefit cheques use a 9xxxxxxx range. */
+async function nextLegacyChequeNumber(): Promise<string> {
+  // Legacy cheque numbers are stored as text and include 9-digit values, so the
+  // range is matched on an exact 8-character `9` pattern rather than a string
+  // comparison (which would pick up 900000000 and reset the sequence).
+  const { data } = await db
+    .from('cl_cheques')
+    .select('cheque_number')
+    .like('cheque_number', '9000____')
+    .order('cheque_number', { ascending: false })
+    .limit(500);
+  const last = (data || [])
+    .map((r: any) => String(r.cheque_number || ''))
+    .filter((n: string) => /^9000\d{4}$/.test(n))
+    .map(Number)
+    .reduce((a: number, b: number) => Math.max(a, b), 0);
+  const next = last >= 90000001 && last < 90009999 ? last + 1 : 90000001;
+  return String(next);
+}
+
+async function writeToLegacyTable(record: IssueRecord, userCode: string): Promise<LegacyWriteResult> {
+  if (!record.claim_number) throw new Error('Issue record has no claim number — cannot write to cl_cheques');
+
+  const now = new Date().toISOString();
+  const claimSeq = 1;
+
+  // Direct-deposit payments are not cheques: they are recorded on the issue
+  // record only and never fabricate a cheque number in the legacy register.
+  if (record.issue_method === 'DIRECT_DEPOSIT') {
+    return { cheque_number: null, dd_reference: await generateDDReference() };
+  }
+
+  const claimNumber = await resolveLegacyClaimNumber(record);
+  const chequeNumber = await nextLegacyChequeNumber();
+  const chequeItem = await nextChequeItem(claimNumber, claimSeq);
+
+  const { data: batch } = await db
+    .from('bn_payment_batch')
+    .select('batch_number')
+    .eq('id', record.batch_id)
+    .maybeSingle();
+
+  const legacyRow: any = {
+    claim_number: claimNumber,
+    claim_seq: claimSeq,
+    cheque_number: chequeNumber,
+    cheque_item: chequeItem,
+    payment_amount: record.amount,
+    cheque_type: 'G',
+    cheque_status: 'O',            // O = outstanding / issued, not yet cashed
+    date_of_issue: now,
+    cheque_date: now,
+    date_period_start: record.period_start || null,
+    date_period_end: record.period_end || null,
+    batch_number: (batch?.batch_number || '').slice(0, 25) || null,
+    entered_by: (userCode || 'BN').slice(0, 5),
+    date_entered: now,
+    remarks: `${record.instruction_type || 'BENEFIT'} ${record.ssn}`.slice(0, 25),
+  };
+
   const table = record.target_table;
 
   if (table === 'cl_cheques_survivor') {
-    baseData.survivor_id = record.survivor_id;
-    baseData.beneficiary_name = record.beneficiary_name;
+    const { error: sErr } = await db.from('cl_cheques_survivor').insert({
+      survivor_number: 1,
+      claim_number: claimNumber,
+      claim_seq: claimSeq,
+      cheque_number: chequeNumber,
+      cheque_item: chequeItem,
+      payment_amount: record.amount,
+    });
+    if (sErr) throw sErr;
+  } else if (table === 'cl_cheques_holding') {
+    const { error: hErr } = await db.from('cl_cheques_holding').insert({
+      ...legacyRow,
+      cheque_id: Date.now(),
+      cheque_status: 'O',
+      remarks: `HOLD ${record.hold_reason || 'withheld'}`.slice(0, 25),
+    });
+    if (hErr) throw hErr;
+  } else {
+    const { error } = await db.from('cl_cheques').insert(legacyRow);
+    if (error) throw error;
   }
 
-  if (table === 'cl_cheques_holding') {
-    baseData.hold_reason = record.hold_reason;
-    baseData.hold_status = 'HELD';
-  }
-
-  const { error } = await db.from(table).insert(baseData);
-  if (error) throw error;
-
-  return {
-    cheque_number: baseData.cheque_number || null,
-    dd_reference: baseData.dd_reference || null,
-  };
+  return { cheque_number: chequeNumber, dd_reference: null };
 }
+
 
 // ─── Void / Reissue / Stop ──────────────────────────────────────────
 
@@ -521,12 +653,16 @@ export async function executeIssueAction(params: ExecuteIssueActionParams): Prom
 
 async function voidIssue(record: IssueRecord, userCode: string, reason: string): Promise<void> {
   // Update legacy table
-  await db.from(record.target_table).update({
-    status: 'VOIDED',
-    voided_by: userCode,
-    voided_date: new Date().toISOString(),
-    void_reason: reason,
-  }).eq('cheque_number', record.cheque_number);
+  if (record.cheque_number) {
+    await db.from(record.target_table).update({
+      cheque_status: 'X',
+      modified_by: userCode,
+      date_modified: new Date().toISOString(),
+      date_cancel: new Date().toISOString(),
+      date_status_changed: new Date().toISOString(),
+      remarks: `VOID: ${reason}`,
+    }).eq('cheque_number', record.cheque_number);
+  }
 
   // Update issue record
   await db.from('bn_issue_record').update({
@@ -570,12 +706,15 @@ async function prepareReissue(record: IssueRecord, userCode: string, reason?: st
 }
 
 async function stopIssue(record: IssueRecord, userCode: string, reason: string): Promise<void> {
-  await db.from(record.target_table).update({
-    status: 'STOPPED',
-    stopped_by: userCode,
-    stopped_date: new Date().toISOString(),
-    stop_reason: reason,
-  }).eq('cheque_number', record.cheque_number);
+  if (record.cheque_number) {
+    await db.from(record.target_table).update({
+      cheque_status: 'X',
+      modified_by: userCode,
+      date_modified: new Date().toISOString(),
+      date_status_changed: new Date().toISOString(),
+      remarks: `STOPPED: ${reason}`,
+    }).eq('cheque_number', record.cheque_number);
+  }
 
   await db.from('bn_issue_record').update({
     status: 'STOPPED',
@@ -586,9 +725,14 @@ async function stopIssue(record: IssueRecord, userCode: string, reason: string):
 }
 
 async function staleDateIssue(record: IssueRecord, userCode: string): Promise<void> {
-  await db.from(record.target_table).update({
-    status: 'STALE_DATED',
-  }).eq('cheque_number', record.cheque_number);
+  if (record.cheque_number) {
+    await db.from(record.target_table).update({
+      cheque_status: 'S',
+      date_stale: new Date().toISOString(),
+      modified_by: userCode,
+      date_modified: new Date().toISOString(),
+    }).eq('cheque_number', record.cheque_number);
+  }
 
   await db.from('bn_issue_record').update({ status: 'STALE_DATED' }).eq('id', record.id);
 }
@@ -633,21 +777,22 @@ export async function releaseHoldingPayment(issueId: string, userCode: string, r
   if (fErr) throw fErr;
 
   // Insert into cl_cheques
-  const { cheque_number: _, hold_reason: __, hold_status: ___, ...chequeData } = holdingRow;
+  const { cheque_id: _cid, cheque_number: _cn, modifier: _m, modified_date: _md, ...chequeData } = holdingRow;
   chequeData.cheque_number = await generateChequeNumber();
-  chequeData.status = 'ISSUED';
-  chequeData.released_from_holding = true;
-  chequeData.released_by = userCode;
-  chequeData.released_date = new Date().toISOString();
+  chequeData.cheque_status = 'O';
+  chequeData.modified_by = userCode;
+  chequeData.date_modified = new Date().toISOString();
+  chequeData.remarks = `${chequeData.remarks || ''} | HOLD RELEASED`.trim();
 
   const { error: iErr } = await db.from('cl_cheques').insert(chequeData);
   if (iErr) throw iErr;
 
   // Mark holding record as released
   await db.from('cl_cheques_holding').update({
-    hold_status: 'RELEASED',
-    released_by: userCode,
-    released_date: new Date().toISOString(),
+    cheque_status: 'C',
+    modified_by: userCode,
+    date_modified: new Date().toISOString(),
+    remarks: 'RELEASED FROM HOLDING',
   }).eq('cheque_number', record.cheque_number);
 
   // Update issue record

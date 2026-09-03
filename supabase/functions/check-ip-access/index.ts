@@ -37,7 +37,10 @@ Deno.serve(async (req) => {
 
     if (!ipToCheck || ipToCheck === "unknown") {
       return new Response(
-        JSON.stringify({ allowed: false, reason: "unable_to_determine_ip", ip: ipToCheck }),
+        // Fail-open: if neither the client nor the infrastructure could resolve an
+        // IP (ad-blocker / offline / blocked lookup service), we must not lock the
+        // user out — every other failure path in this function also fails open.
+        JSON.stringify({ allowed: true, reason: "unable_to_determine_ip", ip: ipToCheck }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

@@ -64578,6 +64578,65 @@ export type Database = {
           },
         ]
       }
+      core_fiscal_year: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organization_id: string
+          planning_open?: boolean
+          start_date: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          organization_id?: string
+          planning_open?: boolean
+          start_date?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_fiscal_year_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "core_organization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       core_generated_document: {
         Row: {
           case_stage_code: string | null
@@ -74830,6 +74889,7 @@ export type Database = {
           execution_gate_status: string | null
           executive_summary: string | null
           fiscal_year: string
+          fiscal_year_id: string | null
           function_id: string | null
           id: string
           internally_approved: boolean | null
@@ -74904,6 +74964,7 @@ export type Database = {
           execution_gate_status?: string | null
           executive_summary?: string | null
           fiscal_year: string
+          fiscal_year_id?: string | null
           function_id?: string | null
           id?: string
           internally_approved?: boolean | null
@@ -74978,6 +75039,7 @@ export type Database = {
           execution_gate_status?: string | null
           executive_summary?: string | null
           fiscal_year?: string
+          fiscal_year_id?: string | null
           function_id?: string | null
           id?: string
           internally_approved?: boolean | null
@@ -75033,6 +75095,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "v_ia_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_annual_plans_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
             referencedColumns: ["id"]
           },
           {
@@ -75258,16 +75327,18 @@ export type Database = {
           closure_notes: string | null
           conflict_check_result: Json | null
           coverage_category: string | null
+          coverage_category_id: string | null
           created_at: string | null
           created_by: string | null
           criteria: string | null
           department_audit_id: string | null
           department_id: string | null
           dependencies: string | null
-          engagement_code: string | null
+          engagement_code: string
           engagement_name: string
           engagement_risk_rating: string | null
           engagement_type: string | null
+          engagement_type_id: string | null
           estimated_budget: number | null
           estimated_days: number | null
           estimated_hours: number | null
@@ -75277,6 +75348,7 @@ export type Database = {
           expected_deliverable: string | null
           expected_deliverable_codes: Json | null
           expected_deliverable_notes: string | null
+          fiscal_period_exception_reason: string | null
           function_id: string | null
           id: string
           inclusion_rationale: string | null
@@ -75333,16 +75405,18 @@ export type Database = {
           closure_notes?: string | null
           conflict_check_result?: Json | null
           coverage_category?: string | null
+          coverage_category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           criteria?: string | null
           department_audit_id?: string | null
           department_id?: string | null
           dependencies?: string | null
-          engagement_code?: string | null
+          engagement_code: string
           engagement_name: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null
+          engagement_type_id?: string | null
           estimated_budget?: number | null
           estimated_days?: number | null
           estimated_hours?: number | null
@@ -75352,6 +75426,7 @@ export type Database = {
           expected_deliverable?: string | null
           expected_deliverable_codes?: Json | null
           expected_deliverable_notes?: string | null
+          fiscal_period_exception_reason?: string | null
           function_id?: string | null
           id?: string
           inclusion_rationale?: string | null
@@ -75408,16 +75483,18 @@ export type Database = {
           closure_notes?: string | null
           conflict_check_result?: Json | null
           coverage_category?: string | null
+          coverage_category_id?: string | null
           created_at?: string | null
           created_by?: string | null
           criteria?: string | null
           department_audit_id?: string | null
           department_id?: string | null
           dependencies?: string | null
-          engagement_code?: string | null
+          engagement_code?: string
           engagement_name?: string
           engagement_risk_rating?: string | null
           engagement_type?: string | null
+          engagement_type_id?: string | null
           estimated_budget?: number | null
           estimated_days?: number | null
           estimated_hours?: number | null
@@ -75427,6 +75504,7 @@ export type Database = {
           expected_deliverable?: string | null
           expected_deliverable_codes?: Json | null
           expected_deliverable_notes?: string | null
+          fiscal_period_exception_reason?: string | null
           function_id?: string | null
           id?: string
           inclusion_rationale?: string | null
@@ -75469,6 +75547,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "ia_audit_engagements_coverage_category_id_fkey"
+            columns: ["coverage_category_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ia_audit_engagements_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -75480,6 +75565,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "v_ia_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_audit_engagements_engagement_type_id_fkey"
+            columns: ["engagement_type_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
             referencedColumns: ["id"]
           },
           {
@@ -78598,6 +78690,53 @@ export type Database = {
           },
         ]
       }
+      ia_fiscal_year_migration_map: {
+        Row: {
+          action: string
+          classification: string
+          created_at: string
+          fiscal_year_id: string | null
+          id: string
+          legacy_fiscal_year: string | null
+          mapping_confidence: string
+          plan_id: string
+          plan_title: string | null
+          rationale: string | null
+        }
+        Insert: {
+          action: string
+          classification: string
+          created_at?: string
+          fiscal_year_id?: string | null
+          id?: string
+          legacy_fiscal_year?: string | null
+          mapping_confidence: string
+          plan_id: string
+          plan_title?: string | null
+          rationale?: string | null
+        }
+        Update: {
+          action?: string
+          classification?: string
+          created_at?: string
+          fiscal_year_id?: string | null
+          id?: string
+          legacy_fiscal_year?: string | null
+          mapping_confidence?: string
+          plan_id?: string
+          plan_title?: string | null
+          rationale?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_fiscal_year_migration_map_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_follow_ups: {
         Row: {
           action_id: string | null
@@ -78614,7 +78753,9 @@ export type Database = {
           engagement_id: string | null
           finding_id: string | null
           fiscal_year: string | null
+          fiscal_year_id: string | null
           follow_up_type: string | null
+          follow_up_type_id: string | null
           id: string
           lifecycle_status: string
           outcome: string | null
@@ -78646,7 +78787,9 @@ export type Database = {
           engagement_id?: string | null
           finding_id?: string | null
           fiscal_year?: string | null
+          fiscal_year_id?: string | null
           follow_up_type?: string | null
+          follow_up_type_id?: string | null
           id?: string
           lifecycle_status?: string
           outcome?: string | null
@@ -78678,7 +78821,9 @@ export type Database = {
           engagement_id?: string | null
           finding_id?: string | null
           fiscal_year?: string | null
+          fiscal_year_id?: string | null
           follow_up_type?: string | null
+          follow_up_type_id?: string | null
           id?: string
           lifecycle_status?: string
           outcome?: string | null
@@ -78743,6 +78888,20 @@ export type Database = {
             columns: ["finding_id"]
             isOneToOne: false
             referencedRelation: "ia_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_follow_ups_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_follow_ups_follow_up_type_id_fkey"
+            columns: ["follow_up_type_id"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_value"
             referencedColumns: ["id"]
           },
         ]
@@ -79503,12 +79662,14 @@ export type Database = {
           priority: string | null
           resolved_at: string | null
           resolved_by: string | null
+          source_fiscal_year_id: string | null
           source_id: string | null
           source_reference: string | null
           source_type: string
           status: string | null
           target_engagement_id: string | null
           target_fiscal_year: string | null
+          target_fiscal_year_id: string | null
           target_plan_id: string | null
           target_resolution_date: string | null
         }
@@ -79529,12 +79690,14 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_fiscal_year_id?: string | null
           source_id?: string | null
           source_reference?: string | null
           source_type: string
           status?: string | null
           target_engagement_id?: string | null
           target_fiscal_year?: string | null
+          target_fiscal_year_id?: string | null
           target_plan_id?: string | null
           target_resolution_date?: string | null
         }
@@ -79555,12 +79718,14 @@ export type Database = {
           priority?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          source_fiscal_year_id?: string | null
           source_id?: string | null
           source_reference?: string | null
           source_type?: string
           status?: string | null
           target_engagement_id?: string | null
           target_fiscal_year?: string | null
+          target_fiscal_year_id?: string | null
           target_plan_id?: string | null
           target_resolution_date?: string | null
         }
@@ -79580,10 +79745,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ia_plan_carry_forward_source_fiscal_year_id_fkey"
+            columns: ["source_fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ia_plan_carry_forward_target_engagement_id_fkey"
             columns: ["target_engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_plan_carry_forward_target_fiscal_year_id_fkey"
+            columns: ["target_fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "core_fiscal_year"
             referencedColumns: ["id"]
           },
           {
@@ -80680,6 +80859,134 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ia_findings"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_reference_migration_map: {
+        Row: {
+          canonical_code: string | null
+          classification: string
+          created_at: string
+          id: string
+          legacy_value: string | null
+          rationale: string | null
+          reference_type: string
+          rows_affected: number
+        }
+        Insert: {
+          canonical_code?: string | null
+          classification: string
+          created_at?: string
+          id?: string
+          legacy_value?: string | null
+          rationale?: string | null
+          reference_type: string
+          rows_affected?: number
+        }
+        Update: {
+          canonical_code?: string | null
+          classification?: string
+          created_at?: string
+          id?: string
+          legacy_value?: string | null
+          rationale?: string | null
+          reference_type?: string
+          rows_affected?: number
+        }
+        Relationships: []
+      }
+      ia_reference_type: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          display_order: number
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_reference_value: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          description: string | null
+          display_order: number
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          reference_type: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          description?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          reference_type: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          description?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          reference_type?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_reference_value_reference_type_fkey"
+            columns: ["reference_type"]
+            isOneToOne: false
+            referencedRelation: "ia_reference_type"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -123837,6 +124144,16 @@ export type Database = {
         }
         Returns: string
       }
+      _core_fiscal_audit: {
+        Args: {
+          _action: string
+          _before: Json
+          _row: Database["public"]["Tables"]["core_fiscal_year"]["Row"]
+          _uid: string
+        }
+        Returns: undefined
+      }
+      _core_fiscal_require_admin: { Args: never; Returns: string }
       _evaluate_comm_hub_send_decision_core: {
         Args: { p_payload: Json }
         Returns: Json
@@ -129672,6 +129989,139 @@ export type Database = {
         }
         Returns: Json
       }
+      core_current_organization_id: { Args: never; Returns: string }
+      core_fiscal_calendar_epoch: { Args: never; Returns: string }
+      core_fiscal_quarter_of: {
+        Args: { p_date: string; p_fiscal_year_id: string }
+        Returns: string
+      }
+      core_fiscal_year_create: {
+        Args: {
+          p_code: string
+          p_display_name?: string
+          p_end_date?: string
+          p_is_active?: boolean
+          p_notes?: string
+          p_planning_open?: boolean
+          p_start_date?: string
+          p_status?: string
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      core_fiscal_year_for_date: {
+        Args: { p_date: string; p_organization_id?: string }
+        Returns: string
+      }
+      core_fiscal_year_planning_eligible: {
+        Args: { p_fiscal_year_id: string }
+        Returns: boolean
+      }
+      core_fiscal_year_set_active: {
+        Args: { p_id: string; p_is_active: boolean }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      core_fiscal_year_set_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      core_fiscal_year_update: {
+        Args: {
+          p_code?: string
+          p_display_name?: string
+          p_end_date?: string
+          p_id: string
+          p_is_active?: boolean
+          p_notes?: string
+          p_planning_open?: boolean
+          p_start_date?: string
+          p_status?: string
+        }
+        Returns: {
+          code: string
+          created_at: string
+          created_by: string | null
+          display_name: string
+          end_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          organization_id: string
+          planning_open: boolean
+          start_date: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "core_fiscal_year"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       core_generate_number: {
         Args: {
           p_branch_code?: string
@@ -129727,6 +130177,10 @@ export type Database = {
       core_map_ledger_fund_to_liability: {
         Args: { p_fund: string }
         Returns: string
+      }
+      core_master_data_actor_can: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       core_preview_next_number: {
         Args: {
@@ -131788,6 +132242,18 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_fiscal_configuration_health: {
+        Args: never
+        Returns: {
+          affected_count: number
+          check_code: string
+          detail: string
+          drill_ref: string
+          severity: string
+          status: string
+          title: string
+        }[]
+      }
       ia_followup_record_outcome: {
         Args: { p_followup_id: string; p_notes?: string; p_outcome: string }
         Returns: Json
@@ -131831,6 +132297,7 @@ export type Database = {
       }
       ia_is_ia_user: { Args: never; Returns: boolean }
       ia_is_quality_reviewer: { Args: never; Returns: boolean }
+      ia_is_risk_band_label: { Args: { _value: string }; Returns: boolean }
       ia_issue_report: {
         Args: { p_notes?: string; p_report_id: string }
         Returns: Json
@@ -131948,8 +132415,11 @@ export type Database = {
           p_acknowledgment_required?: boolean
           p_created_by?: string
           p_engagement_id: string
+          p_event_code?: string
           p_mode?: string
           p_notes?: string
+          p_occurrence?: string
+          p_omni_comms_request_id?: string
           p_recipient_email?: string
           p_recipient_name?: string
           p_stage_code: string
@@ -131968,6 +132438,47 @@ export type Database = {
           p_target_date?: string
         }
         Returns: Json
+      }
+      ia_reference_admin_can: { Args: never; Returns: boolean }
+      ia_reference_assert_id: {
+        Args: { _id: string; _type: string }
+        Returns: string
+      }
+      ia_reference_configuration_health: {
+        Args: never
+        Returns: {
+          affected_count: number
+          check_code: string
+          detail: string
+          severity: string
+        }[]
+      }
+      ia_reference_resolve: {
+        Args: { _type: string; _value: string }
+        Returns: string
+      }
+      ia_reference_value_create: {
+        Args: {
+          _code: string
+          _description?: string
+          _display_order?: number
+          _name: string
+          _reference_type: string
+        }
+        Returns: string
+      }
+      ia_reference_value_set_active: {
+        Args: { _id: string; _is_active: boolean; _reason?: string }
+        Returns: string
+      }
+      ia_reference_value_update: {
+        Args: {
+          _description?: string
+          _display_order?: number
+          _id: string
+          _name?: string
+        }
+        Returns: string
       }
       ia_register_actions: { Args: { p_filters?: Json }; Returns: Json }
       ia_register_findings: { Args: { p_filters?: Json }; Returns: Json }
@@ -138190,12 +138701,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -138219,11 +138730,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -138244,11 +138755,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -138269,11 +138780,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -138286,11 +138797,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

@@ -32,6 +32,9 @@ export type OrchestrationResult = {
   toStatus: string;
   entitlementId?: string;
   paymentInstructionId?: string;
+  awardId?: string;
+  /** Set when the award record could not be created; the approval still stands. */
+  awardWarning?: string;
   message: string;
 };
 
@@ -110,6 +113,19 @@ export async function orchestrateApproval(
   const lump = Number(calc?.lump_sum || 0);
   const today = new Date().toISOString().slice(0, 10);
 
+  // Beneficiary name is denormalised onto the payable so Batch Operations and
+  // the cheque register can display and validate it without a person lookup.
+  let beneficiaryName: string | null = null;
+  for (const table of ['ip_master', 'au_ip_master']) {
+    const { data: ipRow } = await db
+      .from(table)
+      .select('firstname, surname')
+      .eq('ssn', claim.ssn)
+      .maybeSingle();
+    const name = ipRow ? [ipRow.firstname, ipRow.surname].filter(Boolean).join(' ').trim() : '';
+    if (name) { beneficiaryName = name; break; }
+  }
+
   // Resolve payment frequency: respect product version config; otherwise infer
   // from benefit duration (short-term benefits — e.g. Sickness, Maternity,
   // Employment Injury — pay WEEKLY; long-term/pension defaults to MONTHLY).
@@ -135,6 +151,8 @@ export async function orchestrateApproval(
 
   let entitlementId: string | undefined;
   let paymentInstructionId: string | undefined;
+  let awardId: string | undefined;
+  let awardWarning: string | undefined;
   let toStatus = taskType;
 
 
@@ -182,6 +200,41 @@ export async function orchestrateApproval(
       critical: true,
     });
 
+    /**
+     * Create the actual award record. This step used to be missing entirely:
+     * the orchestrator logged an `AWARD_CREATED` event and moved the claim to
+     * AWARD_SETUP while `bn_award` stayed empty, so Payment Preparation had an
+     * entitlement but nothing to build a payment schedule against.
+     *
+     * `force` is passed because the periodic routing decision has already been
+     * made above — the award must not be re-gated on `award_creation_rule`.
+     */
+    try {
+      const { createAwardOnApproval } = await import('@/services/bn/awards/awardCreationService');
+      const awardRes = await createAwardOnApproval(claimId, performedBy, {
+        force: true,
+        source: 'post_approval_orchestrator',
+      });
+      awardId = awardRes.awardId;
+      if (!awardRes.awardId) {
+        awardWarning = `Award record was not created (${awardRes.reason ?? 'unknown reason'}). A payment schedule cannot be generated until an award exists.`;
+      }
+    } catch (e: any) {
+      // Non-fatal: the approval itself stands. The reason is surfaced on the
+      // result and audited rather than swallowed into the console.
+      awardWarning = `Award record was not created: ${e?.message ?? String(e)}`;
+    }
+    if (awardWarning) {
+      await db.from('bn_claim_event').insert({
+        claim_id: claimId,
+        event_type: 'AWARD_CREATION_FAILED',
+        notes: awardWarning,
+        performed_by: performedBy,
+        performed_at: new Date().toISOString(),
+      }).then(() => undefined, () => undefined);
+    }
+
+
     // Also raise the first periodic payment instruction so the claim
     // becomes visible in the Payables Queue and in the Workbench
     // Payments tab immediately after activation.
@@ -195,12 +248,17 @@ export async function orchestrateApproval(
           ssn: claim.ssn,
           amount: firstAmt,
           currency: 'XCD',
-          payment_method: claim.bank_account ? 'EFT' : 'CHEQUE',
+          payment_method: claim.bank_account ? 'DIRECT_DEPOSIT' : 'CHEQUE',
           bank_code: claim.bank_routing_number || null,
           account_number: claim.bank_account || null,
           due_date: today,
           frequency,
           status: 'READY',
+          instruction_type: 'PERIODIC',
+          beneficiary_name: beneficiaryName,
+          period_start: today,
+          period_end: today,
+          office_code: 'HQ',
 
           description: `${product.benefit_name} — first periodic payment`,
         })
@@ -237,12 +295,17 @@ export async function orchestrateApproval(
         ssn: claim.ssn,
         amount: amt,
         currency: 'XCD',
-        payment_method: claim.bank_account ? 'EFT' : 'CHEQUE',
+        payment_method: claim.bank_account ? 'DIRECT_DEPOSIT' : 'CHEQUE',
         bank_code: claim.bank_routing_number || null,
         account_number: claim.bank_account || null,
         due_date: today,
         frequency: 'ONE_OFF',
         status: 'READY',
+        instruction_type: 'LUMP_SUM',
+        beneficiary_name: beneficiaryName,
+        period_start: today,
+        period_end: today,
+        office_code: 'HQ',
 
         description: `${product.benefit_name} — ${claim.claim_number}`,
       })
@@ -302,8 +365,12 @@ export async function orchestrateApproval(
     toStatus,
     entitlementId,
     paymentInstructionId,
+    awardId,
+    awardWarning,
     message: periodic
-      ? `Entitlement created. Claim moved to ${toStatus}.`
+      ? (awardWarning
+          ? `Entitlement created and claim moved to ${toStatus}, but no award record was produced. ${awardWarning}`
+          : `Award and entitlement created. Claim moved to ${toStatus}.`)
       : `Payable queued. Claim moved to ${toStatus}.`,
   };
 }

@@ -64,7 +64,11 @@ export function useEngagementClosureMutations() {
 }
 
 /**
- * Hook to update the lifecycle_status on the engagement itself.
+ * Stage 2E (DEF-E2E-012): engagement lifecycle progression.
+ *
+ * `lifecycle_status` is a non-authoritative UI progress marker. Any terminal
+ * disposition ("Completed"/"Closed") MUST go through the governed closure
+ * command `ia_close_engagement` — the client never writes a terminal state.
  */
 export function useEngagementLifecycle() {
   const qc = useQueryClient();
@@ -73,7 +77,30 @@ export function useEngagementLifecycle() {
 
   const transition = useMutation({
     mutationKey: ['InternalAudit', 'ia_audit_closure', 'update'],
-    mutationFn: async ({ engagementId, status }: { engagementId: string; status: string }) => {
+    mutationFn: async ({
+      engagementId,
+      status,
+      finalRating,
+      notes,
+    }: { engagementId: string; status: string; finalRating?: string | null; notes?: string | null }) => {
+      const terminal = ['Completed', 'Closed', 'Closed – Actions Pending'].includes(status);
+
+      if (terminal) {
+        const { data, error } = await (supabase.rpc as any)('ia_close_engagement', {
+          p_engagement_id: engagementId,
+          p_disposition: status === 'Closed – Actions Pending' ? 'Closed – Actions Pending' : 'Closed',
+          p_final_rating: finalRating ?? null,
+          p_notes: notes ?? null,
+        });
+        if (error) throw error;
+        const result = data as any;
+        if (!result?.success) {
+          const detail: string[] = (result?.blockers || []).map((b: any) => b?.message).filter(Boolean);
+          throw new Error([result?.error, ...detail].filter(Boolean).join(' — '));
+        }
+        return result;
+      }
+
       const { data, error } = await supabase
         .from('ia_audit_engagements' as any)
         .update({ lifecycle_status: status, ...getUpdateFields() } as any)
@@ -85,10 +112,12 @@ export function useEngagementLifecycle() {
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['ia_audit_engagements'] });
+      qc.invalidateQueries({ queryKey: ['ia_engagement_closure_gate'] });
       toast({ title: `Status: ${vars.status}`, description: 'Engagement lifecycle updated' });
     },
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
+
 
   return { transition };
 }

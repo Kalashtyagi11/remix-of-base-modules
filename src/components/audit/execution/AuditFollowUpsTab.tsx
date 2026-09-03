@@ -12,6 +12,8 @@ import { useEngagementFollowUps, useEngagementActions } from '@/hooks/useEngagem
 import { useIaFollowUpSchedule, useIaFollowUpRecordOutcome } from '@/hooks/useAuditActionCentre';
 import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
 import { formatDateForDisplay } from '@/lib/format-config';
+import { IaReferenceSelect } from '@/components/audit/reference/IaReferenceSelect';
+
 
 /**
  * IA-POST-UAT-02 — Follow-Up UI convergence.
@@ -24,11 +26,18 @@ import { formatDateForDisplay } from '@/lib/format-config';
  * Derived states (Resolved / Closed / Overdue) are never set from the UI.
  */
 
-const FOLLOW_UP_TYPES = ['Action Verification', 'Implementation Check', 'Evidence Collection', 'Re-Test', 'Management Meeting', 'Other'];
+// Stage 2B: follow-up types come from the governed IA reference master
+// (ia_reference_value / FOLLOW_UP_TYPE); free entry is no longer possible.
 
-/** Canonical outcome vocabulary enforced by ia_followup_record_outcome. */
-const OUTCOMES = ['In Verification', 'Implemented', 'Partially Implemented', 'Not Implemented', 'Reopened'] as const;
-const OUTCOMES_REQUIRING_NOTES = ['Partially Implemented', 'Not Implemented'];
+
+import {
+  FOLLOWUP_OUTCOMES,
+  FOLLOWUP_OUTCOMES_REQUIRING_NOTES,
+} from '@/config/auditWorkflowVocabulary';
+
+/** Canonical outcome vocabulary enforced by ia_followup_record_outcome (Stage 2E). */
+const OUTCOMES = FOLLOWUP_OUTCOMES;
+const OUTCOMES_REQUIRING_NOTES: string[] = [...FOLLOWUP_OUTCOMES_REQUIRING_NOTES];
 
 const TERMINAL_ACTION_STATUSES = ['Cancelled', 'Closed', 'Superseded'];
 
@@ -46,7 +55,7 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
 
   const [mode, setMode] = useState<'schedule' | 'outcome' | 'view' | null>(null);
   const [active, setActive] = useState<any>(null);
-  const [scheduleForm, setScheduleForm] = useState({ action_id: '', scheduled_date: '', follow_up_type: 'Action Verification', notes: '', fiscal_year: '' });
+  const [scheduleForm, setScheduleForm] = useState({ action_id: '', scheduled_date: '', follow_up_type: '', notes: '', fiscal_year: '' });
   const [outcomeForm, setOutcomeForm] = useState({ outcome: '', notes: '' });
 
   const findingTitle = (id?: string | null) =>
@@ -63,7 +72,7 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
   const close = () => { setMode(null); setActive(null); };
 
   const openSchedule = () => {
-    setScheduleForm({ action_id: '', scheduled_date: '', follow_up_type: 'Action Verification', notes: '', fiscal_year: '' });
+    setScheduleForm({ action_id: '', scheduled_date: '', follow_up_type: '', notes: '', fiscal_year: '' });
     setActive(null);
     setMode('schedule');
   };
@@ -170,11 +179,13 @@ export function AuditFollowUpsTab({ auditId, auditFindings = [] }: AuditFollowUp
 
             <div className="grid grid-cols-2 gap-4">
               <div><Label>Follow-Up Type</Label>
-                <Select value={scheduleForm.follow_up_type} onValueChange={v => setScheduleForm(f => ({ ...f, follow_up_type: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{FOLLOW_UP_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
+                <IaReferenceSelect
+                  type="FOLLOW_UP_TYPE"
+                  value={scheduleForm.follow_up_type}
+                  onChange={v => setScheduleForm(f => ({ ...f, follow_up_type: v }))}
+                />
               </div>
+
               <div><Label>Fiscal Year</Label><Input value={scheduleForm.fiscal_year} onChange={e => setScheduleForm(f => ({ ...f, fiscal_year: e.target.value }))} placeholder="Defaults to scheduled year" /></div>
             </div>
             <div><Label>Notes</Label><Textarea rows={2} value={scheduleForm.notes} onChange={e => setScheduleForm(f => ({ ...f, notes: e.target.value }))} className="text-sm" /></div>
