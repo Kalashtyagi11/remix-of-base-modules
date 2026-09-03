@@ -207,6 +207,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                   <Label>Channel Enabled</Label>
                   <Switch
                     checked={cfg?.is_enabled ?? false}
+                    disabled={isReadOnly}
                     onCheckedChange={v => save(channel, { is_enabled: v })}
                   />
                 </div>
@@ -217,6 +218,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                     <Select
                       value={cfg?.screen_template_id ?? '__none__'}
                       onValueChange={v => save(channel, { screen_template_id: v === '__none__' ? null : v })}
+                      disabled={isReadOnly}
                     >
                       <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                       <SelectContent>
@@ -233,6 +235,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                     <Select
                       value={cfg?.workflow_template_id ?? '__none__'}
                       onValueChange={v => save(channel, { workflow_template_id: v === '__none__' ? null : v })}
+                      disabled={isReadOnly}
                     >
                       <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                       <SelectContent>
@@ -261,6 +264,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                     <Select
                       value={cfg?.document_profile_id ?? '__none__'}
                       onValueChange={v => save(channel, { document_profile_id: v === '__none__' ? null : v })}
+                      disabled={isReadOnly}
                     >
                       <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                       <SelectContent>
@@ -301,6 +305,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                       <Label className="text-sm">{label}</Label>
                       <Switch
                         checked={Boolean((cfg as any)?.[k])}
+                        disabled={isReadOnly}
                         onCheckedChange={v => save(channel, { [k]: v } as any)}
                       />
                     </div>
@@ -310,6 +315,7 @@ export function ChannelsTab({ productId, versionId, isReadOnly, versionStatus }:
                     <Select
                       value={(cfg as any)?.payment_details_visibility ?? 'SHOW'}
                       onValueChange={v => save(channel, { payment_details_visibility: v } as any)}
+                      disabled={isReadOnly}
                     >
                       <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                       <SelectContent>
