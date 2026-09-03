@@ -17,6 +17,8 @@ import {
   useBnIsEvidenceComplete,
   useMarkChecklistPending,
   useWaiveChecklistItem,
+  useDeleteEvidence,
+
 } from '@/hooks/bn/useBnEvidence';
 import { EvidenceStatusBadge } from './EvidenceStatusBadge';
 import { EvidenceUploadDialog } from './EvidenceUploadDialog';
