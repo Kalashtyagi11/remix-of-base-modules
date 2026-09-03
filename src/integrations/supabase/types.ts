@@ -125363,6 +125363,17 @@ export type Database = {
         Args: { p_claim_id: string }
         Returns: number
       }
+      bn_mature_payment_schedule: {
+        Args: { p_as_of?: string; p_award_id?: string; p_performed_by?: string }
+        Returns: {
+          claim_number: string
+          due_date: string
+          instruction_id: string
+          outcome: string
+          reason: string
+          schedule_id: string
+        }[]
+      }
       bn_means_activation_command_v1: {
         Args: {
           p_actor_user_code: string
