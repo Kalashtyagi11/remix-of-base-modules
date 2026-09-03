@@ -64,3 +64,11 @@
 - [x] Resolve duplicate "Create Referral" vs approval-minted referral; context-sensitive next action to Legal Pack
 - [x] Enterprise UI: KPIs, Requires Attention, table register, URL state, error/empty states, RBAC split
 
+
+## Benefits defect register (2026-09-03)
+- [x] ELIG-01 shared catalogue rule mapper + import-time evaluability guard
+- [x] ELIG-02 verified already fail-closed; regression test added
+- [x] ELIG-03 single eligibility field registry (builders derive from authoritative list)
+- [x] AMND-01 amendment policy seed trigger + backfill (staged migration, applies on accept)
+- [x] AMND-02 banner shows the computed locked reason
+- [ ] SAP-SANCHIT v4 config corrections (reported, not auto-applied)
