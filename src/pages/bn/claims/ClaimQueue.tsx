@@ -174,6 +174,7 @@ export default function ClaimQueue() {
   // Opening a basket clears its "new arrival" alerts for this user.
   const openBasket = (basketId: string) => {
     setSelectedBasket(basketId);
+    clearFilters();
     if ((arrivals[basketId] ?? 0) > 0) clearArrivals.mutate(basketId);
   };
 
