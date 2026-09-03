@@ -30,7 +30,7 @@ const db = supabase as any;
 
 async function currentUserIsAdmin(): Promise<boolean> {
   const { data: auth } = await supabase.auth.getUser();
-  const userId = auth?.user?.id;
+  let userId = auth?.user?.id;
   if (!userId) {
     const { data: session } = await supabase.auth.getSession();
     userId = session?.session?.user?.id;
