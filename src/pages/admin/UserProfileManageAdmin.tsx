@@ -44,6 +44,8 @@ import {
   useUserDelegations, useCreateUserDelegation, useRevokeUserDelegation,
   useIdentityUserRoles, useAssignIdentityRole, useRemoveIdentityRole, useAvailableRoles,
 } from '@/platform/identity/useIdentity';
+import { createOrUpdateUserSecurityState } from '@/platform/identity/identityService';
+
 import {
   EMPLOYMENT_STATUSES, STAFF_TYPES, ASSIGNMENT_TYPES, DELEGATION_TYPES,
 } from '@/platform/identity/identityTypes';
