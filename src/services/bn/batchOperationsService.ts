@@ -625,50 +625,67 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
 
   let issued = 0;
   let failed = 0;
+  const errors: string[] = [];
+
+  // Cheque numbers already assigned from physical stock for this batch.
+  const { data: registerRows } = await db
+    .from('bn_cheque_register')
+    .select('batch_item_id, cheque_number, status')
+    .eq('batch_id', batchId);
+  const assignedByItem = new Map<string, string>();
+  for (const r of (registerRows || [])) {
+    if (r.batch_item_id && r.cheque_number && r.status !== 'CANCELLED') {
+      assignedByItem.set(r.batch_item_id, String(r.cheque_number));
+    }
+  }
 
   for (const item of (items || [])) {
     try {
-      // Write to cl_cheques (legacy outbound payment table)
-      const chequeData = {
+      // Single canonical legacy writer (shared with Payment Issue) — the legacy
+      // cl_cheques table uses PowerBuilder column names, not bn_* names.
+      const writeResult = await writeBatchItemToLegacyPayment({
+        batchId,
+        instructionId: item.instruction_id,
+        claimNumber: item.claim_number,
         ssn: item.ssn,
-        claim_number: item.claim_number,
-        amount: item.amount,
-        payment_method: item.payment_method,
-        period_start: item.period_start,
-        period_end: item.period_end,
-        batch_number: batch.batch_number,
-        issued_by: userCode,
-        issued_date: new Date().toISOString(),
-        status: 'ISSUED',
-      };
+        amount: Number(item.amount || 0),
+        paymentMethod: item.payment_method,
+        periodStart: item.period_start,
+        periodEnd: item.period_end,
+        instructionType: item.instruction_type,
+        chequeNumber: assignedByItem.get(item.id) || item.cheque_number || null,
+        userCode,
+      });
 
-      const { data: cheque, error: cErr } = await db
-        .from('cl_cheques')
-        .insert(chequeData)
-        .select('cheque_no')
-        .single();
-
-      if (cErr) throw cErr;
+      const reference = writeResult.cheque_number || writeResult.dd_reference || null;
 
       // Update batch item
-      await db.from('bn_batch_item').update({
+      const { error: itemErr } = await db.from('bn_batch_item').update({
         item_status: 'ISSUED',
-        cl_cheque_no: cheque?.cheque_no || null,
+        cl_cheque_no: reference,
         issued_at: new Date().toISOString(),
+        issue_error: null,
       }).eq('id', item.id);
+      if (itemErr) throw itemErr;
 
-      // Update instruction status
-      await db.from('bn_payment_instruction').update({
+      // Update instruction status. `payment_reference` is the real column on
+      // bn_payment_instruction (there is no cl_cheque_no there).
+      const { error: instrErr } = await db.from('bn_payment_instruction').update({
         status: 'ISSUED_PENDING',
-        cl_cheque_no: cheque?.cheque_no || null,
+        payment_reference: reference,
+        paid_date: new Date().toISOString().slice(0, 10),
       }).eq('id', item.instruction_id);
+      if (instrErr) throw new Error(`Payment written but payable back-link failed: ${instrErr.message}`);
 
       issued++;
     } catch (err: any) {
+      const message = err?.message || 'Issue failed';
+      errors.push(message);
+
       // Mark as failed
       await db.from('bn_batch_item').update({
         item_status: 'ISSUE_FAILED',
-        issue_error: err.message,
+        issue_error: message,
       }).eq('id', item.id);
 
       // Create exception record
@@ -676,7 +693,7 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
         instruction_id: item.instruction_id,
         batch_id: batchId,
         exception_type: 'ISSUE_FAILURE',
-        description: err.message,
+        description: message,
         status: 'OPEN',
         raised_by: userCode,
       });
@@ -684,6 +701,7 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
       failed++;
     }
   }
+
 
   // Update batch final status
   const finalStatus = failed === 0 ? 'ISSUED' : (issued > 0 ? 'PARTIALLY_ISSUED' : 'RELEASED');
