@@ -15,8 +15,10 @@ import { useBnProductVersion } from '@/hooks/bn/useBnProduct';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentUserCode } from '@/services/bn/audit/getCurrentUserCode';
 import { catalogueLegalSnapshot } from '@/lib/bn/catalogueLegalSnapshot';
+import { catalogueRuleDefinition, unmappableCatalogueRules, unmappableRuleMessage } from '@/services/bn/eligibility/catalogueRuleMapping';
+
 import { isRuleCurrentlyEffective, type RuleCatalogueItem } from '@/services/bn/ruleCatalogueService';
-import { BnBusyButton } from '@/components/bn/shared';
+
 
 interface Props {
   open: boolean;
@@ -64,24 +66,28 @@ export function CataloguePickerDialog({ open, onOpenChange, versionId, onAdded }
 
   const handleAdd = async () => {
     if (selected.size === 0) { onOpenChange(false); return; }
+    const picked = rules.filter(r => selected.has(r.id));
+    // ELIG-01 — refuse a rule whose fact resolves to no registered field.
+    const unmappable = unmappableCatalogueRules(picked as any);
+    if (unmappable.length) {
+      toast.error('Cannot add — rule field is not evaluable', {
+        description: unmappableRuleMessage(unmappable),
+      });
+      return;
+    }
     const userCode = await getCurrentUserCode();
     if (!userCode) { toast.error('Authenticated user_code required'); return; }
     setBusy(true);
     try {
-      const items = rules.filter(r => selected.has(r.id));
+      const items = picked;
       const rows = items.map((r: RuleCatalogueItem, i: number) => ({
         product_version_id: versionId,
         rule_code: r.rule_code,
         rule_name: r.rule_name,
         rule_type: r.group_type,
         rule_group: r.group_type,
-        rule_definition: {
-          parameter: r.parameter,
-          operator: r.operator,
-          value_from: r.value_from,
-          value_to: r.value_to,
-          values: r.values,
-        },
+        rule_definition: catalogueRuleDefinition(r as any),
+
         fail_action: r.default_fail_action,
         fail_message: r.failure_message_text,
         fact_key: r.fact_key,

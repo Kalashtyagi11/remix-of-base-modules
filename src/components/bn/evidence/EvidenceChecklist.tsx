@@ -10,13 +10,15 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, CheckCircle2, XCircle, ShieldOff, HelpCircle, AlertTriangle, FileText, Clock } from 'lucide-react';
+import { Upload, CheckCircle2, XCircle, ShieldOff, HelpCircle, AlertTriangle, FileText, Clock, Trash2 } from 'lucide-react';
 import {
   useBnClaimEvidence,
   useBnEvidenceChecklist,
   useBnIsEvidenceComplete,
   useMarkChecklistPending,
   useWaiveChecklistItem,
+  useDeleteEvidence,
+
 } from '@/hooks/bn/useBnEvidence';
 import { EvidenceStatusBadge } from './EvidenceStatusBadge';
 import { EvidenceUploadDialog } from './EvidenceUploadDialog';
@@ -65,13 +67,14 @@ export function EvidenceChecklist({
 
   const markPending = useMarkChecklistPending();
   const waiveItem = useWaiveChecklistItem();
+  const deleteEvidence = useDeleteEvidence();
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadContext, setUploadContext] = useState<{ typeCode?: string; name?: string; requirementId?: string; extensions?: string[]; maxSize?: number }>({});
   const [actionOpen, setActionOpen] = useState(false);
   const [actionType, setActionType] = useState<'VERIFY' | 'REJECT' | 'WAIVE' | 'REQUEST_INFO'>('VERIFY');
   const [selectedEvidence, setSelectedEvidence] = useState<BnClaimEvidence | null>(null);
-  const [reasonDialog, setReasonDialog] = useState<{ open: boolean; kind: 'PENDING' | 'WAIVE'; checklistId: string; docName: string } | null>(null);
+  const [reasonDialog, setReasonDialog] = useState<{ open: boolean; kind: 'PENDING' | 'WAIVE' | 'DELETE'; checklistId: string; docName: string; evidenceId?: string } | null>(null);
   const [reasonText, setReasonText] = useState('');
 
   const isInternal = mode === 'INTERNAL';
@@ -96,7 +99,10 @@ export function EvidenceChecklist({
     if (!reasonDialog) return;
     if (!reasonText.trim()) { toast.error('A reason is required.'); return; }
     try {
-      if (reasonDialog.kind === 'PENDING') {
+      if (reasonDialog.kind === 'DELETE') {
+        await deleteEvidence.mutateAsync({ evidenceId: reasonDialog.evidenceId!, reason: reasonText, userCode: userCode || 'SYSTEM' });
+        toast.success(`${reasonDialog.docName} deleted.`);
+      } else if (reasonDialog.kind === 'PENDING') {
         await markPending.mutateAsync({ claimId, checklistId: reasonDialog.checklistId, reason: reasonText, userCode: userCode || 'SYSTEM' });
         toast.success(`${reasonDialog.docName} marked pending.`);
       } else {
@@ -299,6 +305,24 @@ export function EvidenceChecklist({
                                   <TooltipContent>Request More Info</TooltipContent>
                                 </Tooltip>
                               )}
+                              {isInternal && ev.status !== 'VERIFIED' && ev.status !== 'WAIVED' && roleCanVerify && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      disabled={deleteEvidence.isPending}
+                                      onClick={() => {
+                                        setReasonDialog({ open: true, kind: 'DELETE', checklistId: '', docName: ev.document_name, evidenceId: ev.id });
+                                        setReasonText('');
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete document</TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           </TooltipProvider>
 
@@ -337,7 +361,7 @@ export function EvidenceChecklist({
       <Dialog open={!!reasonDialog} onOpenChange={(o) => { if (!o) { setReasonDialog(null); setReasonText(''); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{reasonDialog?.kind === 'PENDING' ? 'Mark Document Pending' : 'Waive Document Requirement'}</DialogTitle>
+            <DialogTitle>{reasonDialog?.kind === 'PENDING' ? 'Mark Document Pending' : reasonDialog?.kind === 'DELETE' ? 'Delete Document' : 'Waive Document Requirement'}</DialogTitle>
             <DialogDescription>
               {reasonDialog?.docName} — a reason is required and will be recorded in the audit trail.
             </DialogDescription>
@@ -348,7 +372,7 @@ export function EvidenceChecklist({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setReasonDialog(null); setReasonText(''); }}>Cancel</Button>
-            <Button onClick={submitReason} disabled={!reasonText.trim() || markPending.isPending || waiveItem.isPending}>
+            <Button onClick={submitReason} disabled={!reasonText.trim() || markPending.isPending || waiveItem.isPending || deleteEvidence.isPending}>
               Confirm
             </Button>
           </DialogFooter>

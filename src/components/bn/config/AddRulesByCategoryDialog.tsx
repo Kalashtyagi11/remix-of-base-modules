@@ -19,6 +19,8 @@ import { useBnProductVersion } from '@/hooks/bn/useBnProduct';
 import { useEligibilityFacts } from '@/hooks/bn/useEligibilityFacts';
 import { getCurrentUserCode } from '@/services/bn/audit/getCurrentUserCode';
 import { catalogueLegalSnapshot } from '@/lib/bn/catalogueLegalSnapshot';
+import { catalogueRuleDefinition, unmappableCatalogueRules, unmappableRuleMessage } from '@/services/bn/eligibility/catalogueRuleMapping';
+
 import { RULE_CATEGORIES, isRuleCurrentlyEffective, type RuleCatalogueItem } from '@/services/bn/ruleCatalogueService';
 import { BnBusyButton } from '@/components/bn/shared';
 
@@ -97,6 +99,16 @@ export function AddRulesByCategoryDialog({ open, onOpenChange, versionId, onAdde
       });
       return;
     }
+    // ELIG-01 — a rule whose fact resolves to no registered field can never be
+    // evaluated. Refuse it here rather than let it land as a permanent
+    // UNEVALUATED entry on every claim.
+    const unmappable = unmappableCatalogueRules(picked as any);
+    if (unmappable.length) {
+      toast.error('Cannot add — rule field is not evaluable', {
+        description: unmappableRuleMessage(unmappable),
+      });
+      return;
+    }
     const userCode = await getCurrentUserCode();
     if (!userCode) { toast.error('Authenticated user_code required'); return; }
     setBusy(true);
@@ -112,13 +124,8 @@ export function AddRulesByCategoryDialog({ open, onOpenChange, versionId, onAdde
         rule_type: 'CATALOGUE',
         rule_group: 'GENERAL',
         fact_key: r.fact_key,
-        rule_definition: {
-          parameter: r.rule_code,
-          operator: r.operator,
-          value_from: r.value_from,
-          value_to: r.value_to,
-          values: r.values,
-        },
+        rule_definition: catalogueRuleDefinition(r as any),
+
         fail_action: r.default_fail_action,
         fail_message: r.failure_message_text,
         // Legal approval must travel with the copy — the publish gate reads

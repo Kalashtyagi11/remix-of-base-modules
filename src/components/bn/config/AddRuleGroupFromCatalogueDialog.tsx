@@ -16,6 +16,8 @@ import { useBnRuleGroups } from '@/hooks/bn/useBnConfig';
 import { useEligibilityFacts } from '@/hooks/bn/useEligibilityFacts';
 import { getCurrentUserCode } from '@/services/bn/audit/getCurrentUserCode';
 import { catalogueLegalSnapshot } from '@/lib/bn/catalogueLegalSnapshot';
+import { catalogueRuleDefinition, unmappableCatalogueRules, unmappableRuleMessage } from '@/services/bn/eligibility/catalogueRuleMapping';
+
 import { recommendedGroupsForProduct } from '@/services/bn/eligibility/recommendedGroups';
 import { BnBusyButton } from '@/components/bn/shared';
 
@@ -83,6 +85,14 @@ export function AddRuleGroupFromCatalogueDialog({ open, onOpenChange, versionId,
       });
       return;
     }
+    // ELIG-01 — refuse a rule whose fact resolves to no registered field.
+    const unmappable = unmappableCatalogueRules(linked as any[]);
+    if (unmappable.length) {
+      toast.error('Cannot add — rule field is not evaluable', {
+        description: unmappableRuleMessage(unmappable),
+      });
+      return;
+    }
     const userCode = await getCurrentUserCode();
     if (!userCode) { toast.error('Authenticated user_code required'); return; }
     const group = (groups as any[]).find(g => g.id === groupId);
@@ -103,13 +113,8 @@ export function AddRuleGroupFromCatalogueDialog({ open, onOpenChange, versionId,
         rule_type: 'CATALOGUE',
         rule_group: group?.group_code ?? 'GENERAL',
         fact_key: r.fact_key,
-        rule_definition: {
-          parameter: r.rule_code,
-          operator: r.operator,
-          value_from: r.value_from,
-          value_to: r.value_to,
-          values: r.values,
-        },
+        rule_definition: catalogueRuleDefinition(r as any),
+
         fail_action: r.default_fail_action,
         fail_message: r.failure_message_text,
         // Legal approval must travel with the copy — the publish gate reads

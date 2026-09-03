@@ -44,6 +44,8 @@ import {
   useUserDelegations, useCreateUserDelegation, useRevokeUserDelegation,
   useIdentityUserRoles, useAssignIdentityRole, useRemoveIdentityRole, useAvailableRoles,
 } from '@/platform/identity/useIdentity';
+import { createOrUpdateUserSecurityState } from '@/platform/identity/identityService';
+
 import {
   EMPLOYMENT_STATUSES, STAFF_TYPES, ASSIGNMENT_TYPES, DELEGATION_TYPES,
 } from '@/platform/identity/identityTypes';
@@ -443,8 +445,8 @@ const UserManageContent = () => {
             <Switch
               checked={!!security?.mfa_required}
               onCheckedChange={async (v) => {
-                const m = await import('@/platform/identity/identityService');
-                await m.createOrUpdateUserSecurityState(userId, { mfa_required: v });
+                await createOrUpdateUserSecurityState(userId, { mfa_required: v });
+
                 toast.success(`MFA requirement ${v ? 'enabled' : 'disabled'}`);
               }}
             />

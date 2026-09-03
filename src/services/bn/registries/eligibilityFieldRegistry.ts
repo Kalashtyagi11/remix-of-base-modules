@@ -1,15 +1,43 @@
 /**
- * Eligibility Field Registry — canonical, typed list of fields that may be
- * referenced from eligibility rules. Eliminates free-text field names.
+ * Eligibility Field Registry — builder-facing view of the fields the engine
+ * can actually evaluate.
+ *
+ * ELIG-03. This file used to carry its own hand-written list of field keys,
+ * which drifted from the registries the engine resolves against. The rule
+ * builder therefore offered keys (`contribution.recent_paid_weeks`,
+ * `survivor.*`, `medical.disablement_percentage`) that no evaluation path can
+ * read, and a rule authored with one was born unevaluable.
+ *
+ * The list is now derived, never hand-maintained: the authoritative field
+ * registry (`eligibility/fieldRegistry.ts`, what `getFieldDef` reads) plus the
+ * fact registry (`eligibility/eligibilityFactRegistry.ts`, what `getFact`
+ * reads). Those two are exactly what `lookupField` consults at evaluation
+ * time, so a key can be offered here if and only if the engine can evaluate
+ * it. To add a field, add it to one of those registries — there is no second
+ * list.
+ *
+ * Export names and shape are unchanged, so RuleBuilder, BlockInspector and
+ * bnRegistryValidationService consume it exactly as before.
  */
 import type { FieldDataType } from './operatorRegistry';
+import {
+  ELIGIBILITY_FIELD_REGISTRY,
+  type EligibilityCategory as FieldCategory,
+  type EligibilityValueType,
+} from '../eligibility/fieldRegistry';
+import {
+  ELIGIBILITY_FACTS,
+  CATEGORY_LABELS,
+  type EligibilityCategory as FactCategory,
+} from '../eligibility/eligibilityFactRegistry';
+import type { EligibilityDataType } from '../eligibility/operators';
 
 export interface EligibilityFieldDef {
   key: string;
   label: string;
   type: FieldDataType;
   /** Logical domain — used to group fields in the picker. */
-  group: 'Person' | 'Contribution' | 'Employer' | 'Evidence' | 'Claim' | 'Survivor' | 'Medical';
+  group: string;
   /** Resolver hint — adapter/table the runtime will read from. */
   source: string;
   /** Example value, used for the simulator. */
@@ -17,38 +45,77 @@ export interface EligibilityFieldDef {
   description?: string;
 }
 
-export const ELIGIBILITY_FIELDS: readonly EligibilityFieldDef[] = [
-  // Person
-  { key: 'person.age_at_claim_date', label: 'Age at claim date', type: 'number', group: 'Person', source: 'ip_master.dob', sampleValue: 62 },
-  { key: 'person.gender', label: 'Gender', type: 'string', group: 'Person', source: 'ip_master.gender', sampleValue: 'M' },
-  { key: 'person.status', label: 'Person status', type: 'string', group: 'Person', source: 'ip_master.status', sampleValue: 'ACTIVE' },
+const FIELD_GROUP: Record<FieldCategory, string> = {
+  PERSON: 'Person',
+  CONTRIBUTION: 'Contribution',
+  EMPLOYER: 'Employer',
+  EVIDENCE: 'Evidence',
+  CLAIM: 'Claim',
+};
 
-  // Contribution
-  { key: 'contribution.paid_weeks', label: 'Paid weeks', type: 'number', group: 'Contribution', source: 'ip_wages_ann_sum', sampleValue: 500 },
-  { key: 'contribution.total_paid_credited_weeks', label: 'Paid + credited weeks', type: 'number', group: 'Contribution', source: 'ip_wages_ann_sum', sampleValue: 520 },
-  { key: 'contribution.recent_paid_weeks', label: 'Recent paid weeks (last N)', type: 'number', group: 'Contribution', source: 'ip_wages', sampleValue: 26 },
-  { key: 'contribution.average_weekly_wage', label: 'Average weekly wage', type: 'number', group: 'Contribution', source: 'ip_wages', sampleValue: 850 },
+const FIELD_TYPE: Record<EligibilityValueType, FieldDataType> = {
+  number: 'number',
+  string: 'string',
+  boolean: 'boolean',
+  date: 'date',
+};
 
-  // Employer
-  { key: 'employer.status', label: 'Employer status', type: 'string', group: 'Employer', source: 'er_master.status', sampleValue: 'ACTIVE' },
+const FACT_TYPE: Record<EligibilityDataType, FieldDataType> = {
+  number: 'number',
+  date: 'date',
+  string: 'string',
+  bool: 'boolean',
+  enum: 'string',
+};
 
-  // Evidence
-  { key: 'evidence.required_docs_complete', label: 'Required documents complete', type: 'boolean', group: 'Evidence', source: 'bn_claim_document', sampleValue: true },
+const SAMPLE_BY_TYPE: Record<FieldDataType, string | number | boolean> = {
+  number: 0,
+  string: '',
+  boolean: true,
+  date: '2026-01-01',
+  list: '',
+};
 
-  // Claim
-  { key: 'claim.has_duplicate_active_claim', label: 'Has duplicate active claim', type: 'boolean', group: 'Claim', source: 'bn_claim', sampleValue: false },
+function build(): EligibilityFieldDef[] {
+  const out: EligibilityFieldDef[] = [];
+  const seen = new Set<string>();
 
-  // Survivor
-  { key: 'survivor.relationship', label: 'Survivor relationship', type: 'string', group: 'Survivor', source: 'bn_award_beneficiary.relationship', sampleValue: 'SPOUSE' },
-  { key: 'survivor.age', label: 'Survivor age', type: 'number', group: 'Survivor', source: 'bn_award_beneficiary.dob', sampleValue: 17 },
-  { key: 'survivor.student_status', label: 'Survivor student status', type: 'boolean', group: 'Survivor', source: 'bn_award_beneficiary.is_student', sampleValue: true },
+  for (const f of ELIGIBILITY_FIELD_REGISTRY) {
+    if (seen.has(f.key)) continue;
+    seen.add(f.key);
+    const type = FIELD_TYPE[f.valueType] ?? 'string';
+    out.push({
+      key: f.key,
+      label: f.label,
+      type,
+      group: f.key.startsWith('participant.') ? 'Participant' : FIELD_GROUP[f.category],
+      source: f.dataSource,
+      sampleValue: SAMPLE_BY_TYPE[type],
+      description: f.helpText,
+    });
+  }
 
-  // Medical
-  { key: 'medical.board_decision', label: 'Medical board decision', type: 'string', group: 'Medical', source: 'bn_medical_recommendation.decision', sampleValue: 'APPROVE' },
-  { key: 'medical.disablement_percentage', label: 'Disablement %', type: 'number', group: 'Medical', source: 'bn_medical_recommendation.disablement_pct', sampleValue: 35 },
-] as const;
+  for (const f of ELIGIBILITY_FACTS) {
+    if (seen.has(f.fact_key)) continue;
+    seen.add(f.fact_key);
+    const type = FACT_TYPE[f.data_type] ?? 'string';
+    out.push({
+      key: f.fact_key,
+      label: f.label,
+      type,
+      group: CATEGORY_LABELS[f.category as FactCategory] ?? 'Other',
+      source: `${f.source_table}.${f.source_column}`,
+      sampleValue: f.example_value ?? SAMPLE_BY_TYPE[type],
+      description: f.description,
+    });
+  }
 
-export type EligibilityFieldKey = (typeof ELIGIBILITY_FIELDS)[number]['key'];
+  return out;
+}
+
+export const ELIGIBILITY_FIELDS: readonly EligibilityFieldDef[] = build();
+
+export type EligibilityFieldKey = string;
 
 const BY_KEY = new Map(ELIGIBILITY_FIELDS.map((f) => [f.key, f]));
 

@@ -24,6 +24,10 @@ import {
   type FieldOwnership,
 } from '@/lib/bn/fieldOwnership';
 import { BENEFIT_FIELDS, normalizeBenefitKey } from '@/services/bn/forms/sectionCatalogue';
+import {
+  getCategoryDetailFields,
+  type BenefitDetailFieldType,
+} from '@/services/bn/forms/benefitDetailFields';
 
 interface BenefitDetailSectionProps {
   category: string;
@@ -37,81 +41,13 @@ interface BenefitDetailSectionProps {
   onDetailChange: (key: string, value: any) => void;
 }
 
-interface FieldDef {
+type FieldDef = {
   key: string;
   label: string;
-  type: 'text' | 'date' | 'number' | 'checkbox';
+  type: BenefitDetailFieldType;
   required: boolean;
-}
-
-// Canonical field list per category — keys must match the ownership registry.
-const CATEGORY_FIELDS: Record<string, FieldDef[]> = {
-  SHORT_TERM: [
-    { key: 'illness_start_date', label: 'Illness Start Date', type: 'date', required: true },
-    { key: 'last_worked_date', label: 'Last Worked Date', type: 'date', required: false },
-    { key: 'expected_return_date', label: 'Expected Return Date', type: 'date', required: false },
-    { key: 'diagnosis_code', label: 'Diagnosis Code', type: 'text', required: false },
-    { key: 'doctor_name', label: 'Doctor Name', type: 'text', required: true },
-    { key: 'doctor_reg_no', label: 'Doctor Reg. No', type: 'text', required: false },
-    { key: 'hospital_clinic', label: 'Hospital/Clinic', type: 'text', required: false },
-    { key: 'medical_cert_verified', label: 'Medical Cert Verified', type: 'checkbox', required: false },
-    { key: 'work_related', label: 'Work Related', type: 'checkbox', required: false },
-    { key: 'employer_notified', label: 'Employer Notified', type: 'checkbox', required: false },
-  ],
-  LONG_TERM: [
-    { key: 'retirement_date', label: 'Retirement Date', type: 'date', required: true },
-    { key: 'pension_type', label: 'Pension Type', type: 'text', required: true },
-    { key: 'best_years_start', label: 'Best Years Start', type: 'number', required: false },
-    { key: 'best_years_end', label: 'Best Years End', type: 'number', required: false },
-    { key: 'total_contribution_weeks', label: 'Contribution Weeks', type: 'number', required: false },
-  ],
-  PENSION: [
-    { key: 'retirement_date', label: 'Retirement Date', type: 'date', required: true },
-    { key: 'pension_type', label: 'Pension Type', type: 'text', required: true },
-    { key: 'tier_applied', label: 'Tier', type: 'text', required: false },
-    { key: 'total_contribution_weeks', label: 'Contribution Weeks', type: 'number', required: false },
-  ],
-  INJURY: [
-    { key: 'injury_date', label: 'Injury Date', type: 'date', required: true },
-    { key: 'injury_description', label: 'Injury Description', type: 'text', required: true },
-    { key: 'injury_location', label: 'Injury Location', type: 'text', required: true },
-    { key: 'body_part_affected', label: 'Body Part Affected', type: 'text', required: false },
-    { key: 'disablement_percentage', label: 'Disablement %', type: 'number', required: false },
-    { key: 'is_temporary', label: 'Temporary Disability', type: 'checkbox', required: false },
-    { key: 'employer_report_date', label: 'Employer Report Date', type: 'date', required: false },
-  ],
-  GRANT: [
-    { key: 'deceased_ssn', label: 'Deceased SSN', type: 'text', required: true },
-    { key: 'deceased_name', label: 'Deceased Name', type: 'text', required: true },
-    { key: 'date_of_death', label: 'Date of Death', type: 'date', required: true },
-    { key: 'relationship_to_claimant', label: 'Relationship', type: 'text', required: true },
-    { key: 'funeral_date', label: 'Funeral Date', type: 'date', required: false },
-    { key: 'funeral_home', label: 'Funeral Home', type: 'text', required: false },
-    { key: 'is_employment_injury_death', label: 'EI-Related Death', type: 'checkbox', required: false },
-  ],
-  SURVIVOR: [
-    { key: 'deceased_ssn', label: 'Deceased SSN', type: 'text', required: true },
-    { key: 'deceased_name', label: 'Deceased Name', type: 'text', required: true },
-    { key: 'date_of_death', label: 'Date of Death', type: 'date', required: true },
-    { key: 'relationship', label: 'Relationship', type: 'text', required: true },
-    { key: 'survivor_dob', label: 'Survivor DOB', type: 'date', required: false },
-    { key: 'is_dependent_child', label: 'Dependent Child', type: 'checkbox', required: false },
-    { key: 'school_name', label: 'School Name', type: 'text', required: false },
-  ],
-  NON_CONTRIBUTORY: [
-    { key: 'means_test_date', label: 'Means Test Date', type: 'date', required: true },
-    { key: 'monthly_income', label: 'Monthly Income (EC$)', type: 'number', required: true },
-    { key: 'income_threshold', label: 'Income Threshold (EC$)', type: 'number', required: false },
-    { key: 'means_test_passed', label: 'Means Test Passed', type: 'checkbox', required: false },
-    { key: 'living_arrangement', label: 'Living Arrangement', type: 'text', required: false },
-    { key: 'other_pension_amount', label: 'Other Pension Amount', type: 'number', required: false },
-  ],
-  ASSISTANCE: [
-    { key: 'means_test_date', label: 'Means Test Date', type: 'date', required: true },
-    { key: 'monthly_income', label: 'Monthly Income (EC$)', type: 'number', required: true },
-    { key: 'means_test_passed', label: 'Means Test Passed', type: 'checkbox', required: false },
-  ],
 };
+
 
 const OWNERSHIP_BADGE: Record<FieldOwnership, { label: string; className: string; Icon: React.ElementType }> = {
   CITIZEN_SUBMITTED: {
@@ -152,7 +88,7 @@ export const BenefitDetailSection: React.FC<BenefitDetailSectionProps> = ({
   onDetailChange,
 }) => {
   const fields = React.useMemo<FieldDef[]>(() => {
-    const base = CATEGORY_FIELDS[category] || CATEGORY_FIELDS.SHORT_TERM || [];
+    const base = getCategoryDetailFields(category);
     const benefitKey = normalizeBenefitKey(productCode);
     const productFields = benefitKey ? BENEFIT_FIELDS[benefitKey] ?? [] : [];
     if (productFields.length === 0) return base;
@@ -173,6 +109,14 @@ export const BenefitDetailSection: React.FC<BenefitDetailSectionProps> = ({
   }, [category, productCode]);
 
   const data = detailJson || {};
+  const hasAnyValue = React.useMemo(
+    () => fields.some((f) => {
+      const v = data[f.key];
+      return v !== undefined && v !== null && v !== '';
+    }),
+    [fields, data],
+  );
+
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -184,9 +128,16 @@ export const BenefitDetailSection: React.FC<BenefitDetailSectionProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {fields.length > 0 && !hasAnyValue && (
+            <div className="mb-4 rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+              No benefit-specific data was captured at registration for this claim.
+              Enter the values below and save — they are stored against the claim.
+            </div>
+          )}
           {fields.length === 0 ? (
             <p className="text-sm text-muted-foreground">No benefit-specific fields defined for this category.</p>
           ) : (
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {fields.map((field) => {
                 const decision = isFieldEditable({

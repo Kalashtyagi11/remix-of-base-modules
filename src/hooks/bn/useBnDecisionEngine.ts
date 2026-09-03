@@ -22,6 +22,11 @@ export function useBnExecuteAction() {
       qc.invalidateQueries({ queryKey: ['bn', 'available-actions', vars.claimId] });
       qc.invalidateQueries({ queryKey: ['bn', 'claim-decisions', vars.claimId] });
       qc.invalidateQueries({ queryKey: ['bn', 'claim-events', vars.claimId] });
+      // Workbasket views: any status change can move the claim between baskets
+      qc.invalidateQueries({ queryKey: ['bn', 'queue-claims'] });
+      qc.invalidateQueries({ queryKey: ['bn', 'workbaskets'] });
+      qc.invalidateQueries({ queryKey: ['bn', 'my-queue'] });
+      qc.invalidateQueries({ queryKey: ['bn', 'basket-claim-counts'] });
     },
   });
 }

@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Inbox, HandMetal, ArrowUpRight, Clock } from 'lucide-react';
+import { Inbox, HandMetal, ArrowUpRight, Clock, Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   useBnWorkbaskets,
   useBnQueueClaims,
@@ -64,6 +66,59 @@ export default function ClaimQueue() {
   const pickClaim = usePickBnClaim();
   const releaseClaim = useReleaseBnClaim();
 
+  // ─── Queue filters (client-side over the loaded basket) ─────────
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [assignmentFilter, setAssignmentFilter] = useState<string>('all');
+
+  const clearFilters = () => {
+    setSearchText('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setAssignmentFilter('all');
+  };
+  const filtersActive =
+    searchText.trim() !== '' || statusFilter !== 'all' || priorityFilter !== 'all' || assignmentFilter !== 'all';
+
+  const matchesSearch = (item: BnClaimQueueAssignment) => {
+    const q = searchText.trim().toLowerCase();
+    if (!q) return true;
+    const claim = item.bn_claim;
+    return (
+      (claim?.claim_number ?? '').toLowerCase().includes(q) ||
+      (claim?.ssn ?? '').toLowerCase().includes(q) ||
+      (item.assigned_to ?? '').toLowerCase().includes(q)
+    );
+  };
+
+  const filteredQueueClaims = useMemo(() => {
+    return queueClaims.filter((item) => {
+      if (!matchesSearch(item)) return false;
+      const claim = item.bn_claim;
+      if (statusFilter !== 'all' && claim?.status !== statusFilter) return false;
+      if (priorityFilter !== 'all') {
+        const p = item.priority ?? 5;
+        if (priorityFilter === 'high' && p > 2) return false;
+        if (priorityFilter === 'normal' && (p <= 2 || p > 4)) return false;
+        if (priorityFilter === 'low' && p <= 4) return false;
+      }
+      if (assignmentFilter === 'unassigned' && item.assigned_to) return false;
+      if (assignmentFilter === 'mine' && item.assigned_to !== userCode) return false;
+      return true;
+    });
+  }, [queueClaims, searchText, statusFilter, priorityFilter, assignmentFilter, userCode]);
+
+  const filteredMyQueue = useMemo(() => myQueue.filter(matchesSearch), [myQueue, searchText]);
+
+  const statusOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(queueClaims.map((i) => i.bn_claim?.status).filter(Boolean) as string[]),
+      ).sort(),
+    [queueClaims],
+  );
+
   const roleNames = useMemo(
     () => Array.from(new Set(myRoles.map((r) => r.role_name))).sort(),
     [myRoles],
@@ -119,6 +174,7 @@ export default function ClaimQueue() {
   // Opening a basket clears its "new arrival" alerts for this user.
   const openBasket = (basketId: string) => {
     setSelectedBasket(basketId);
+    clearFilters();
     if ((arrivals[basketId] ?? 0) > 0) clearArrivals.mutate(basketId);
   };
 
@@ -256,14 +312,14 @@ export default function ClaimQueue() {
               <Button
                 size="sm"
                 variant={scope === 'mine' ? 'default' : 'outline'}
-                onClick={() => { setScope('mine'); setSelectedBasket(null); }}
+                onClick={() => { setScope('mine'); setSelectedBasket(null); clearFilters(); }}
               >
                 My baskets
               </Button>
               <Button
                 size="sm"
                 variant={scope === 'all' ? 'default' : 'outline'}
-                onClick={() => { setScope('all'); setSelectedBasket(null); }}
+                onClick={() => { setScope('all'); setSelectedBasket(null); clearFilters(); }}
               >
                 All baskets
               </Button>
@@ -296,7 +352,7 @@ export default function ClaimQueue() {
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>{myQueue.map(item => renderClaimRow(item))}</TableBody>
+                <TableBody>{filteredMyQueue.map(item => renderClaimRow(item))}</TableBody>
               </Table>
             </CardContent>
           </Card>
@@ -357,12 +413,74 @@ export default function ClaimQueue() {
                     )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* Filter bar — narrows the loaded basket client-side */}
+                  {!queueLoading && queueClaims.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative min-w-[220px] flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          value={searchText}
+                          onChange={(e) => setSearchText(e.target.value)}
+                          placeholder="Search claim no, SSN or officer…"
+                          className="pl-8"
+                        />
+                      </div>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          {statusOptions.map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {(BN_CLAIM_STATUS_LABELS as any)[s] || s}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All priorities</SelectItem>
+                          <SelectItem value="high">High (P1–P2)</SelectItem>
+                          <SelectItem value="normal">Normal (P3–P4)</SelectItem>
+                          <SelectItem value="low">Low (P5+)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={assignmentFilter} onValueChange={setAssignmentFilter}>
+                        <SelectTrigger className="w-[150px]">
+                          <SelectValue placeholder="Assignment" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
+                          <SelectItem value="mine">Assigned to me</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {filtersActive && (
+                        <Button size="sm" variant="ghost" onClick={clearFilters}>
+                          <X className="mr-1 h-3 w-3" /> Clear
+                        </Button>
+                      )}
+                      {filtersActive && (
+                        <span className="text-xs text-muted-foreground">
+                          Showing {filteredQueueClaims.length} of {queueClaims.length} claims
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {queueLoading ? (
                     <p className="text-sm text-muted-foreground">Loading...</p>
                   ) : queueClaims.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No claims currently in {selected?.basket_name || 'this queue'}.
+                    </p>
+                  ) : filteredQueueClaims.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No claims match the current filters.
                     </p>
                   ) : (
                     <Table>
@@ -377,7 +495,7 @@ export default function ClaimQueue() {
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>{queueClaims.map(item => renderClaimRow(item))}</TableBody>
+                      <TableBody>{filteredQueueClaims.map(item => renderClaimRow(item))}</TableBody>
                     </Table>
                   )}
                 </CardContent>

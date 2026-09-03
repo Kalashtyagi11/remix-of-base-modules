@@ -1,0 +1,51 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: var(--font-sans); fill: hsl(var(--foreground)); }
+    .lbl { font-size: 14px; font-weight: 480; }
+    .note { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .box { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .zone { fill: none; stroke: hsl(var(--border)); stroke-width: 1; stroke-dasharray: 4 3; }
+    .wire { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+    .acc { stroke: hsl(var(--accent-foreground)); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+    </marker>
+    <marker id="b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--accent-foreground))"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="16" y="40" width="140" height="52" rx="8"/>
+  <text class="lbl" x="86" y="62" text-anchor="middle">Approve Claim</text>
+  <text class="note" x="86" y="80" text-anchor="middle">status = APPROVED</text>
+
+  <rect class="box" x="196" y="40" width="150" height="52" rx="8"/>
+  <text class="lbl" x="271" y="62" text-anchor="middle">Award Setup</text>
+  <text class="note" x="271" y="80" text-anchor="middle">claim is here now</text>
+
+  <rect class="box acc" x="386" y="40" width="150" height="52" rx="8"/>
+  <text class="lbl" x="461" y="62" text-anchor="middle">Send to Payment</text>
+  <text class="note" x="461" y="80" text-anchor="middle">existing action, not shown</text>
+
+  <rect class="box" x="386" y="150" width="150" height="52" rx="8"/>
+  <text class="lbl" x="461" y="172" text-anchor="middle">Payment Preparation</text>
+  <text class="note" x="461" y="190" text-anchor="middle">status = PAYMENT_QUEUE</text>
+
+  <rect class="box" x="196" y="150" width="150" height="52" rx="8"/>
+  <text class="lbl" x="271" y="172" text-anchor="middle">Payables Queue</text>
+  <text class="note" x="271" y="190" text-anchor="middle">instruction READY 255</text>
+
+  <line class="wire" x1="156" y1="66" x2="192" y2="66" marker-end="url(#a)"/>
+  <line class="wire acc" x1="346" y1="66" x2="382" y2="66" marker-end="url(#b)"/>
+  <line class="wire acc" x1="461" y1="92" x2="461" y2="146" marker-end="url(#b)"/>
+  <line class="wire" x1="271" y1="92" x2="271" y2="146" marker-end="url(#a)"/>
+
+  <rect class="zone" x="180" y="120" width="372" height="100" rx="8"/>
+  <text class="note" x="192" y="238">money already moved · the claim did not</text>
+
+  <circle cx="30" cy="264" r="9" fill="hsl(var(--accent))"/>
+  <text class="note" x="30" y="268" text-anchor="middle" style="fill:hsl(var(--accent-foreground))">1</text>
+  <text class="note" x="48" y="268">Surface the existing "Send to Payment" action on the Award Setup card — no new status or table.</text>
+</svg>

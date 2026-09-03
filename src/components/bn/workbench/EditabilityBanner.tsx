@@ -44,7 +44,16 @@ export function EditabilityBanner({ editability, isLoading, onRequestCorrection,
         <Badge variant="secondary">Status: {status}</Badge>
       </AlertTitle>
       <AlertDescription className="space-y-2 mt-2">
-        <p className="text-sm">{channelMessage[channel] ?? channelMessage.STAFF_OFFLINE}</p>
+        {/* AMND-02 — the channel sentence describes what the channel would
+            allow, not what the computed policy actually allows. Whenever
+            anything is locked, the computed reason is the truth and is what
+            the officer needs to see. */}
+        <p className="text-sm">
+          {lockedAreas.length > 0
+            ? (lockedReasons[0] ?? `Locked: ${lockedAreas.join(', ')}.`)
+            : (channelMessage[channel] ?? channelMessage.STAFF_OFFLINE)}
+        </p>
+
 
         <div className="flex flex-wrap gap-2 text-xs">
           {editableAreas.length > 0 && (

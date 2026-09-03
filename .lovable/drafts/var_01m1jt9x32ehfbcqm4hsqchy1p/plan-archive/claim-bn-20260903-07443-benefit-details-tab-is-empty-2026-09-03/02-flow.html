@@ -1,0 +1,40 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans);">
+  <defs>
+    <marker id="ch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--muted-foreground))"/>
+    </marker>
+  </defs>
+
+  <rect x="10" y="40" width="150" height="60" rx="8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="85" y="66" text-anchor="middle" style="font-size:14px;font-weight:480;fill:hsl(var(--foreground))">Registration wizard</text>
+  <text x="85" y="86" text-anchor="middle" style="font-size:12px;fill:hsl(var(--muted-foreground))">Benefit-Specific Facts</text>
+
+  <rect x="245" y="40" width="150" height="60" rx="8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="320" y="66" text-anchor="middle" style="font-size:14px;font-weight:480;fill:hsl(var(--foreground))">Submit claim</text>
+  <text x="320" y="86" text-anchor="middle" style="font-size:12px;fill:hsl(var(--muted-foreground))">raw application JSON</text>
+
+  <rect x="480" y="40" width="150" height="60" rx="8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="555" y="66" text-anchor="middle" style="font-size:14px;font-weight:480;fill:hsl(var(--foreground))">Workbench tab</text>
+  <text x="555" y="86" text-anchor="middle" style="font-size:12px;fill:hsl(var(--muted-foreground))">Benefit Details</text>
+
+  <line x1="160" y1="70" x2="240" y2="70" stroke="hsl(var(--muted-foreground))" marker-end="url(#ch)"/>
+  <line x1="395" y1="70" x2="475" y2="70" stroke="hsl(var(--muted-foreground))" stroke-dasharray="4 3" marker-end="url(#ch)"/>
+
+  <rect x="245" y="170" width="150" height="56" rx="8" fill="none" stroke="hsl(var(--accent))"/>
+  <text x="320" y="194" text-anchor="middle" style="font-size:14px;font-weight:480;fill:hsl(var(--foreground))">Benefit detail record</text>
+  <text x="320" y="213" text-anchor="middle" style="font-size:12px;fill:hsl(var(--muted-foreground))">never written — 0 rows</text>
+  <line x1="320" y1="100" x2="320" y2="165" stroke="hsl(var(--accent))" stroke-dasharray="4 3" marker-end="url(#ch)"/>
+  <path d="M 395 198 L 555 198 L 555 105" fill="none" stroke="hsl(var(--accent))" stroke-dasharray="4 3" marker-end="url(#ch)"/>
+
+  <circle cx="30" cy="130" r="10" fill="hsl(var(--accent))"/>
+  <text x="30" y="134" text-anchor="middle" style="font-size:12px;fill:hsl(var(--accent-foreground))">1</text>
+  <text x="48" y="134" style="font-size:12px;fill:hsl(var(--muted-foreground))">ASST_PENSION resolves to no field set — step showed nothing to fill</text>
+
+  <circle cx="30" cy="256" r="10" fill="hsl(var(--accent))"/>
+  <text x="30" y="260" text-anchor="middle" style="font-size:12px;fill:hsl(var(--accent-foreground))">2</text>
+  <text x="48" y="260" style="font-size:12px;fill:hsl(var(--muted-foreground))">Captured facts stay in raw JSON and are never promoted, so the tab reads blank</text>
+
+  <circle cx="30" cy="282" r="10" fill="hsl(var(--accent))"/>
+  <text x="30" y="286" text-anchor="middle" style="font-size:12px;fill:hsl(var(--accent-foreground))">3</text>
+  <text x="48" y="286" style="font-size:12px;fill:hsl(var(--muted-foreground))">Intake and workbench use different field codes, so values would not line up</text>
+</svg>

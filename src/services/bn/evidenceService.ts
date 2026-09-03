@@ -131,6 +131,7 @@ export async function fetchClaimEvidence(claimId: string): Promise<BnClaimEviden
     .from('bn_claim_evidence')
     .select('*')
     .eq('claim_id', claimId)
+    .neq('status', 'DELETED')
     .order('entered_at', { ascending: false });
   if (error) throw error;
   return (data || []) as BnClaimEvidence[];
@@ -312,7 +313,88 @@ export async function requestMoreInfo(evidenceId: string, reason: string, userCo
   }, reason, userCode);
 }
 
+/**
+ * Officer-only: remove an uploaded evidence document.
+ * Soft-deletes the record (audit history is preserved), detaches the storage
+ * object and returns the linked checklist row to OUTSTANDING so the
+ * requirement blocks again. Verified/waived evidence cannot be deleted.
+ */
+export async function deleteEvidence(
+  evidenceId: string,
+  reason: string,
+  userCode: string,
+): Promise<BnClaimEvidence> {
+  if (!reason?.trim()) throw new Error('A reason is required to delete a document.');
+
+  const { data: current, error: getErr } = await db
+    .from('bn_claim_evidence').select('*').eq('id', evidenceId).single();
+  if (getErr || !current) throw new Error('Evidence record not found');
+  if (['VERIFIED', 'WAIVED'].includes(String(current.status).toUpperCase())) {
+    throw new Error(`A ${String(current.status).toLowerCase()} document cannot be deleted. Reject it first if it is incorrect.`);
+  }
+  if (String(current.status).toUpperCase() === 'DELETED') {
+    throw new Error('This document has already been deleted.');
+  }
+
+  // Audit first — the row survives because the evidence record is soft-deleted.
+  const { error: auditErr } = await db.from('bn_evidence_audit').insert({
+    evidence_id: evidenceId,
+    claim_id: current.claim_id,
+    action: 'DELETE',
+    from_status: current.status,
+    to_status: 'DELETED',
+    reason,
+    performed_by: userCode,
+  });
+  if (auditErr) throw auditErr;
+
+  const { data, error } = await db
+    .from('bn_claim_evidence')
+    .update({
+      status: 'DELETED',
+      status_reason: reason,
+      modified_by: userCode,
+      modified_at: new Date().toISOString(),
+    })
+    .eq('id', evidenceId)
+    .select()
+    .single();
+  if (error) throw error;
+
+  // Return the requirement to outstanding so decision gates block again.
+  if (current.requirement_id) {
+    const { data: req } = await db
+      .from('bn_doc_requirement')
+      .select('requirement_level, blocks_decision')
+      .eq('id', current.requirement_id)
+      .maybeSingle();
+    const blocking = req?.requirement_level === 'MANDATORY' || req?.blocks_decision === true;
+    await db.from('bn_evidence_checklist')
+      .update({
+        evidence_id: null,
+        status: 'OUTSTANDING',
+        is_blocking: blocking,
+        modified_by: userCode,
+        modified_at: new Date().toISOString(),
+      })
+      .eq('claim_id', current.claim_id)
+      .eq('requirement_id', current.requirement_id);
+  }
+
+  // Best-effort storage cleanup — the record stays for audit either way.
+  if (current.file_path) {
+    try {
+      await supabase.storage.from(current.storage_bucket || 'bn-evidence').remove([current.file_path]);
+    } catch {
+      /* storage cleanup is not authoritative */
+    }
+  }
+
+  return data as BnClaimEvidence;
+}
+
 // ── Checklist ──
+
 
 export async function getEvidenceChecklist(claimId: string): Promise<BnEvidenceChecklist[]> {
   const { data, error } = await db

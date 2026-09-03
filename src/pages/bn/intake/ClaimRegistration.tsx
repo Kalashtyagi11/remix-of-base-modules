@@ -87,10 +87,11 @@ import {
 } from '@/services/bn/eligibility/eligibilityEvaluator';
 import { summariseBlockingRules } from '@/services/bn/eligibility/ruleMessage';
 import {
-  getDefaultFieldsForBenefit,
+  getBenefitFactFields,
   normalizeBenefitKey,
   type FormFieldDef,
 } from '@/services/bn/forms/sectionCatalogue';
+
 import type { PersonSummary, Dependant } from '@/services/bn/integration';
 import PaymentDetailsSection from '@/components/bn/payment/PaymentDetailsSection';
 import { validateField } from '@/lib/fieldValidationRegistry';
@@ -472,23 +473,28 @@ export default function ClaimRegistration() {
   }
 
   // ─── Benefit-specific facts list ─────────────────────────────────
+  // Falls back to the canonical category vocabulary when the product code
+  // carries no recognisable benefit token (e.g. ASST_PENSION), so every
+  // product presents its benefit facts instead of an empty step.
   const factFields: FormFieldDef[] = useMemo(() => {
-    if (!benefitKey) return [];
-    return getDefaultFieldsForBenefit(benefitKey).filter(f => {
-      const skipSections = new Set([
-        'claimant_details',
-        'insured_person_details',
-        'benefit_selection',
-        'employment_details',
-        'contribution_context',
-        'banking_payee_details',
-        'documents',
-        'declaration_consent',
-        'internal_review',
-      ]);
-      return !skipSections.has(f.section_code);
-    });
-  }, [benefitKey]);
+    const fields = getBenefitFactFields(
+      (selectedProduct as any)?.benefit_code ?? null,
+      (selectedProduct as any)?.category ?? null,
+    );
+    const skipSections = new Set([
+      'claimant_details',
+      'insured_person_details',
+      'benefit_selection',
+      'employment_details',
+      'contribution_context',
+      'banking_payee_details',
+      'documents',
+      'declaration_consent',
+      'internal_review',
+    ]);
+    return fields.filter(f => !skipSections.has(f.section_code));
+  }, [selectedProduct]);
+
 
   // ─── Step navigation guards ──────────────────────────────────────
   function canAdvanceFrom(s: StepKey): string | null {

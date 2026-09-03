@@ -43,14 +43,17 @@ export async function getAvailableTransitions(
   if (rulesErr) throw rulesErr;
 
   // 3. Check preconditions in parallel
-  const [eligResults, calcResults, evidenceComplete] = await Promise.all([
+  const [eligResults, calcResults, evidenceComplete, awardResults] = await Promise.all([
     db.from('bn_claim_eligibility').select('overall_result').eq('claim_id', claimId).order('check_date', { ascending: false }).limit(1),
     db.from('bn_claim_calculation').select('id').eq('claim_id', claimId).limit(1),
     isEvidenceComplete(claimId),
+    db.from('bn_award').select('id').eq('bn_claim_id', claimId).limit(1),
   ]);
 
   const hasEligibilityPass = eligResults.data?.[0]?.overall_result === true;
   const hasCalculation = (calcResults.data?.length || 0) > 0;
+  const hasAward = (awardResults.data?.length || 0) > 0;
+
 
   // 4. Evaluate each rule
   return (rules || []).map((rule: BnClaimTransitionRule) => {
@@ -85,9 +88,16 @@ export async function getAvailableTransitions(
       return { rule, blocked: true, blockedReason: 'All mandatory documents must be verified first' };
     }
 
+    // Award Setup → Payment hand-off cannot happen without an award record:
+    // the payment schedule is built from the award.
+    if (rule.from_status === 'AWARD_SETUP' && rule.to_status === 'PAYMENT_QUEUE' && !hasAward) {
+      return { rule, blocked: true, blockedReason: 'Award record must be created first' };
+    }
+
     return { rule, blocked: false, blockedReason: null };
   }).filter(Boolean) as BnAvailableAction[];
 }
+
 
 // ── Execute a transition ──
 
@@ -144,11 +154,59 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
     throw new Error(`Claim status "${claim.status}" does not match expected "${rule.from_status}"`);
   }
 
+  // 3a. Re-assert the rule's own preconditions. These used to decide button
+  // state only, so anything reaching execution by another route — a stale
+  // page, a direct call — transitioned without them. The button is a
+  // convenience; this is the check that decides.
+  if (rule.requires_eligibility_pass) {
+    const { data: eligRows, error: eligErr } = await db
+      .from('bn_claim_eligibility')
+      .select('overall_result')
+      .eq('claim_id', claimId)
+      .order('check_date', { ascending: false })
+      .limit(1);
+    // An unreadable eligibility result is a refusal, not a pass.
+    if (eligErr || eligRows?.[0]?.overall_result !== true) {
+      throw new Error('Eligibility check must pass first');
+    }
+  }
+  if (rule.requires_calculation) {
+    const { data: calcRows, error: calcErr } = await db
+      .from('bn_claim_calculation')
+      .select('id')
+      .eq('claim_id', claimId)
+      .limit(1);
+    if (calcErr || !calcRows || calcRows.length === 0) {
+      throw new Error('Calculation must be completed first');
+    }
+  }
+  if (rule.requires_evidence_complete && !(await isEvidenceComplete(claimId))) {
+    throw new Error('All mandatory documents must be verified first');
+  }
+
+
+
+
+
+  // 3b. Award Setup → Payment Queue requires an award record.
+  if (rule.from_status === 'AWARD_SETUP' && rule.to_status === 'PAYMENT_QUEUE') {
+    const { data: awardRows } = await db
+      .from('bn_award')
+      .select('id')
+      .eq('bn_claim_id', claimId)
+      .limit(1);
+    if (!awardRows || awardRows.length === 0) {
+      throw new Error(
+        'This claim has no award record, so a payment schedule cannot be generated. Create the award before sending it to Payment.',
+      );
+    }
+  }
 
   // 4. Validate reason if required
   if (rule.requires_reason && !reasonCodeId) {
     throw new Error('A reason code is required for this action');
   }
+
 
   // 5. Validate narrative if required
   if (rule.requires_narrative && (!narrative || !narrative.trim())) {
@@ -229,8 +287,10 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
 
   if (updateErr) throw updateErr;
 
-  // The claim's new status decides which workbasket owns it next.
-  await routeClaimAfterStatusChange(claimId, performedBy);
+  // The claim's new status decides which workbasket owns it next. Routing is
+  // non-blocking, so its outcome is recorded on the claim event — otherwise a
+  // basket that failed to move leaves no trace outside the browser console.
+  const routing = await routeClaimAfterStatusChange(claimId, performedBy);
 
   // 10. Insert claim event
   await db.from('bn_claim_event').insert({
@@ -240,8 +300,15 @@ export async function executeTransition(params: ExecuteTransitionParams): Promis
     to_status: rule.to_status,
     notes: narrative || rule.action_label,
     performed_by: performedBy,
-    metadata: { decision_id: decision.id, reason_code_id: reasonCodeId },
+    metadata: {
+      decision_id: decision.id,
+      reason_code_id: reasonCodeId,
+      routing_outcome: routing?.outcome ?? 'NOT_ATTEMPTED',
+      routing_reason: routing?.reason ?? 'Routing threw before returning a result.',
+      routing_to_workbasket: routing?.workbasketName ?? null,
+    },
   });
+
 
   return decision as BnClaimDecision;
 }
