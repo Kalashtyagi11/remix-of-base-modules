@@ -1,0 +1,46 @@
+<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans)">
+  <style>
+    .b { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .a { fill: none; stroke: hsl(var(--accent)); stroke-width: 1; }
+    .l { fill: hsl(var(--foreground)); font-size: 14px; font-weight: 480; }
+    .n { fill: hsl(var(--muted-foreground)); font-size: 12px; }
+    .w { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+  </style>
+  <defs>
+    <marker id="c" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="hsl(var(--muted-foreground))"/>
+    </marker>
+  </defs>
+
+  <rect class="b" x="10" y="30" width="140" height="52" rx="8"/>
+  <text class="l" x="80" y="52" text-anchor="middle">Intake Review</text>
+  <text class="n" x="80" y="70" text-anchor="middle">completed</text>
+
+  <line class="w" x1="152" y1="56" x2="188" y2="56" marker-end="url(#c)"/>
+
+  <rect class="b" x="190" y="30" width="150" height="52" rx="8"/>
+  <text class="l" x="265" y="52" text-anchor="middle">Manager Approval</text>
+  <text class="n" x="265" y="70" text-anchor="middle">completed</text>
+
+  <line class="w" x1="342" y1="56" x2="378" y2="56" marker-end="url(#c)"/>
+
+  <rect class="a" x="380" y="30" width="150" height="52" rx="8"/>
+  <text class="l" x="455" y="52" text-anchor="middle">Award Setup</text>
+  <text class="n" x="455" y="70" text-anchor="middle">open — claim is here</text>
+
+  <line class="w" x1="532" y1="56" x2="568" y2="56" stroke-dasharray="4 3" marker-end="url(#c)"/>
+  <rect class="b" x="500" y="120" width="130" height="52" rx="8"/>
+  <text class="l" x="565" y="142" text-anchor="middle">Payment Prep</text>
+  <text class="n" x="565" y="160" text-anchor="middle">not yet</text>
+
+  <rect class="b" x="10" y="120" width="230" height="100" rx="8"/>
+  <text class="l" x="26" y="144">Downstream records</text>
+  <text class="n" x="26" y="166">entitlement — exists (XCD 255/mo)</text>
+  <text class="n" x="26" y="184">payment instruction — READY</text>
+  <text class="n" x="26" y="202">award record — MISSING</text>
+
+  <circle cx="290" cy="150" r="10" fill="hsl(var(--accent))"/>
+  <text x="290" y="154" text-anchor="middle" font-size="12" fill="hsl(var(--accent-foreground))">1</text>
+  <text class="n" x="308" y="147">Send to Payment is offered with no award,</text>
+  <text class="n" x="308" y="165">and the transition rule has no award guard.</text>
+</svg>
