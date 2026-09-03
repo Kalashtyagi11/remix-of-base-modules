@@ -16,6 +16,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBlockingMutation } from '@/hooks/useBlockingMutation';
 import { useUserCode } from '@/hooks/useUserCode';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { useBnAvailableActions } from '@/hooks/bn/useBnDecisionEngine';
+import { executeTransition } from '@/services/bn/decisionEngine';
 import { toast } from 'sonner';
 import { BnBusyButton } from '@/components/bn/shared';
 import {
@@ -25,6 +28,7 @@ import {
 } from '@/services/bn/postApprovalOrchestrator';
 
 const db = supabase as any;
+
 
 interface Props {
   claimId: string;
