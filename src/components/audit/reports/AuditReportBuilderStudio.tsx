@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useCreateReportVersion, useIssueReport } from '@/hooks/useAuditLifecycleCommands';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuditReportTemplate } from '@/hooks/useAuditDocumentTemplates';
@@ -75,6 +76,8 @@ export function AuditReportBuilderStudio() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const createVersion = useCreateReportVersion();
+  const issueReport = useIssueReport();
   const { userCode } = useUserCode();
 
   const reportId = searchParams.get('id');
@@ -192,7 +195,7 @@ export function AuditReportBuilderStudio() {
     [actions, reportData.engagement_id]
   );
 
-  const isLocked = reportData.status === 'Final' || reportData.status === 'Submitted';
+  const isLocked = reportData.status === 'Issued';
   const enabledSections = sections.filter((s) => s.enabled);
 
   // Content completeness
@@ -250,14 +253,15 @@ export function AuditReportBuilderStudio() {
     }
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    if (reportId) {
-      update.mutate(
-        { id: reportId, status: newStatus, ...(newStatus === 'Final' ? { issued_at: new Date().toISOString(), issued_by: userCode } : {}) } as any,
-        { onSuccess: () => { toast({ title: `Report status: ${newStatus}` }); setReportData((p) => ({ ...p, status: newStatus })); } }
-      );
-    } else {
+  const handleStatusChange = async (newStatus: string) => {
+    if (!reportId) {
       setReportData((p) => ({ ...p, status: newStatus }));
+      return;
+    }
+    if (newStatus !== 'Issued') return;
+    const result: any = await issueReport.mutateAsync({ reportId });
+    if (result?.success) {
+      setReportData((p) => ({ ...p, status: 'Issued' }));
     }
   };
 
@@ -832,7 +836,25 @@ export function AuditReportBuilderStudio() {
             {showVersions && (
               <>
                 <Separator />
-                <AuditReportVersionTimeline reportId={reportId} />
+                <div className="space-y-2">
+                  <AuditReportVersionTimeline reportId={reportId} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={!reportId || createVersion.isPending || reportData.status === 'Issued'}
+                    onClick={() =>
+                      reportId &&
+                      createVersion.mutate({
+                        reportId,
+                        content: reportData as any,
+                        changeSummary: 'Version created from Report Builder',
+                      })
+                    }
+                  >
+                    <History className="h-4 w-4 mr-1" /> Create version
+                  </Button>
+                </div>
               </>
             )}
           </div>

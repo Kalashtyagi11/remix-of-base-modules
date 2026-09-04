@@ -8,12 +8,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CheckCircle2, ChevronRight, RotateCcw, Send, FileCheck, Eye, Clock } from 'lucide-react';
 
+// Governed report lifecycle. Issuance runs through the ia_issue_report command,
+// which enforces quality-review clearance, versioning and segregation of duties.
 const WORKFLOW_STEPS = [
   { key: 'Draft', label: 'Draft', icon: Clock },
-  { key: 'In Review', label: 'In Review', icon: Eye },
-  { key: 'Submitted', label: 'Submitted', icon: Send },
-  { key: 'Approved', label: 'Approved', icon: CheckCircle2 },
-  { key: 'Final', label: 'Final / Issued', icon: FileCheck },
+  { key: 'Issued', label: 'Issued', icon: FileCheck },
 ];
 
 interface AuditReportWorkflowBarProps {
@@ -27,7 +26,7 @@ export function AuditReportWorkflowBar({ currentStatus, onStatusChange, disabled
   const currentIdx = WORKFLOW_STEPS.findIndex((s) => s.key === currentStatus);
 
   const nextStep = currentIdx < WORKFLOW_STEPS.length - 1 ? WORKFLOW_STEPS[currentIdx + 1] : null;
-  const canRevert = currentIdx > 0 && currentStatus !== 'Final';
+  const canRevert = false;
 
   const handleConfirm = () => {
     if (confirmAction) {
@@ -89,16 +88,16 @@ export function AuditReportWorkflowBar({ currentStatus, onStatusChange, disabled
               onClick={() =>
                 setConfirmAction({
                   status: nextStep.key,
-                  label: nextStep.key === 'Final' ? 'Issue Report' : `Move to ${nextStep.label}`,
+                  label: nextStep.key === 'Issued' ? 'Issue Report' : `Move to ${nextStep.label}`,
                 })
               }
             >
-              {nextStep.key === 'Final' ? (
+              {nextStep.key === 'Issued' ? (
                 <FileCheck className="h-3 w-3 mr-1" />
               ) : (
                 <Send className="h-3 w-3 mr-1" />
               )}
-              {nextStep.key === 'Final' ? 'Issue' : nextStep.label}
+              {nextStep.key === 'Issued' ? 'Issue' : nextStep.label}
             </Button>
           )}
         </div>
@@ -111,7 +110,7 @@ export function AuditReportWorkflowBar({ currentStatus, onStatusChange, disabled
             <AlertDialogTitle>Confirm Status Change</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to <strong>{confirmAction?.label}</strong>?
-              {confirmAction?.status === 'Final' &&
+              {confirmAction?.status === 'Issued' &&
                 ' Once issued, the report will be locked and cannot be edited.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
