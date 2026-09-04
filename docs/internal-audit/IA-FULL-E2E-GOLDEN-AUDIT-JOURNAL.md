@@ -35,3 +35,17 @@ Environment: TEST. No Production deployment.
 - FOLLOW-UP: **PASS**
 - PERSONA / SEGREGATION OF DUTIES: **PASS**
 - BUSINESS BACKEND WORKAROUNDS: **0**
+
+## Gate — Formal Document / PDF Distribution (2026-09-04)
+
+The Golden Audit was not reset. Continuing from the issued report `IA-RPT-SKN-2026-000038`:
+
+- Reusable governed formal document register `ia_document_artifact` (versioned, checksummed, sealed once, immutable, supersession-aware).
+- Issued report PDF sealed from the exact issued bytes and registered in the existing Omni-Comms attachment registry.
+- Distribution performed entirely through the visible **Distribute Report** screen; no parallel communication path.
+- Email carried the sealed document; In-App delivered the notification with the document dropped by channel policy instead of blocking the message.
+- Negative cases, immutability and Annual Plan regression all pass.
+
+Verdict: **PASS**. Business backend workarounds: **0**.
+See `IA-FULL-E2E-ATTACHMENT-POLICY-2026-09-04.md`, `IA-FULL-E2E-TRANSACTION-JOURNAL-2026-09-04.md`,
+`IA-FULL-E2E-DEFECT-REGISTER-2026-09-04.md`, `IA-FULL-E2E-SCREEN-COVERAGE-2026-09-04.md`.
