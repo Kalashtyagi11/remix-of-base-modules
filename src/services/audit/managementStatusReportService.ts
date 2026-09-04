@@ -238,6 +238,10 @@ export async function generateManagementStatusReport(input: {
   asAt?: string | null;
   departmentId?: string | null;
   compareReportId?: string | null;
+  periodCode?: ManagementPeriodCode;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  reportMode?: ManagementReportMode;
 }): Promise<{ ok: boolean; code?: string; reportId?: string; reportNumber?: string | null }> {
   const { data, error } = await supabase.rpc('ia_generate_management_status_report', {
     p_plan_id: input.planId,
@@ -246,7 +250,12 @@ export async function generateManagementStatusReport(input: {
     p_as_at: input.asAt || new Date().toISOString(),
     p_department_id: input.departmentId ?? null,
     p_compare_report_id: input.compareReportId ?? null,
+    p_period_code: input.periodCode ?? 'CURRENT',
+    p_period_start: input.periodStart ?? null,
+    p_period_end: input.periodEnd ?? null,
+    p_report_mode: input.reportMode ?? 'Detailed Management Report',
   } as never);
+
 
   if (error) return { ok: false, code: 'generation_failed' };
   const row = (data ?? {}) as { ok?: boolean; code?: string; report_id?: string; report_number?: string };
