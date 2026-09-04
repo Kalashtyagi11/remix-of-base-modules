@@ -132,6 +132,10 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
     setIsEditing(false);
     setNotes('');
     setAckRequired(mode === 'reminder');
+    setMeetingDateTime('');
+    setMeetingLocation('');
+    setVersionNumber('');
+    setCommentDueDate('');
 
     if (matchingTemplate) {
       setSelectedTemplateId(matchingTemplate.id);
@@ -454,7 +458,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} size="sm">Cancel</Button>
-          <Button onClick={handleSend} disabled={!recipientEmail || isPending || policyValid === false} size="sm">
+          <Button onClick={handleSend} disabled={!recipientEmail || stageFactsMissing || isPending || policyValid === false} size="sm">
             {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <modeConfig.btnIcon className="h-4 w-4 mr-1" />}
             {modeConfig.btnLabel}
           </Button>
