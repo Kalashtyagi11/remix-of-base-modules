@@ -76,7 +76,9 @@ export function AuditReportPreview({
 
   /** Produces the exact issued bytes for governed sealing. Never downloaded. */
   const buildIssuedPdf = async () => {
-    const out = generateAuditReportPDF({ ...pdfParams, output: 'blob' });
+    const out = generateAuditReportPDF({ ...pdfParams, output: 'blob' }) as
+      | { blob: Blob; fileName: string }
+      | undefined;
     return out ?? null;
   };
 
