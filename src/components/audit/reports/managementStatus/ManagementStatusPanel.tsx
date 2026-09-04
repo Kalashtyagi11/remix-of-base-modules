@@ -32,8 +32,14 @@ import {
   fetchManagementReportingConfiguration,
   formatMetricValue,
   generateManagementStatusReport,
+  issueManagementStatusReport,
+  canGenerateManagementReport,
+  canIssueManagementReport,
+  fetchManagementKpiDrilldown,
+  DRILLABLE_KPI_CODES,
   listManagementStatusReports,
   resolveMetricValue,
+  type DrilldownRecord,
   type ManagementAudience,
   type ManagementPeriodCode,
   type ManagementReportMode,
@@ -97,6 +103,12 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const [drill, setDrill] = useState<{ kpiCode: string; label: string } | null>(null);
+  const [drillRows, setDrillRows] = useState<DrilldownRecord[]>([]);
+  const [drillSource, setDrillSource] = useState<string>('live');
+  const [drillBusy, setDrillBusy] = useState(false);
+  const [issuing, setIssuing] = useState<ManagementStatusSnapshot | null>(null);
+  const [issueNote, setIssueNote] = useState('');
 
   /** Governed reporting configuration — audiences, periods, definitions, metrics. */
   const { data: config } = useQuery({
@@ -184,6 +196,17 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
     enabled: !!effectivePlanId,
   });
 
+  const { data: mayGenerate = false } = useQuery({
+    queryKey: ['ia-msr-can-generate', effectivePlanId],
+    queryFn: () => canGenerateManagementReport(effectivePlanId!),
+    enabled: !!effectivePlanId,
+  });
+  const { data: mayIssue = false } = useQuery({
+    queryKey: ['ia-msr-can-issue', effectivePlanId],
+    queryFn: () => canIssueManagementReport(effectivePlanId!),
+    enabled: !!effectivePlanId,
+  });
+
   const payload: ManagementStatusPayload | undefined =
     live.data && live.data.ok !== false ? live.data : undefined;
   const notAuthorised = live.data && live.data.ok === false;
@@ -206,6 +229,9 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const forecast = shown?.forecast ?? {};
   const period = shown?.period;
   const fidelity = shown?.temporal_fidelity;
+  const dataQuality = shown?.data_quality;
+  const denominators = shown?.denominators ?? {};
+  const dateBasis = shown?.period_date_basis ?? {};
 
   const engagementRows = useMemo(() => shown?.engagements ?? [], [shown]);
 
@@ -234,7 +260,54 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
       );
       return;
     }
-    toast.success(`Management status report ${res.reportNumber ?? ''} generated.`);
+    toast.success('Draft management status report created with its supporting evidence.');
+    qc.invalidateQueries({ queryKey: ['ia-msr-snapshots', effectivePlanId] });
+  }
+
+  async function openDrilldown(kpiCode: string, label: string) {
+    if (!effectivePlanId) return;
+    setDrill({ kpiCode, label });
+    setDrillRows([]);
+    setDrillBusy(true);
+    const res = await fetchManagementKpiDrilldown({
+      planId: effectivePlanId,
+      kpiCode,
+      asAt: viewing ? viewing.status_as_at : new Date(`${asAt}T23:59:59Z`).toISOString(),
+      departmentId: viewing ? viewing.department_id : effectiveDept,
+      periodCode: viewing ? (viewing.snapshot?.period?.code ?? 'CURRENT') : periodCode,
+      periodStart: periodCode === 'CUSTOM' ? customStart || null : null,
+      periodEnd: periodCode === 'CUSTOM' ? customEnd || null : null,
+      reportId: viewing && viewing.lifecycle_state === 'Issued' ? viewing.id : null,
+    });
+    setDrillBusy(false);
+    setDrillSource(res.source ?? 'live');
+    if (!res.ok) {
+      toast.error(
+        res.code === 'kpi_not_drillable'
+          ? 'This figure has no record-level breakdown.'
+          : 'The breakdown could not be opened.',
+      );
+      return;
+    }
+    setDrillRows(res.records);
+  }
+
+  async function handleIssue() {
+    if (!issuing) return;
+    setBusy(true);
+    const res = await issueManagementStatusReport(issuing.id, issueNote || null);
+    setBusy(false);
+    if (!res.ok) {
+      toast.error(
+        res.code === 'not_authorised'
+          ? 'You are not entitled to issue this management status report.'
+          : 'The report could not be issued.',
+      );
+      return;
+    }
+    toast.success(`Report issued as ${res.reportNumber ?? ''}.`);
+    setIssuing(null);
+    setIssueNote('');
     qc.invalidateQueries({ queryKey: ['ia-msr-snapshots', effectivePlanId] });
   }
 
@@ -437,7 +510,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
               </Badge>
               <span className="text-xs text-muted-foreground">
                 {viewing
-                  ? `Sealed snapshot ${viewing.report_number} · as at ${fmt(viewing.status_as_at)}`
+                  ? `${viewing.lifecycle_state === 'Issued' ? 'Issued report' : 'Draft report'} ${viewing.report_number} · as at ${fmt(viewing.status_as_at)}`
                   : `Live status · as at ${fmt(shown.as_at)}`}
               </span>
               {viewing && (
@@ -452,8 +525,8 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
                 <Download className="h-4 w-4 mr-2" />PDF
               </Button>
               {!viewing && (
-                <Button size="sm" disabled={busy} onClick={handleGenerate}>
-                  <FileText className="h-4 w-4 mr-2" />Generate status report
+                <Button size="sm" disabled={busy || !mayGenerate} onClick={handleGenerate}>
+                  <FileText className="h-4 w-4 mr-2" />Generate draft report
                 </Button>
               )}
             </div>
@@ -494,13 +567,32 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
 
           {/* ── KPI dashboard — configured metric registry (cumulative) ── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            {activeMetrics.map((m) => (
-              <Kpi
-                key={m.metricCode}
-                label={m.label}
-                value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
-              />
-            ))}
+            {activeMetrics.map((m) => {
+              const kpiCode = (m.sourcePath ?? '').split('.').pop() ?? '';
+              if (!DRILLABLE_KPI_CODES.has(kpiCode)) {
+                return (
+                  <Kpi
+                    key={m.metricCode}
+                    label={m.label}
+                    value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
+                  />
+                );
+              }
+              return (
+                <button
+                  key={m.metricCode}
+                  type="button"
+                  className="text-left"
+                  onClick={() => openDrilldown(kpiCode, m.label)}
+                  title="Show the underlying records"
+                >
+                  <Kpi
+                    label={m.label}
+                    value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
+                  />
+                </button>
+              );
+            })}
             {activeMetrics.length === 0 && (
               <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-4 xl:col-span-6">
                 No metrics are enabled for this report and audience.
@@ -520,7 +612,10 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
               <TabsTrigger value="prior">Prior Issues & Capacity</TabsTrigger>
               <TabsTrigger value="changes">Plan Changes</TabsTrigger>
               <TabsTrigger value="attention">Attention ({attention.length})</TabsTrigger>
-              <TabsTrigger value="snapshots">Snapshots ({snapshots.data?.length ?? 0})</TabsTrigger>
+              <TabsTrigger value="quality">
+                Data Quality ({dataQuality?.exception_count ?? 0})
+              </TabsTrigger>
+              <TabsTrigger value="snapshots">Reports ({snapshots.data?.length ?? 0})</TabsTrigger>
             </TabsList>
 
             <TabsContent value="period">
@@ -835,6 +930,49 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
               </CardContent></Card>
             </TabsContent>
 
+            <TabsContent value="quality">
+              <Card className="mb-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">How these figures are measured</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-1 text-xs sm:grid-cols-2">
+                  {Object.entries(denominators).map(([key, val]) => (
+                    <p key={key} className="text-muted-foreground">
+                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>: {String(val)}
+                    </p>
+                  ))}
+                  {Object.entries(dateBasis).map(([key, val]) => (
+                    <p key={key} className="text-muted-foreground">
+                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>: {val}
+                    </p>
+                  ))}
+                </CardContent>
+              </Card>
+              <Card><CardContent className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead>Condition</TableHead><TableHead>Severity</TableHead>
+                    <TableHead>Record</TableHead><TableHead>Detail</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {(dataQuality?.exceptions ?? []).map((x, i) => (
+                      <TableRow key={`${x.rule}-${x.record_id}-${i}`}>
+                        <TableCell className="text-xs">{x.rule.replace(/_/g, ' ')}</TableCell>
+                        <TableCell className="text-xs">{x.severity}</TableCell>
+                        <TableCell className="text-xs font-mono">{x.record_code ?? x.record_type}</TableCell>
+                        <TableCell className="text-xs">{x.detail}</TableCell>
+                      </TableRow>
+                    ))}
+                    {(dataQuality?.exceptions ?? []).length === 0 && (
+                      <TableRow><TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                        No reporting data-quality exceptions were found for this plan.
+                      </TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent></Card>
+            </TabsContent>
+
             <TabsContent value="snapshots">
               <Card className="mb-4">
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Compare against</CardTitle></CardHeader>
@@ -851,7 +989,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-2">
-                    The next generated report records movement since the selected sealed snapshot.
+                    The next generated report records movement since the selected issued report.
                   </p>
                 </CardContent>
               </Card>
@@ -859,7 +997,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
                 <Table>
                   <TableHeader><TableRow>
                     <TableHead>Report</TableHead><TableHead>As at</TableHead><TableHead>Period</TableHead>
-                    <TableHead>Audience</TableHead><TableHead>Plan version</TableHead>
+                    <TableHead>Audience</TableHead><TableHead>State</TableHead>
                     <TableHead>Sealed PDF</TableHead><TableHead className="text-right">Actions</TableHead>
                   </TableRow></TableHeader>
                   <TableBody>
@@ -869,7 +1007,9 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
                         <TableCell className="text-xs">{fmt(s.status_as_at)}</TableCell>
                         <TableCell className="text-xs">{s.reporting_period ?? '—'}</TableCell>
                         <TableCell className="text-xs">{s.audience}</TableCell>
-                        <TableCell className="text-xs">v{s.plan_version_number ?? 1}</TableCell>
+                        <TableCell className="text-xs">
+                          <Badge variant="outline">{s.lifecycle_state ?? s.status}</Badge>
+                        </TableCell>
                         <TableCell className="text-xs">{s.artifact_id ? 'Sealed' : 'Not sealed'}</TableCell>
                         <TableCell className="text-right space-x-2">
                           <Button variant="ghost" size="sm" onClick={() => setViewing(s)}>View</Button>
@@ -883,15 +1023,25 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setDistributing(s)}>
-                            <Send className="h-4 w-4" />
-                          </Button>
+                          {s.lifecycle_state === 'Issued' ? (
+                            <Button variant="ghost" size="sm" onClick={() => setDistributing(s)}>
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline" size="sm"
+                              disabled={!mayIssue}
+                              onClick={() => setIssuing(s)}
+                            >
+                              Issue
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
                     {(snapshots.data ?? []).length === 0 && (
                       <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-8">
-                        No management status reports generated for this plan yet.
+                        No management status reports have been prepared for this plan yet.
                       </TableCell></TableRow>
                     )}
                   </TableBody>
@@ -901,6 +1051,66 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           </Tabs>
         </>
       )}
+
+      <Dialog open={!!drill} onOpenChange={(o) => !o && setDrill(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{drill?.label} — {drillRows.length} record(s)</DialogTitle>
+            <DialogDescription>
+              {drillSource === 'sealed_evidence'
+                ? 'Resolved from the evidence sealed with this issued report, so the historical figure always reconciles.'
+                : 'Resolved live under exactly the same reporting rules that produced the figure.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-auto">
+            {drillBusy && <Skeleton className="h-32 w-full" />}
+            {!drillBusy && drillRows.length === 0 && (
+              <p className="text-sm text-muted-foreground py-6 text-center">No applicable records.</p>
+            )}
+            {!drillBusy && drillRows.length > 0 && (
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Reference</TableHead><TableHead>Description</TableHead><TableHead>Detail</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {drillRows.map((r, i) => (
+                    <TableRow key={`${r.record_id ?? i}`}>
+                      <TableCell className="font-mono text-xs">{r.record_code ?? '—'}</TableCell>
+                      <TableCell className="text-xs">{r.record_label ?? '—'}</TableCell>
+                      <TableCell className="text-[11px] text-muted-foreground">
+                        {Object.entries(r.attributes ?? {})
+                          .filter(([key]) => key !== 'link')
+                          .map(([key, val]) => `${key.replace(/_/g, ' ')}: ${val ?? '—'}`)
+                          .join(' · ')}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!issuing} onOpenChange={(o) => !o && setIssuing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue management status report</DialogTitle>
+            <DialogDescription>
+              Issuing seals the report, allocates its official number and freezes its supporting evidence.
+              It can no longer change, even if audits, findings or actions move afterwards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Issue note (optional)</Label>
+            <Input value={issueNote} onChange={(e) => setIssueNote(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIssuing(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={handleIssue}>Issue report</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!distributing} onOpenChange={(o) => !o && setDistributing(null)}>
         <DialogContent>

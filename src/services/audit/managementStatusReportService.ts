@@ -332,7 +332,24 @@ export interface ManagementStatusPayload {
     current_state_only: string[];
     limitation: string;
   };
+
+  /** Integrity gate — explicit denominators, date basis and data-quality exceptions. */
+  denominators?: Record<string, unknown>;
+  period_date_basis?: Record<string, string>;
+  data_quality?: {
+    ok: boolean;
+    exception_count: number;
+    exceptions: Array<{
+      rule: string;
+      severity: string;
+      record_type: string;
+      record_id: string;
+      record_code: string | null;
+      detail: string;
+    }>;
+  };
 }
+
 
 export interface ManagementStatusSnapshot {
   id: string;
@@ -345,6 +362,11 @@ export interface ManagementStatusSnapshot {
   audience: string;
   department_id: string | null;
   status: string;
+  /** Draft | Issued — issued reports are sealed and historically reproducible. */
+  lifecycle_state?: string;
+  issued_by?: string | null;
+  issued_at?: string | null;
+  issue_note?: string | null;
   snapshot: ManagementStatusPayload;
   comparison_report_id: string | null;
   comparison: Record<string, any> | null;
@@ -355,6 +377,24 @@ export interface ManagementStatusSnapshot {
   config_provenance?: Record<string, any> | null;
 
 }
+
+export interface DataQualityException {
+  rule: string;
+  severity: string;
+  record_type: string;
+  record_id: string;
+  record_code: string | null;
+  detail: string;
+}
+
+export interface DrilldownRecord {
+  record_type: string;
+  record_id: string | null;
+  record_code: string | null;
+  record_label: string | null;
+  attributes: Record<string, any>;
+}
+
 
 /** Live plan status + period activity — reads current state, never stored. */
 export async function fetchLiveManagementStatus(input: {
@@ -445,4 +485,91 @@ export function healthTone(rating: string | undefined): 'success' | 'warning' | 
   if (rating === 'RED') return 'destructive';
   if (rating === 'AMBER') return 'warning';
   return 'success';
+}
+
+/** KPI codes that resolve to record-level evidence (mirrors the server-side drill-down). */
+export const DRILLABLE_KPI_CODES = new Set<string>([
+  'approved_engagements', 'closed', 'closed_actions_pending', 'in_progress',
+  'planned_not_started', 'delayed_at_risk', 'cancelled', 'carried_forward',
+  'findings_total', 'open_critical_high', 'overdue_responses', 'findings_raised', 'findings_closed',
+  'actions_open', 'actions_overdue', 'actions_awaiting_verification', 'actions_verified',
+  'universe_high_risk_unscheduled', 'universe_overdue_by_frequency',
+]);
+
+/**
+ * INTEGRITY GATE — resolve any material KPI back to the underlying governed records.
+ * When `reportId` refers to an issued report the records come from that report's
+ * sealed evidence, so the historical figure always reconciles.
+ */
+export async function fetchManagementKpiDrilldown(input: {
+  planId: string;
+  kpiCode: string;
+  asAt?: string | null;
+  departmentId?: string | null;
+  periodCode?: string;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  reportId?: string | null;
+}): Promise<{ ok: boolean; code?: string; source?: string; count: number; records: DrilldownRecord[] }> {
+  const { data, error } = await supabase.rpc('ia_management_status_drilldown', {
+    p_plan_id: input.planId,
+    p_kpi_code: input.kpiCode,
+    p_as_at: input.asAt || new Date().toISOString(),
+    p_department_id: input.departmentId ?? null,
+    p_period_code: input.periodCode ?? 'CURRENT',
+    p_period_start: input.periodStart ?? null,
+    p_period_end: input.periodEnd ?? null,
+    p_report_id: input.reportId ?? null,
+  } as never);
+  if (error) return { ok: false, code: 'drilldown_unavailable', count: 0, records: [] };
+  const row = (data ?? {}) as any;
+  return {
+    ok: !!row.ok,
+    code: row.code,
+    source: row.source,
+    count: row.count ?? 0,
+    records: (row.records ?? []) as DrilldownRecord[],
+  };
+}
+
+/** Reporting-critical data conditions, surfaced rather than silently excluded. */
+export async function fetchManagementDataQuality(planId: string, departmentId?: string | null) {
+  const { data, error } = await supabase.rpc('ia_management_data_quality', {
+    p_plan_id: planId,
+    p_department_id: departmentId ?? null,
+  } as never);
+  if (error) return { ok: false, exception_count: 0, exceptions: [] as DataQualityException[] };
+  const row = (data ?? {}) as any;
+  return {
+    ok: !!row.ok,
+    exception_count: row.exception_count ?? 0,
+    exceptions: (row.exceptions ?? []) as DataQualityException[],
+  };
+}
+
+/**
+ * Issue (seal) a draft management report. Separate authority from generation:
+ * only report/plan approvers may issue. The authoritative IA-MSR number is
+ * allocated here, never by the browser.
+ */
+export async function issueManagementStatusReport(reportId: string, note?: string | null) {
+  const { data, error } = await supabase.rpc('ia_issue_management_status_report', {
+    p_report_id: reportId,
+    p_note: note ?? null,
+  } as never);
+  if (error) return { ok: false, code: 'issue_failed' as string, reportNumber: null as string | null };
+  const row = (data ?? {}) as any;
+  return { ok: !!row.ok, code: row.code as string | undefined, reportNumber: (row.report_number ?? null) as string | null };
+}
+
+/** May the current user generate a draft management report for this plan? */
+export async function canGenerateManagementReport(planId: string): Promise<boolean> {
+  const { data } = await supabase.rpc('ia_can_generate_management_report', { p_plan_id: planId } as never);
+  return data === true;
+}
+
+/** May the current user issue/seal a management report for this plan? */
+export async function canIssueManagementReport(planId: string): Promise<boolean> {
+  const { data } = await supabase.rpc('ia_can_issue_management_report', { p_plan_id: planId } as never);
+  return data === true;
 }
