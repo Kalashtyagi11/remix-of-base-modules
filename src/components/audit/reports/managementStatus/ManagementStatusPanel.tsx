@@ -29,13 +29,18 @@ import { toast } from 'sonner';
 import { Download, FileText, RefreshCw, Send, ShieldCheck } from 'lucide-react';
 import {
   MANAGEMENT_AUDIENCES,
+  MANAGEMENT_PERIODS,
+  MANAGEMENT_REPORT_MODES,
   fetchLiveManagementStatus,
   generateManagementStatusReport,
   listManagementStatusReports,
   type ManagementAudience,
+  type ManagementPeriodCode,
+  type ManagementReportMode,
   type ManagementStatusPayload,
   type ManagementStatusSnapshot,
 } from '@/services/audit/managementStatusReportService';
+
 import {
   downloadManagementStatusPdf,
   managementStatusPdfBlob,
