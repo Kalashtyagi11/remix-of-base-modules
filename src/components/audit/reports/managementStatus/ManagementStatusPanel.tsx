@@ -82,14 +82,14 @@ function fmt(v: string | null | undefined) {
 export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const qc = useQueryClient();
   const [planId, setPlanId] = useState<string | undefined>(fixedPlanId);
-  const [audience, setAudience] = useState<ManagementAudience>('HIA');
+  const [audience, setAudience] = useState<ManagementAudience>('');
   const [departmentId, setDepartmentId] = useState<string>('all');
   const [asAt, setAsAt] = useState<string>(new Date().toISOString().slice(0, 10));
   const [reportingPeriod, setReportingPeriod] = useState<string>('');
-  const [periodCode, setPeriodCode] = useState<ManagementPeriodCode>('CURRENT');
+  const [periodCode, setPeriodCode] = useState<ManagementPeriodCode>('');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
-  const [reportMode, setReportMode] = useState<ManagementReportMode>('Detailed Management Report');
+  const [reportMode, setReportMode] = useState<ManagementReportMode>('');
 
   const [compareId, setCompareId] = useState<string>('none');
   const [viewing, setViewing] = useState<ManagementStatusSnapshot | null>(null);
@@ -97,6 +97,45 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [busy, setBusy] = useState(false);
+
+  /** Governed reporting configuration — audiences, periods, definitions, metrics. */
+  const { data: config } = useQuery({
+    queryKey: ['ia-msr-config'],
+    queryFn: fetchManagementReportingConfiguration,
+    staleTime: 60_000,
+  });
+  const { data: foundation } = useDocumentFoundation();
+
+  useEffect(() => {
+    if (!config) return;
+    if (!audience && config.audiences.length) setAudience(config.audiences[0].code);
+    if (!periodCode && config.periods.length) setPeriodCode(config.periods[0].code);
+    if (!reportMode && config.definitions.length) setReportMode(config.definitions[0].reportName);
+  }, [config, audience, periodCode, reportMode]);
+
+  const definition = useMemo(
+    () =>
+      config?.definitions.find((d) => d.reportName === reportMode || d.reportCode === reportMode) ??
+      config?.definitions.find((d) => d.audienceCode === audience),
+    [config, reportMode, audience],
+  );
+  const departmentScoped = definition?.permittedScope === 'DEPARTMENT';
+  const customPeriod = periodCode === 'CUSTOM';
+
+  const visibleSections = useMemo(
+    () =>
+      (definition?.sections ?? []).filter(
+        (s) => s.isVisible && (s.audiences.length === 0 || s.audiences.includes(audience)),
+      ),
+    [definition, audience],
+  );
+
+  const activeMetrics = useMemo(() => {
+    const allowed = definition?.metrics ?? [];
+    return (config?.metrics ?? [])
+      .filter((m) => allowed.length === 0 || allowed.includes(m.metricCode))
+      .filter((m) => m.audiences.length === 0 || m.audiences.includes(audience));
+  }, [config, definition, audience]);
 
   const { data: plans = [] } = useQuery({
     queryKey: ['ia-msr-plans'],
@@ -119,7 +158,8 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   });
 
   const effectivePlanId = fixedPlanId ?? planId;
-  const effectiveDept = audience === 'Department Management' && departmentId !== 'all' ? departmentId : null;
+  const effectiveDept = departmentScoped && departmentId !== 'all' ? departmentId : null;
+
 
   const live = useQuery({
     queryKey: ['ia-msr-live', effectivePlanId, audience, effectiveDept, asAt, periodCode, customStart, customEnd],
