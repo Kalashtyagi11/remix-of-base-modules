@@ -387,7 +387,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
 
             </Select>
           </div>
-          {periodCode === 'CUSTOM' && (
+          {customPeriod && (
             <>
               <div className="space-y-1.5">
                 <Label className="text-xs">Period from</Label>
