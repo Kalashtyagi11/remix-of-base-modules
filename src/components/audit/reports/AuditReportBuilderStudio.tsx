@@ -193,7 +193,7 @@ export function AuditReportBuilderStudio() {
     [actions, reportData.engagement_id]
   );
 
-  const isLocked = reportData.status === 'Final' || reportData.status === 'Submitted';
+  const isLocked = reportData.status === 'Issued';
   const enabledSections = sections.filter((s) => s.enabled);
 
   // Content completeness
