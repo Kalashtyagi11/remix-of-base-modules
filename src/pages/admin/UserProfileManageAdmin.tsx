@@ -33,7 +33,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 
 import { PermissionWrapper } from '@/components/ui/permission-wrapper';
-import { useTbOffices, useDepartments } from '@/hooks/useAdminData';
+import { useTbOffices } from '@/hooks/useAdminData';
+import { useDepartmentsWithProfiles } from '@/hooks/comm/useDepartmentMaster';
+
 
 import {
   useCoreUserProfile, useUpdateUserProfile,
@@ -93,7 +95,17 @@ const UserManageContent = () => {
   const { data: offices = [] } = useTbOffices();
 
   const [officeCode, setOfficeCode] = useState<string>('');
-  const { data: departments = [] } = useDepartments(officeCode || profile?.office_code || '');
+  // DEF IA-FULL-E2E-015: staff assignments must reference the CANONICAL
+  // organisation department (core_department). The legacy tb_office_departments
+  // list produced assignments the organisation authoriser could never match,
+  // which denied every governed action (including Omni-Comms sends).
+  const { data: departmentRows = [] } = useDepartmentsWithProfiles();
+  const departments = useMemo(
+    () => departmentRows.map((r: any) => r.master).filter((m: any) => m && m.is_active !== false),
+    [departmentRows],
+  );
+
+
 
   const updateProfile = useUpdateUserProfile();
   const createStaff = useCreateStaffProfile();
@@ -678,6 +690,8 @@ const UserManageContent = () => {
         userId={userId}
         staffProfileId={staff?.id}
         offices={offices}
+        departments={departments}
+
         onCreate={async (payload) => {
           await createAssignment.mutateAsync(payload);
           toast.success('Assignment created');
@@ -779,23 +793,26 @@ function NewDelegationDialog({
 }
 
 function NewAssignmentDialog({
-  open, onOpenChange, userId, staffProfileId, offices, onCreate,
+  open, onOpenChange, userId, staffProfileId, offices, departments, onCreate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   userId: string;
   staffProfileId?: string;
   offices: any[];
+  departments: any[];
   onCreate: (payload: any) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     office_code: '',
+    department_id: '',
     assignment_type: 'PRIMARY',
     effective_from: new Date().toISOString().slice(0, 10),
     effective_to: '',
     is_primary: true,
     reason: '',
   });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -817,6 +834,15 @@ function NewAssignmentDialog({
             </Select>
           </div>
           <div>
+            <Label>Department</Label>
+            <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+              <SelectContent>
+                {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label>Type</Label>
             <Select value={form.assignment_type} onValueChange={(v) => setForm({ ...form, assignment_type: v, is_primary: v === 'PRIMARY' })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -825,6 +851,7 @@ function NewAssignmentDialog({
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Effective From</Label>
             <Input type="date" value={form.effective_from}
@@ -843,13 +870,15 @@ function NewAssignmentDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
-            disabled={!staffProfileId || !form.office_code}
+            disabled={!staffProfileId || !form.office_code || !form.department_id}
             onClick={async () => {
               await onCreate({
                 staff_profile_id: staffProfileId!,
                 user_id: userId,
                 office_code: form.office_code,
+                department_id: form.department_id,
                 assignment_type: form.assignment_type,
+
                 assignment_status: 'ACTIVE',
                 effective_from: form.effective_from,
                 effective_to: form.effective_to || null,
