@@ -12,7 +12,14 @@ import { useRecordCommunicationStage, useValidateTemplatePolicy, STAGE_LABELS } 
 import { useIADocumentTemplates } from '@/hooks/useAuditData';
 import { useDocumentRequests } from '@/hooks/useEngagementExecution';
 import { supabase } from '@/integrations/supabase/client';
-import { emitInternalAuditStageCommunication } from '@/platform/omni-comms/integrations/business/internal-audit/internalAuditManualCommunication';
+import { emitInternalAuditStageCommunication, resolveInternalAuditStageEvent } from '@/platform/omni-comms/integrations/business/internal-audit/internalAuditManualCommunication';
+import {
+  resolveAuditCommunicationArtifacts,
+  createArtifactViewLink,
+  type ResolvedCommunicationDocument,
+} from '@/services/audit/auditCommunicationDocumentPolicy';
+import { generateAndSealStageDocument } from '@/services/audit/auditStageDocumentService';
+import { FormalDocumentPanel } from '@/components/audit/FormalDocumentPanel';
 import { useToast } from '@/hooks/use-toast';
 import { formatDateForDisplay } from '@/lib/format-config';
 
@@ -81,6 +88,15 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [policyValid, setPolicyValid] = useState<boolean | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  // IA-FULL-E2E-024: the formal document that must accompany this business
+  // communication is decided centrally, never by this screen.
+  const resolvedEventCode = useMemo(
+    () => resolveInternalAuditStageEvent(stageCode, mode === 'reminder' ? 'reminder' : mode === 'resend' ? 'reissue' : 'initial'),
+    [stageCode, mode],
+  );
+  const [documentPolicy, setDocumentPolicy] = useState<ResolvedCommunicationDocument | null>(null);
+  const [isResolvingDocument, setIsResolvingDocument] = useState(false);
+  const [isGeneratingDocument, setIsGeneratingDocument] = useState(false);
   // DEF IA-FULL-E2E-013: meeting and draft-circulation events declare mandatory
   // facts (meeting date/time, location, draft version, comment due date). They
   // must be captured on this screen or the producer blocks the obligation.
@@ -187,6 +203,67 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
     }
   }, [open, stageCode, matchingTemplate?.id, mergeData, mode]);
 
+  // Resolve the central formal-document policy for this event.
+  useEffect(() => {
+    if (!open || !resolvedEventCode || !engagementId) {
+      setDocumentPolicy(null);
+      return;
+    }
+    let cancelled = false;
+    setIsResolvingDocument(true);
+    resolveAuditCommunicationArtifacts(resolvedEventCode, engagementId)
+      .then((result) => { if (!cancelled) setDocumentPolicy(result); })
+      .catch(() => { if (!cancelled) setDocumentPolicy(null); })
+      .finally(() => { if (!cancelled) setIsResolvingDocument(false); });
+    return () => { cancelled = true; };
+  }, [open, resolvedEventCode, engagementId]);
+
+  const handleGenerateDocument = async () => {
+    const policy = documentPolicy?.policy;
+    if (!policy) return;
+    setIsGeneratingDocument(true);
+    try {
+      const ctx = engagementContext || {};
+      const sealed = await generateAndSealStageDocument({
+        policy,
+        entityId: engagementId,
+        title: policy.documentLabel,
+        reference: ctx.engagement_name || engagementName || engagementId,
+        body: messageContent,
+        recipientName: recipientName || ctx.department_head || null,
+        departmentName: ctx.department_name || null,
+      });
+      if (!sealed.ok || !sealed.artifact) {
+        toast({
+          title: 'Document could not be produced',
+          description: 'The formal document could not be created. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setDocumentPolicy((prev) => (prev ? { ...prev, artifact: sealed.artifact, blocksDistribution: false, correctiveAction: null, code: null } : prev));
+      toast({
+        title: sealed.reused ? 'Existing document reused' : 'Formal document produced',
+        description: `${sealed.artifact.fileName} (v${sealed.artifact.versionNumber}) is ready to distribute.`,
+      });
+    } finally {
+      setIsGeneratingDocument(false);
+    }
+  };
+
+  const handleViewDocument = async () => {
+    const path = documentPolicy?.artifact?.storagePath;
+    if (!path) return;
+    const url = await createArtifactViewLink(path);
+    if (url) window.open(url, '_blank', 'noopener');
+    else toast({ title: 'Document unavailable', description: 'The document could not be opened right now.', variant: 'destructive' });
+  };
+
+  const documentBlocks =
+    !!documentPolicy && documentPolicy.requirement === 'REQUIRED' && !documentPolicy.artifact?.attachmentId;
+
+
+
   /**
    * Wave 4 closure (DEF-2A): operator-initiated stage communications are
    * raised as Omni-Comms obligations. This surface never contacts a provider,
@@ -246,6 +323,19 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
             : {}),
 
         },
+        // IA-FULL-E2E-024: the official system document travels with the
+        // communication. Email encloses the exact sealed bytes; channels that
+        // cannot carry files stay deliverable with a secure in-platform link.
+        attachments: documentPolicy?.artifact?.attachmentId
+          ? [
+              {
+                attachmentId: documentPolicy.artifact.attachmentId,
+                disposition: 'attachment' as const,
+                requiredForDelivery: documentPolicy.requirement === 'REQUIRED',
+                requirementScope: 'attachment_capable_channels' as const,
+              },
+            ]
+          : undefined,
       });
       if (result.outcome === 'blocked') {
         return { success: false, message: result.blockers.join(', ') };
@@ -260,6 +350,18 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
 
   const handleSend = async () => {
     if (!recipientEmail) return;
+
+    // Never distribute a formal communication without the document it promises.
+    if (documentBlocks) {
+      toast({
+        title: 'Formal document required',
+        description: `${documentPolicy?.policy?.documentLabel ?? 'The formal document'} must be produced before this communication can be distributed.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+
 
     const stageLabel = STAGE_LABELS[stageCode] || stageCode;
     const subjectPrefix = mode === 'reminder' ? 'REMINDER: ' : mode === 'resend' ? 'Re: ' : '';
@@ -302,8 +404,10 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
       }, {
         onSuccess: () => {
           toast({
-            title: mode === 'reminder' ? 'Reminder Sent' : mode === 'resend' ? 'Communication Resent' : 'Communication Sent',
-            description: `Email sent to ${recipientEmail} successfully.`,
+            title: mode === 'reminder' ? 'Reminder Distributed' : mode === 'resend' ? 'Communication Redistributed' : 'Communication Distributed',
+            description: documentPolicy?.artifact
+              ? `Sent to ${recipientEmail} with ${documentPolicy.artifact.fileName} (v${documentPolicy.artifact.versionNumber}) enclosed.`
+              : `Sent to ${recipientEmail} successfully.`,
           });
           onClose();
         },
@@ -322,9 +426,9 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
   const isPending = recordStage.isPending || isSendingEmail;
 
   const modeConfig = {
-    send: { icon: Send, title: `Send: ${stageLabel}`, btnLabel: 'Send Communication', btnIcon: Send },
-    resend: { icon: RefreshCw, title: `Resend: ${stageLabel}`, btnLabel: 'Resend Communication', btnIcon: RefreshCw },
-    reminder: { icon: Bell, title: `Send Reminder: ${stageLabel}`, btnLabel: 'Send Reminder', btnIcon: Bell },
+    send: { icon: Send, title: `Distribute: ${stageLabel}`, btnLabel: 'Distribute', btnIcon: Send },
+    resend: { icon: RefreshCw, title: `Redistribute: ${stageLabel}`, btnLabel: 'Redistribute', btnIcon: RefreshCw },
+    reminder: { icon: Bell, title: `Reminder: ${stageLabel}`, btnLabel: 'Distribute Reminder', btnIcon: Bell },
   }[mode];
 
   return (
@@ -461,6 +565,16 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
             )}
           </div>
 
+          {/* Official system document resolved by the central policy */}
+          <FormalDocumentPanel
+            resolved={documentPolicy}
+            isResolving={isResolvingDocument}
+            isGenerating={isGeneratingDocument}
+            onGenerate={handleGenerateDocument}
+            onView={handleViewDocument}
+          />
+
+
           {/* Additional Notes */}
           <div className="space-y-1">
             <Label className="text-xs">Additional Notes (optional)</Label>
@@ -475,7 +589,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} size="sm">Cancel</Button>
-          <Button onClick={handleSend} disabled={!recipientEmail || stageFactsMissing || isPending || policyValid === false} size="sm">
+          <Button onClick={handleSend} disabled={!recipientEmail || stageFactsMissing || isPending || policyValid === false || documentBlocks} size="sm">
             {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <modeConfig.btnIcon className="h-4 w-4 mr-1" />}
             {modeConfig.btnLabel}
           </Button>
