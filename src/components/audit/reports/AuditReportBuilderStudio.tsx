@@ -306,7 +306,12 @@ export function AuditReportBuilderStudio() {
   if (showPreview) {
     return (
       <AuditReportPreview
-        reportData={reportData}
+        reportData={{
+          ...reportData,
+          id: reportId,
+          report_number: (existingReport as any)?.report_number ?? null,
+          issued_at: (existingReport as any)?.issued_at ?? null,
+        }}
         findings={engagementFindings}
         responses={engagementResponses}
         actions={engagementActions}
