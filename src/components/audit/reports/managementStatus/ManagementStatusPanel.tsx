@@ -240,7 +240,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             <ShieldCheck className="h-4 w-4" /> Reporting Context
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-5">
+        <CardContent className="grid gap-4 md:grid-cols-4">
           {!fixedPlanId && (
             <div className="space-y-1.5">
               <Label className="text-xs">Annual Plan</Label>
@@ -266,6 +266,15 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             </Select>
           </div>
           <div className="space-y-1.5">
+            <Label className="text-xs">Report mode</Label>
+            <Select value={reportMode} onValueChange={(v) => setReportMode(v as ManagementReportMode)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MANAGEMENT_REPORT_MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
             <Label className="text-xs">Department scope</Label>
             <Select
               value={departmentId}
@@ -280,19 +289,41 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Status as at</Label>
+            <Label className="text-xs">Reporting period</Label>
+            <Select value={periodCode} onValueChange={(v) => setPeriodCode(v as ManagementPeriodCode)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MANAGEMENT_PERIODS.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {periodCode === 'CUSTOM' && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Period from</Label>
+                <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Period to</Label>
+                <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
+              </div>
+            </>
+          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Cumulative status as at</Label>
             <Input type="date" value={asAt} onChange={(e) => setAsAt(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Reporting period</Label>
+            <Label className="text-xs">Period label override</Label>
             <Input
-              placeholder="e.g. Q2 FY2030"
+              placeholder="Defaults to the calculated period"
               value={reportingPeriod}
               onChange={(e) => setReportingPeriod(e.target.value)}
             />
           </div>
         </CardContent>
       </Card>
+
 
       {!effectivePlanId && (
         <p className="text-sm text-muted-foreground">Select an annual plan to view its management status.</p>
