@@ -95,7 +95,16 @@ const UserManageContent = () => {
   const { data: offices = [] } = useTbOffices();
 
   const [officeCode, setOfficeCode] = useState<string>('');
-  const { data: departments = [] } = useDepartments(officeCode || profile?.office_code || '');
+  // DEF IA-FULL-E2E-015: staff assignments must reference the CANONICAL
+  // organisation department (core_department). The legacy tb_office_departments
+  // list produced assignments the organisation authoriser could never match,
+  // which denied every governed action (including Omni-Comms sends).
+  const { data: departmentRows = [] } = useDepartmentsWithProfiles();
+  const departments = React.useMemo(
+    () => departmentRows.map((r: any) => r.master).filter((m: any) => m && m.is_active !== false),
+    [departmentRows],
+  );
+
 
   const updateProfile = useUpdateUserProfile();
   const createStaff = useCreateStaffProfile();
