@@ -63,7 +63,13 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
 
   const overdueCount = auditActions.filter(isOverdue).length;
   const openFindingsCount = auditFindings.filter((f: any) => !['Closed', 'Resolved'].includes(f.status || '')).length;
-  const isClosed = audit?.status === 'Closed' || audit?.execution_status === 'Closed';
+  // IA-FULL-E2E-015: an engagement closed as "Closed – Actions Pending" must keep
+  // its outstanding corrective actions workable; only a full closure/cancellation locks them.
+  const closureState = String(audit?.execution_status || audit?.status || '');
+  const isClosureRecorded = closureState.startsWith('Closed') || closureState === 'Cancelled';
+  const isClosed = closureState === 'Closed' || closureState === 'Cancelled';
+  const canCreateActions = can('create_audit_actions');
+
 
   const openProgress = (row: any) => {
     setProgressAction(row);
