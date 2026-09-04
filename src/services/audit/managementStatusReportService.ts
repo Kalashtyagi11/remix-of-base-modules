@@ -345,6 +345,11 @@ export interface ManagementStatusSnapshot {
   audience: string;
   department_id: string | null;
   status: string;
+  /** Draft | Issued — issued reports are sealed and historically reproducible. */
+  lifecycle_state?: string;
+  issued_by?: string | null;
+  issued_at?: string | null;
+  issue_note?: string | null;
   snapshot: ManagementStatusPayload;
   comparison_report_id: string | null;
   comparison: Record<string, any> | null;
@@ -355,6 +360,24 @@ export interface ManagementStatusSnapshot {
   config_provenance?: Record<string, any> | null;
 
 }
+
+export interface DataQualityException {
+  rule: string;
+  severity: string;
+  record_type: string;
+  record_id: string;
+  record_code: string | null;
+  detail: string;
+}
+
+export interface DrilldownRecord {
+  record_type: string;
+  record_id: string | null;
+  record_code: string | null;
+  record_label: string | null;
+  attributes: Record<string, any>;
+}
+
 
 /** Live plan status + period activity — reads current state, never stored. */
 export async function fetchLiveManagementStatus(input: {
