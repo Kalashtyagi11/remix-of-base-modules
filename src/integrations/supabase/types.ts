@@ -77989,6 +77989,92 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_document_artifact: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          artifact_type: string
+          byte_size: number
+          checksum_sha256: string
+          classification: string
+          created_at: string
+          file_name: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          mime_type: string
+          source_entity_id: string
+          source_entity_type: string
+          status: string
+          storage_bucket: string
+          storage_path: string
+          superseded_at: string | null
+          supersedes_artifact_id: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artifact_type: string
+          byte_size: number
+          checksum_sha256: string
+          classification?: string
+          created_at?: string
+          file_name: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          mime_type?: string
+          source_entity_id: string
+          source_entity_type: string
+          status?: string
+          storage_bucket?: string
+          storage_path: string
+          superseded_at?: string | null
+          supersedes_artifact_id?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artifact_type?: string
+          byte_size?: number
+          checksum_sha256?: string
+          classification?: string
+          created_at?: string
+          file_name?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          mime_type?: string
+          source_entity_id?: string
+          source_entity_type?: string
+          status?: string
+          storage_bucket?: string
+          storage_path?: string
+          superseded_at?: string | null
+          supersedes_artifact_id?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_document_artifact_supersedes_artifact_id_fkey"
+            columns: ["supersedes_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "ia_document_artifact"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_document_requests: {
         Row: {
           created_at: string | null
@@ -104750,6 +104836,7 @@ export type Database = {
           pinned_file_name: string
           request_id: string
           required_for_delivery: boolean
+          requirement_scope: string
         }
         Insert: {
           attachment_id: string
@@ -104762,6 +104849,7 @@ export type Database = {
           pinned_file_name: string
           request_id: string
           required_for_delivery?: boolean
+          requirement_scope?: string
         }
         Update: {
           attachment_id?: string
@@ -104774,6 +104862,7 @@ export type Database = {
           pinned_file_name?: string
           request_id?: string
           required_for_delivery?: boolean
+          requirement_scope?: string
         }
         Relationships: [
           {
@@ -132997,6 +133086,21 @@ export type Database = {
         Returns: string
       }
       ia_register_actions: { Args: { p_filters?: Json }; Returns: Json }
+      ia_register_document_artifact: {
+        Args: {
+          p_artifact_type: string
+          p_byte_size: number
+          p_checksum_sha256: string
+          p_classification?: string
+          p_file_name: string
+          p_mime_type?: string
+          p_seal?: boolean
+          p_source_entity_id: string
+          p_source_entity_type: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
       ia_register_findings: { Args: { p_filters?: Json }; Returns: Json }
       ia_register_management_responses: {
         Args: { p_filters?: Json }
