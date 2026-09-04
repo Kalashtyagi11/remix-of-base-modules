@@ -332,7 +332,24 @@ export interface ManagementStatusPayload {
     current_state_only: string[];
     limitation: string;
   };
+
+  /** Integrity gate — explicit denominators, date basis and data-quality exceptions. */
+  denominators?: Record<string, unknown>;
+  period_date_basis?: Record<string, string>;
+  data_quality?: {
+    ok: boolean;
+    exception_count: number;
+    exceptions: Array<{
+      rule: string;
+      severity: string;
+      record_type: string;
+      record_id: string;
+      record_code: string | null;
+      detail: string;
+    }>;
+  };
 }
+
 
 export interface ManagementStatusSnapshot {
   id: string;
