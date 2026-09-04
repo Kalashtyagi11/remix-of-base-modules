@@ -211,6 +211,19 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
           dueDate: docDue ? formatDateForDisplay(docDue) : plannedEnd,
           issuedOn: formatDateForDisplay(new Date().toISOString()),
           launchedOn: plannedStart,
+          ...(isMeetingStage
+            ? {
+                meetingDateTime: formatDateForDisplay(meetingDateTime) + (meetingDateTime.includes('T') ? ' at ' + meetingDateTime.split('T')[1] : ''),
+                meetingLocation: meetingLocation.trim(),
+              }
+            : {}),
+          ...(isDraftDiscussionStage
+            ? {
+                versionNumber: versionNumber.trim(),
+                commentDueDate: formatDateForDisplay(commentDueDate),
+              }
+            : {}),
+
         },
       });
       if (result.outcome === 'blocked') {
