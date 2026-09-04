@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuditReportTemplate } from '@/hooks/useAuditDocumentTemplates';
@@ -250,15 +251,26 @@ export function AuditReportBuilderStudio() {
     }
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    if (reportId) {
-      update.mutate(
-        { id: reportId, status: newStatus, ...(newStatus === 'Final' ? { issued_at: new Date().toISOString(), issued_by: userCode } : {}) } as any,
-        { onSuccess: () => { toast({ title: `Report status: ${newStatus}` }); setReportData((p) => ({ ...p, status: newStatus })); } }
-      );
-    } else {
+  const handleStatusChange = async (newStatus: string) => {
+    if (!reportId) {
       setReportData((p) => ({ ...p, status: newStatus }));
+      return;
     }
+    if (newStatus !== 'Issued') return;
+
+    const { data, error } = await supabase.rpc('ia_issue_report' as any, { p_report_id: reportId });
+    const result = data as any;
+    if (error || !result?.success) {
+      const gateReasons: string[] = result?.gate?.reasons ?? [];
+      toast({
+        title: 'Report cannot be issued',
+        description: gateReasons.length ? gateReasons.join(' · ') : (result?.error || error?.message || 'Issuance was rejected'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({ title: 'Report issued' });
+    setReportData((p) => ({ ...p, status: 'Issued' }));
   };
 
   const autoPopulate = () => {
