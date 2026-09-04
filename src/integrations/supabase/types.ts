@@ -78738,6 +78738,36 @@ export type Database = {
           },
         ]
       }
+      ia_finding_theme: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          sort_order: number
+          theme_code: string
+          theme_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          sort_order?: number
+          theme_code: string
+          theme_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          sort_order?: number
+          theme_code?: string
+          theme_name?: string
+        }
+        Relationships: []
+      }
       ia_findings: {
         Row: {
           activity_id: string | null
@@ -133016,7 +133046,11 @@ export type Database = {
           p_audience?: string
           p_compare_report_id?: string
           p_department_id?: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
           p_plan_id: string
+          p_report_mode?: string
           p_reporting_period?: string
         }
         Returns: Json
@@ -133083,11 +133117,33 @@ export type Database = {
         }
         Returns: string
       }
+      ia_management_period_bounds: {
+        Args: {
+          p_as_at?: string
+          p_custom_end?: string
+          p_custom_start?: string
+          p_period_code?: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
       ia_management_status_live: {
         Args: {
           p_as_at?: string
           p_audience?: string
           p_department_id?: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
+      ia_management_status_live_v2: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_department_id?: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
           p_plan_id: string
         }
         Returns: Json
