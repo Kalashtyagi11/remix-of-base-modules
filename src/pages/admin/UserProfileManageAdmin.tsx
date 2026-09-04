@@ -33,7 +33,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 
 import { PermissionWrapper } from '@/components/ui/permission-wrapper';
-import { useTbOffices, useDepartments } from '@/hooks/useAdminData';
+import { useTbOffices } from '@/hooks/useAdminData';
+import { useDepartmentsWithProfiles } from '@/hooks/comm/useDepartmentMaster';
+
 
 import {
   useCoreUserProfile, useUpdateUserProfile,
