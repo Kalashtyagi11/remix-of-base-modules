@@ -487,6 +487,15 @@ export function healthTone(rating: string | undefined): 'success' | 'warning' | 
   return 'success';
 }
 
+/** KPI codes that resolve to record-level evidence (mirrors the server-side drill-down). */
+export const DRILLABLE_KPI_CODES = new Set<string>([
+  'approved_engagements', 'closed', 'closed_actions_pending', 'in_progress',
+  'planned_not_started', 'delayed_at_risk', 'cancelled', 'carried_forward',
+  'findings_total', 'open_critical_high', 'overdue_responses', 'findings_raised', 'findings_closed',
+  'actions_open', 'actions_overdue', 'actions_awaiting_verification', 'actions_verified',
+  'universe_high_risk_unscheduled', 'universe_overdue_by_frequency',
+]);
+
 /**
  * INTEGRITY GATE — resolve any material KPI back to the underlying governed records.
  * When `reportId` refers to an issued report the records come from that report's

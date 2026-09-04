@@ -36,6 +36,7 @@ import {
   canGenerateManagementReport,
   canIssueManagementReport,
   fetchManagementKpiDrilldown,
+  DRILLABLE_KPI_CODES,
   listManagementStatusReports,
   resolveMetricValue,
   type DrilldownRecord,
@@ -568,6 +569,15 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             {activeMetrics.map((m) => {
               const kpiCode = (m.sourcePath ?? '').split('.').pop() ?? '';
+              if (!DRILLABLE_KPI_CODES.has(kpiCode)) {
+                return (
+                  <Kpi
+                    key={m.metricCode}
+                    label={m.label}
+                    value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
+                  />
+                );
+              }
               return (
                 <button
                   key={m.metricCode}
