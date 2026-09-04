@@ -133475,6 +133475,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_msr_capture_evidence: {
+        Args: { p_report_id: string }
+        Returns: number
+      }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json
