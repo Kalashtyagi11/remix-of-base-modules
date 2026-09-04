@@ -100,10 +100,11 @@ const UserManageContent = () => {
   // list produced assignments the organisation authoriser could never match,
   // which denied every governed action (including Omni-Comms sends).
   const { data: departmentRows = [] } = useDepartmentsWithProfiles();
-  const departments = React.useMemo(
+  const departments = useMemo(
     () => departmentRows.map((r: any) => r.master).filter((m: any) => m && m.is_active !== false),
     [departmentRows],
   );
+
 
 
   const updateProfile = useUpdateUserProfile();
