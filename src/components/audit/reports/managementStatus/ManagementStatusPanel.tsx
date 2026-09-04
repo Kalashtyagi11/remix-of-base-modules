@@ -5,7 +5,7 @@
  * Management, the Audit / Risk Committee and Department Management.
  * Every figure comes from the single server-side status engine.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,24 +28,27 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { Download, FileText, RefreshCw, Send, ShieldCheck } from 'lucide-react';
 import {
-  MANAGEMENT_AUDIENCES,
-  MANAGEMENT_PERIODS,
-  MANAGEMENT_REPORT_MODES,
   fetchLiveManagementStatus,
+  fetchManagementReportingConfiguration,
+  formatMetricValue,
   generateManagementStatusReport,
   listManagementStatusReports,
+  resolveMetricValue,
   type ManagementAudience,
   type ManagementPeriodCode,
   type ManagementReportMode,
   type ManagementStatusPayload,
   type ManagementStatusSnapshot,
 } from '@/services/audit/managementStatusReportService';
+import { useDocumentFoundation } from '@/hooks/useDocumentFoundation';
+import { brandingFromFoundation } from '@/lib/audit/auditExportPrimitives';
 
 import {
   downloadManagementStatusPdf,
   managementStatusPdfBlob,
 } from '../ManagementStatusReportPDFExport';
 import { distributeManagementStatusReport } from '@/services/audit/managementStatusDistributionService';
+
 
 interface Props {
   /** When provided the plan is fixed (plan workspace tab). */
