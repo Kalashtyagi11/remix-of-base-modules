@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useCreateReportVersion, useIssueReport } from '@/hooks/useAuditLifecycleCommands';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuditReportTemplate } from '@/hooks/useAuditDocumentTemplates';
@@ -257,20 +257,10 @@ export function AuditReportBuilderStudio() {
       return;
     }
     if (newStatus !== 'Issued') return;
-
-    const { data, error } = await supabase.rpc('ia_issue_report' as any, { p_report_id: reportId });
-    const result = data as any;
-    if (error || !result?.success) {
-      const gateReasons: string[] = result?.gate?.reasons ?? [];
-      toast({
-        title: 'Report cannot be issued',
-        description: gateReasons.length ? gateReasons.join(' · ') : (result?.error || error?.message || 'Issuance was rejected'),
-        variant: 'destructive',
-      });
-      return;
+    const result: any = await issueReport.mutateAsync({ reportId });
+    if (result?.success) {
+      setReportData((p) => ({ ...p, status: 'Issued' }));
     }
-    toast({ title: 'Report issued' });
-    setReportData((p) => ({ ...p, status: 'Issued' }));
   };
 
   const autoPopulate = () => {
@@ -844,7 +834,25 @@ export function AuditReportBuilderStudio() {
             {showVersions && (
               <>
                 <Separator />
-                <AuditReportVersionTimeline reportId={reportId} />
+                <div className="space-y-2">
+                  <AuditReportVersionTimeline reportId={reportId} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={!reportId || createVersion.isPending || reportData.status === 'Issued'}
+                    onClick={() =>
+                      reportId &&
+                      createVersion.mutate({
+                        reportId,
+                        content: reportData as any,
+                        changeSummary: 'Version created from Report Builder',
+                      })
+                    }
+                  >
+                    <History className="h-4 w-4 mr-1" /> Create version
+                  </Button>
+                </div>
               </>
             )}
           </div>
