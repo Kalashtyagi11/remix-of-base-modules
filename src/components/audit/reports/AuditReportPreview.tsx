@@ -356,7 +356,7 @@ export function AuditReportPreview({
           reportId={reportData.id}
           reportNumber={reportData.report_number}
           reportTitle={reportData.title}
-          engagementTitle={engagement?.title ?? engagement?.engagement_title ?? null}
+          engagementTitle={engagement?.engagement_name ?? engagement?.title ?? reportData.title ?? null}
           overallOpinion={reportData.overall_assessment}
           issuedOn={reportData.issued_at ?? reportData.generated_on ?? null}
           buildPdf={buildIssuedPdf}
