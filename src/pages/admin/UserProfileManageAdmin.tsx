@@ -690,6 +690,8 @@ const UserManageContent = () => {
         userId={userId}
         staffProfileId={staff?.id}
         offices={offices}
+        departments={departments}
+
         onCreate={async (payload) => {
           await createAssignment.mutateAsync(payload);
           toast.success('Assignment created');
