@@ -392,7 +392,33 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
               <Input id="ia-recipient-email" type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@example.com" className="h-8 text-sm" />
             </div>
 
+            {isMeetingStage && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-meeting-datetime" className="text-xs">Meeting Date &amp; Time *</Label>
+                  <Input id="ia-meeting-datetime" type="datetime-local" value={meetingDateTime} onChange={e => setMeetingDateTime(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-meeting-location" className="text-xs">Meeting Location *</Label>
+                  <Input id="ia-meeting-location" value={meetingLocation} onChange={e => setMeetingLocation(e.target.value)} placeholder="Boardroom / Teams link" className="h-8 text-sm" />
+                </div>
+              </>
+            )}
+
+            {isDraftDiscussionStage && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-version-number" className="text-xs">Draft Report Version *</Label>
+                  <Input id="ia-version-number" value={versionNumber} onChange={e => setVersionNumber(e.target.value)} placeholder="1" className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-comment-due" className="text-xs">Comment Due Date *</Label>
+                  <Input id="ia-comment-due" type="date" value={commentDueDate} onChange={e => setCommentDueDate(e.target.value)} className="h-8 text-sm" />
+                </div>
+              </>
+            )}
           </div>
+
 
           {/* Communication Content */}
           <div className="space-y-1">
