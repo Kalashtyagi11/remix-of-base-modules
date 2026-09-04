@@ -209,7 +209,9 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
 
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{auditActions.length} action(s)</p>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />New Action</Button>
+        {canCreateActions && !isClosed && (
+          <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />New Action</Button>
+        )}
       </div>
 
       {showForm && (
@@ -235,7 +237,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       )}
 
       {auditActions.length === 0 && !showForm ? (
-        <AuditEmptyState icon={CheckCircle} title="No corrective actions yet" description="Actions will be created from audit findings" actionLabel="Create Action" onAction={() => setShowForm(true)} />
+        <AuditEmptyState icon={CheckCircle} title="No corrective actions yet" description="Actions will be created from audit findings" actionLabel={canCreateActions && !isClosed ? 'Create Action' : undefined} onAction={canCreateActions && !isClosed ? () => setShowForm(true) : undefined} />
       ) : (
         <Card><CardContent className="pt-4">
           <DataTable columns={columns} data={auditActions} emptyMessage="No corrective actions assigned."
@@ -297,22 +299,26 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
           { label: `Actions assigned (${auditActions.length})`, passed: auditFindings.length === 0 || auditActions.length > 0, required: true },
         ]}
       />
-      {isClosed ? (
+      {isClosureRecorded ? (
         <Card className="border-primary/30">
           <CardContent className="pt-6 space-y-2">
-            <div className="flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /><span className="font-medium">Audit Closed</span></div>
+            <div className="flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /><span className="font-medium">{closureState}</span></div>
             {audit?.closure_date && <p className="text-sm text-muted-foreground">Closed on: {formatDateForDisplay(audit.closure_date)}</p>}
             {audit?.closed_by && <p className="text-sm text-muted-foreground">Closed by: {audit.closed_by}</p>}
             {audit?.closure_notes && <p className="text-sm mt-2">{audit.closure_notes}</p>}
+            {!isClosed && (
+              <p className="text-sm text-muted-foreground">
+                Outstanding corrective actions remain open and can still be progressed, verified and closed here.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <CardContent className="pt-6 space-y-3">
-            <div><Label>Closure Notes</Label><Textarea value={closureNotes} onChange={e => setClosureNotes(e.target.value)} placeholder="Final remarks..." /></div>
-            <Button onClick={onClose} disabled={openFindingsCount > 0}>
-              {openFindingsCount === 0 ? <><Lock className="h-4 w-4 mr-1" />Close Audit</> : 'Cannot close — resolve open findings first'}
-            </Button>
+          <CardContent className="pt-6 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Closure is performed on the Closure tab, where every closure requirement is checked and the disposition is recorded.
+            </p>
           </CardContent>
         </Card>
       )}
