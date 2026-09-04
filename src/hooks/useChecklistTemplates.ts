@@ -8,15 +8,19 @@ export function useChecklistTemplates(departmentId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('ia_checklist_templates' as any)
-        .select('*')
+        .select('*, ia_checklist_template_items(count)')
         .eq('is_active', true)
         .order('template_name');
 
       const { data, error } = await query;
       if (error) throw error;
-      
+
       // Sort: department-specific first, then general
-      const items = (data ?? []) as any[];
+      const items = ((data ?? []) as any[]).map((t: any) => ({
+        ...t,
+        item_count: t.ia_checklist_template_items?.[0]?.count ?? 0,
+      }));
+
       if (departmentId) {
         return [
           ...items.filter((t: any) => t.department_id === departmentId),

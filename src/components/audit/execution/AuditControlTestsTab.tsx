@@ -13,7 +13,7 @@ import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
 import { formatDateForDisplay } from '@/lib/format-config';
 import { useUserCode } from '@/hooks/useUserCode';
 import { supabase } from '@/integrations/supabase/client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useConcludeControlTest } from '@/hooks/useAuditLifecycleCommands';
 
@@ -32,6 +32,16 @@ interface AuditControlTestsTabProps {
 
 export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
   const { data: tests = [], isLoading } = useEngagementControlTests(auditId);
+  const { data: rcmControls = [] } = useQuery({
+    queryKey: ['ia_rcm_controls', 'all'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('ia_rcm_controls').select('id, control_name, control_type').eq('is_active', true).order('control_name');
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   const { userCode } = useUserCode();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -114,7 +124,7 @@ export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
   };
 
   const columns: DataTableColumn<any>[] = [
-    { key: 'rcm_control_id', header: 'Control', render: (r) => <span className="text-sm font-mono">{r.rcm_control_id?.slice(0, 12) || '—'}</span> },
+    { key: 'rcm_control_id', header: 'Control', render: (r) => <span className="text-sm">{rcmControls.find((c: any) => c.id === r.rcm_control_id)?.control_name || '—'}</span> },
     { key: 'sample_size', header: 'Sample Size', render: (r) => <span className="text-sm">{r.sample_size ?? '—'}</span> },
     { key: 'exceptions_found', header: 'Exceptions', render: (r) => <span className={`text-sm font-medium ${(r.exceptions_found || 0) > 0 ? 'text-destructive' : ''}`}>{r.exceptions_found ?? '—'}</span> },
     { key: 'result', header: 'Result', render: (r) => <span className={`text-sm font-medium ${resultColor(r.result || '')}`}>{r.result || '—'}</span> },
@@ -144,7 +154,27 @@ export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={closeForm}><X className="h-4 w-4" /></Button>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Control Reference</Label><Input value={form.rcm_control_id} onChange={e => setForm(f => ({ ...f, rcm_control_id: e.target.value }))} disabled={formMode === 'view'} placeholder="Control ID from RCM" /></div>
+              <div><Label>Control Reference</Label>
+                <Select
+                  value={form.rcm_control_id || 'none'}
+                  onValueChange={(v) => setForm(f => ({ ...f, rcm_control_id: v === 'none' ? '' : v }))}
+                  disabled={formMode === 'view'}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select a control from the RCM" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not linked to an RCM control</SelectItem>
+                    {rcmControls.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.control_name}{c.control_type ? ` — ${c.control_type}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {rcmControls.length === 0 && (
+                  <p className="mt-1 text-[11px] text-muted-foreground">No RCM controls defined yet — add them on the Programme / RCM tab.</p>
+                )}
+              </div>
+
               <div><Label>Test Result</Label>
                 <Input value={editRecord?.result || 'Not Tested'} disabled readOnly />
                 <p className="mt-1 text-[11px] text-muted-foreground">Set by the governed “Conclude test” command.</p>

@@ -16,6 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Badge } from '@/components/ui/badge';
 import { FindingLifecycleControls } from './FindingLifecycleControls';
 import { FINDING_STATES, FINDING_LEGACY_STATES } from '@/config/auditWorkflowVocabulary';
+import { useEngagementActivities, useEngagementControlTests } from '@/hooks/useEngagementData';
 
 
 const RISK_RATINGS = ['Critical', 'High', 'Medium', 'Low'];
@@ -28,7 +29,7 @@ const emptyForm = {
   title: '', finding_id: '', condition: '', criteria: '', cause: '', effect: '',
   risk_rating: 'Medium', recommendation: '', status: 'Draft', impact_area: '', owner_role: '',
   preventive_action: '', root_cause_category: '', corrective_action_description: '',
-  function_area: '', department_head_name: '',
+  function_area: '', department_head_name: '', control_test_id: '', activity_id: '',
 };
 
 interface AuditFindingsTabProps {
@@ -43,6 +44,8 @@ interface AuditFindingsTabProps {
 
 export function AuditFindingsTab({ auditId, auditFindings, auditResponses, auditActions, auditEvidence = [], auditWorkingPapers = [], departmentId }: AuditFindingsTabProps) {
   const { create, update } = useIAFindingMutations();
+  const { data: controlTests = [] } = useEngagementControlTests(auditId);
+  const { data: activities = [] } = useEngagementActivities(auditId);
   const { getCreateFields, getUpdateFields } = useAuditFields();
   const { toast } = useToast();
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view' | null>(null);
@@ -68,6 +71,7 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
       owner_role: r.owner_role || '', preventive_action: r.preventive_action || '',
       root_cause_category: r.root_cause_category || '', corrective_action_description: r.corrective_action_description || '',
       function_area: r.function_area || '', department_head_name: r.department_head_name || '',
+      control_test_id: r.control_test_id || '', activity_id: r.activity_id || '',
     });
     setFormMode('edit');
     setEditRecord(r);
@@ -88,7 +92,8 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
       root_cause_category: form.root_cause_category || null, corrective_action_description: form.corrective_action_description || null,
       function_area: form.function_area || null, department_head_name: form.department_head_name || null,
       engagement_id: auditId, department_id: departmentId || null,
-      activity_id: null, annual_plan_id: null,
+      activity_id: form.activity_id || null, annual_plan_id: null,
+      control_test_id: form.control_test_id || null,
     };
     if (formMode === 'create') {
       create.mutate({ ...payload, ...getCreateFields() } as any, { onSuccess: closeForm });
@@ -174,8 +179,8 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
                           <CheckCircle className="h-3.5 w-3.5" />{actions.length}
                         </span>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(finding)}><Edit className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setExpandedId(isExpanded ? null : finding.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit finding" aria-label="Edit finding" onClick={() => openEdit(finding)}><Edit className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" title={isExpanded ? 'Collapse finding' : 'Expand finding'} aria-label={isExpanded ? 'Collapse finding' : 'Expand finding'} onClick={() => setExpandedId(isExpanded ? null : finding.id)}>
                         {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
                     </div>
@@ -325,6 +330,34 @@ export function AuditFindingsTab({ auditId, auditFindings, auditResponses, audit
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div><Label>Source Control Test</Label>
+                <Select value={form.control_test_id || '__none__'} onValueChange={v => setForm(f => ({ ...f, control_test_id: v === '__none__' ? '' : v }))} disabled={formMode === 'view'}>
+                  <SelectTrigger><SelectValue placeholder="Select the control test that raised this finding" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not raised from a control test</SelectItem>
+                    {controlTests.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {(t.remarks || 'Control test').slice(0, 60)}{t.test_date ? ` — ${formatDateForDisplay(t.test_date)}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Source Activity</Label>
+                <Select value={form.activity_id || '__none__'} onValueChange={v => setForm(f => ({ ...f, activity_id: v === '__none__' ? '' : v }))} disabled={formMode === 'view'}>
+                  <SelectTrigger><SelectValue placeholder="Select the fieldwork activity" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Not linked to an activity</SelectItem>
+                    {activities.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>{a.activity_name || a.title || 'Activity'}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
 
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pt-2">Finding Detail (Criteria / Condition / Cause / Effect)</p>
             <div className="grid grid-cols-2 gap-4">

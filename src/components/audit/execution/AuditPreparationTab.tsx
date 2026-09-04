@@ -349,17 +349,26 @@ function ChecklistSection({ auditId, departmentId }: { auditId: string; departme
                     <div className="flex gap-2 mt-1 flex-wrap">
                       {t.control_area && <Badge variant="outline" className="text-[10px]">{t.control_area}</Badge>}
                       {t.audit_type && <Badge variant="secondary" className="text-[10px]">{t.audit_type}</Badge>}
+                      <Badge variant={t.item_count ? 'outline' : 'destructive'} className="text-[10px]">
+                        {t.item_count ?? 0} question{t.item_count === 1 ? '' : 's'}
+                      </Badge>
                     </div>
+                    {!t.item_count && (
+                      <p className="text-[11px] text-destructive mt-1">
+                        This template has no questions configured yet — add checklist items manually instead.
+                      </p>
+                    )}
                   </div>
                   <Button
                     size="sm"
                     onClick={() => handleLoadTemplate(t.id)}
-                    disabled={loadTemplate.isPending}
+                    disabled={loadTemplate.isPending || !t.item_count}
                     className="shrink-0 ml-3"
                   >
                     {loadTemplate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                     Load
                   </Button>
+
                 </div>
               ))}
             </div>
