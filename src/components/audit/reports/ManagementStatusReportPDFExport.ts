@@ -173,264 +173,279 @@ export function buildManagementStatusPdf(
       });
     },
 
-
-  // ── Reporting period movement (activity in period, not cumulative) ──
-  const mv = data.period_movement ?? {};
-  if (Object.keys(mv).length) {
-    doc.addPage();
-    renderSectionHeading(
-      doc,
-      branding,
-      `Reporting Period Activity — ${data.period?.label ?? 'Selected period'}`,
-      18,
-    );
-    autoTable(doc, {
-      startY: 30,
-      head: [['Movement during the reporting period', 'Count']],
-      body: Object.entries(mv).map(([key, val]) => [
-        key.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
-        String(val),
-      ]),
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2.2 },
-      headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-      alternateRowStyles: { fillColor: branding.lightGray },
-      margin: { left: margin, right: margin },
-    });
-    doc.setFontSize(7.5);
-    doc.setTextColor(110, 110, 110);
-    doc.text(
-      `Period movement counts activity inside the reporting period only. Cumulative position is reported as at ${fmtDate(data.as_at)}.`,
-      margin,
-      (doc as any).lastAutoTable.finalY + 6,
-    );
-  }
-
-  // ── Completed audits — conclusions, issues, outstanding actions ──
-  const completed = data.completed_audits ?? [];
-  if (completed.length) {
-    doc.addPage();
-    renderSectionHeading(doc, branding, 'Audits Completed — Conclusions & Material Issues', 18);
-    autoTable(doc, {
-      startY: 30,
-      head: [[
-        'Reference', 'Audit', 'Department', 'Completed', 'Report', 'Opinion',
-        'Conclusion', 'Findings (by severity)', 'Responses', 'Actions outstanding', 'Next target',
-      ]],
-      body: completed.map((c) => [
-        c.engagement_code ?? '—',
-        c.title ?? '—',
-        c.department ?? '—',
-        fmtDate(c.completed_on),
-        c.report_number ?? 'Not issued',
-        c.audit_opinion ?? '—',
-        c.conclusion ?? c.executive_summary ?? '—',
-        Object.entries(c.findings_by_severity ?? {}).map(([s, n]) => `${s}: ${n}`).join(', ') || 'None',
-        String(c.responses_received ?? 0),
-        `${c.actions_outstanding ?? 0} of ${c.actions_total ?? 0}`,
-        fmtDate(c.next_target_date),
-      ]),
-      theme: 'grid',
-      styles: { fontSize: 6.5, cellPadding: 1.8, overflow: 'linebreak' },
-      headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 6.5 },
-      alternateRowStyles: { fillColor: branding.lightGray },
-      margin: { left: margin, right: margin },
-    });
-
-    const significant = completed.flatMap((c) =>
-      (c.significant_findings ?? []).map((f) => [
-        c.engagement_code ?? '—',
-        f.severity ?? '—',
-        f.title ?? '—',
-        f.status ?? '—',
-        f.recommendation ?? '—',
-      ]),
-    );
-    if (significant.length) {
+    MSR_PERIOD_MOVEMENT: (section) => {
+      const mv = data.period_movement ?? {};
+      if (!Object.keys(mv).length) return;
+      const y = beginSection({ ...section, heading: `${section.heading} — ${data.period?.label ?? 'Selected period'}` });
       autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 8,
-        head: [['Audit', 'Severity', 'Material issue identified', 'Status', 'Recommendation']],
-        body: significant,
+        startY: y,
+        head: [['Movement during the reporting period', 'Count']],
+        body: Object.entries(mv).map(([key, val]) => [
+          key.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+          String(val),
+        ]),
         theme: 'grid',
-        styles: { fontSize: 7, cellPadding: 1.8, overflow: 'linebreak' },
-        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 7 },
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        alternateRowStyles: { fillColor: branding.lightGray },
         margin: { left: margin, right: margin },
       });
-    }
+      doc.setFontSize(7.5);
+      doc.setTextColor(110, 110, 110);
+      doc.text(
+        `Period movement counts activity inside the reporting period only. Cumulative position is reported as at ${fmtDate(data.as_at)}.`,
+        margin,
+        (doc as any).lastAutoTable.finalY + 6,
+      );
+    },
+
+    MSR_COMPLETED_AUDITS: (section) => {
+      const completed = data.completed_audits ?? [];
+      if (!completed.length) return;
+      const y = beginSection(section);
+      autoTable(doc, {
+        startY: y,
+        head: [[
+          'Reference', 'Audit', 'Department', 'Completed', 'Report', 'Opinion',
+          'Conclusion', 'Findings (by severity)', 'Responses', 'Actions outstanding', 'Next target',
+        ]],
+        body: completed.map((c) => [
+          c.engagement_code ?? '—',
+          c.title ?? '—',
+          c.department ?? '—',
+          fmtDate(c.completed_on),
+          c.report_number ?? 'Not issued',
+          c.audit_opinion ?? '—',
+          c.conclusion ?? c.executive_summary ?? '—',
+          Object.entries(c.findings_by_severity ?? {}).map(([s, n]) => `${s}: ${n}`).join(', ') || 'None',
+          String(c.responses_received ?? 0),
+          `${c.actions_outstanding ?? 0} of ${c.actions_total ?? 0}`,
+          fmtDate(c.next_target_date),
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 6.5, cellPadding: 1.8, overflow: 'linebreak' },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 6.5 },
+        alternateRowStyles: { fillColor: branding.lightGray },
+        margin: { left: margin, right: margin },
+      });
+
+      const significant = completed.flatMap((c) =>
+        (c.significant_findings ?? []).map((f) => [
+          c.engagement_code ?? '—',
+          f.severity ?? '—',
+          f.title ?? '—',
+          f.status ?? '—',
+          f.recommendation ?? '—',
+        ]),
+      );
+      if (significant.length) {
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 8,
+          head: [['Audit', 'Severity', 'Material issue identified', 'Status', 'Recommendation']],
+          body: significant,
+          theme: 'grid',
+          styles: { fontSize: 7, cellPadding: 1.8, overflow: 'linebreak' },
+          headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 7 },
+          margin: { left: margin, right: margin },
+        });
+      }
+    },
+
+    MSR_THEMES: (section) => {
+      const themes = data.themes ?? [];
+      const coverage = data.coverage ?? {};
+      const forecast: Record<string, any> = data.forecast ?? {};
+      const y = beginSection(section);
+      autoTable(doc, {
+        startY: y,
+        head: [['Recurring / cross-audit theme', 'Findings', 'Audits affected']],
+        body: themes.length
+          ? themes.map((t) => [t.theme_name, String(t.finding_count), String(t.audit_count)])
+          : [['No recurring themes identified', '—', '—']],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        margin: { left: margin, right: margin },
+      });
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 8,
+        head: [['Assurance coverage', 'Value', 'Outlook to year end', 'Value']],
+        body: [
+          ['Planned vs completed audits', `${coverage.completed_total ?? 0} / ${coverage.planned_total ?? 0}`, 'Fiscal year end', fmtDate(forecast.fiscal_year_end)],
+          ['Critical risk areas covered', `${coverage.critical_completed ?? 0} / ${coverage.critical_planned ?? 0}`, 'Expected plan completion', `${forecast.expected_completion_pct ?? 0}%`],
+          ['High risk areas covered', `${coverage.high_completed ?? 0} / ${coverage.high_planned ?? 0}`, 'Likely to close', String(forecast.likely_to_close ?? 0)],
+          ['Departments covered', `${coverage.departments_covered ?? 0} / ${coverage.departments_planned ?? 0}`, 'Likely closed with actions pending', String(forecast.likely_actions_pending ?? 0)],
+          ['Functions covered', `${coverage.functions_covered ?? 0} / ${coverage.functions_planned ?? 0}`, 'At risk of delay', String(forecast.at_risk_of_delay ?? 0)],
+          ['High / Critical work deferred or cancelled', String(coverage.deferred_high_risk ?? 0), 'Likely carry-forward', String(forecast.likely_carry_forward ?? 0)],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        alternateRowStyles: { fillColor: branding.lightGray },
+        margin: { left: margin, right: margin },
+      });
+      if (forecast.basis || data.temporal_fidelity?.limitation) {
+        doc.setFontSize(7.5);
+        doc.setTextColor(110, 110, 110);
+        doc.text(
+          doc.splitTextToSize(
+            `${forecast.basis ? `Forecast basis: ${forecast.basis} ` : ''}${data.temporal_fidelity?.limitation ?? ''}`,
+            pw - margin * 2,
+          ),
+          margin,
+          (doc as any).lastAutoTable.finalY + 6,
+        );
+      }
+    },
+
+    MSR_ENGAGEMENTS: (section) => {
+      const y = beginSection(section);
+      autoTable(doc, {
+        startY: y,
+        head: [[
+          'Reference', 'Audit', 'Department', 'Risk', 'Qtr', 'Planned', 'Actual',
+          'Stage', 'Progress', 'Schedule', 'Var (d)', 'Lead', 'Find.', 'Open act.', 'Opinion', 'Next milestone',
+        ]],
+        body: (data.engagements ?? []).map((e) => [
+          e.engagement_code ?? '—',
+          e.engagement_name ?? '—',
+          e.department_name ?? '—',
+          e.risk_rating ?? '—',
+          e.quarter ?? '—',
+          `${fmtDate(e.planned_start)} → ${fmtDate(e.planned_end)}`,
+          `${fmtDate(e.actual_start)} → ${fmtDate(e.actual_end)}`,
+          e.lifecycle_status ?? '—',
+          `${e.progress_pct ?? 0}%`,
+          e.schedule_health ?? '—',
+          String(e.variance_days ?? 0),
+          e.lead_auditor ?? '—',
+          String(e.findings_total ?? 0),
+          String(e.open_actions ?? 0),
+          e.audit_opinion ?? '—',
+          e.next_milestone ?? '—',
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 6.5, cellPadding: 1.8, overflow: 'linebreak' },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 6.5 },
+        alternateRowStyles: { fillColor: branding.lightGray },
+        margin: { left: margin, right: margin },
+      });
+    },
+
+    MSR_FINDINGS: (section) => {
+      const y = beginSection(section);
+      const sev = data.findings?.by_severity ?? {};
+      autoTable(doc, {
+        startY: y,
+        head: [['Findings & risk', 'Value', 'Corrective actions', 'Value', 'Prior issues / follow-up', 'Value']],
+        body: [
+          ['Critical', String(sev.CRITICAL ?? 0), 'Open', String(data.actions?.open ?? 0), 'Prior open actions', String(data.prior_history?.prior_open_actions ?? 0)],
+          ['High', String(sev.HIGH ?? 0), 'In progress', String(data.actions?.in_progress ?? 0), 'Prior Critical/High findings', String(data.prior_history?.prior_critical_high_findings ?? 0)],
+          ['Medium', String(sev.MEDIUM ?? 0), 'Awaiting verification', String(data.actions?.awaiting_verification ?? 0), 'Follow-ups due', String(data.prior_history?.follow_ups_due ?? 0)],
+          ['Low', String(sev.LOW ?? 0), 'Verified / closed', String(data.actions?.verified ?? 0), 'Follow-ups overdue', String(data.prior_history?.follow_ups_overdue ?? 0)],
+          ['Open Critical / High', String(data.findings?.open_critical_high ?? 0), 'Overdue', String(data.actions?.overdue ?? 0), 'Partially implemented', String(data.prior_history?.partially_implemented ?? 0)],
+          ['Disputed findings', String(data.findings?.disputed ?? 0), 'Due within 30 days', String(data.actions?.due_soon ?? 0), 'Repeat / prior-year findings', String(data.findings?.repeat_prior_year ?? 0)],
+          ['Overdue management responses', String(data.findings?.overdue_responses ?? 0), 'Overdue > 90 days', String(data.actions?.ageing?.gt_90 ?? 0), 'Allocated vs available hours',
+            `${data.capacity?.allocated_hours ?? 0} / ${data.capacity?.available_hours ?? 0}`],
+        ],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2 },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        alternateRowStyles: { fillColor: branding.lightGray },
+        margin: { left: margin, right: margin },
+      });
+
+      if (meta.comparison) {
+        const c = meta.comparison;
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 8,
+          head: [[`Changes since ${c.previous_report_number ?? 'previous report'} (${fmtDate(c.previous_as_at)})`, 'Count']],
+          body: [
+            ['Engagements started', String(c.engagements_started ?? 0)],
+            ['Engagements closed', String(c.engagements_closed ?? 0)],
+            ['New delays', String(c.new_delays ?? 0)],
+            ['New Critical / High findings', String(c.new_critical_high_findings ?? 0)],
+            ['Actions closed', String(c.actions_closed ?? 0)],
+            ['Actions newly overdue', String(c.actions_newly_overdue ?? 0)],
+            ['Audits rescheduled', String(c.rescheduled ?? 0)],
+            ['Audits cancelled', String(c.newly_cancelled ?? 0)],
+            ['Audits carried forward', String(c.newly_carried_forward ?? 0)],
+            ['Plan amendments', String(c.plan_amendments ?? 0)],
+            ['Plan completion change', `${c.plan_completion_delta ?? 0}%`],
+          ],
+          theme: 'grid',
+          styles: { fontSize: 8, cellPadding: 2.2 },
+          headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+          margin: { left: margin, right: margin },
+        });
+      }
+    },
+
+    MSR_ATTENTION: (section) => {
+      const y = beginSection(section);
+      const attention = data.management_attention ?? [];
+      autoTable(doc, {
+        startY: y,
+        head: [['Severity', 'Category', 'Matter', 'Source']],
+        body: attention.length
+          ? attention.map((a) => [a.severity, a.category, a.title, a.link])
+          : [['—', 'None', 'No exceptional matters requiring management decision at this date.', '—']],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak' },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 62 }, 3: { cellWidth: 78 } },
+        margin: { left: margin, right: margin },
+      });
+
+      const amendments: any[] = data.plan_changes?.amendments ?? [];
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 8,
+        head: [['Plan change governance (original commitments retained)', 'Detail', 'Reason', 'Status', 'Date']],
+        body: amendments.length
+          ? amendments.map((a) => [
+              a.amendment_type ?? '—',
+              `${a.field ?? ''} ${a.old_value ?? ''} → ${a.new_value ?? ''}`.trim(),
+              a.reason ?? '—',
+              a.status ?? '—',
+              fmtDate(a.date),
+            ])
+          : [['No amendments', '—', '—', '—', '—']],
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak' },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        margin: { left: margin, right: margin },
+      });
+    },
+
+    /** Basis of preparation — which governed configuration produced this report. */
+    MSR_PROVENANCE: (section) => {
+      const rows = Object.entries(provenance);
+      if (!rows.length) return;
+      const y = beginSection(section);
+      autoTable(doc, {
+        startY: y,
+        head: [['Configuration applied', 'Version / value']],
+        body: rows.map(([key, val]) => [
+          key.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()),
+          typeof val === 'object' ? JSON.stringify(val) : String(val),
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak' },
+        headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
+        margin: { left: margin, right: margin },
+      });
+    },
+  };
+
+  for (const section of sections) {
+    const render = renderers[section.sectionKey];
+    if (render) render(section);
   }
-
-  // ── Themes, assurance coverage and outlook ──
-  const themes = data.themes ?? [];
-  const coverage = data.coverage ?? {};
-  const forecast: Record<string, any> = data.forecast ?? {};
-  doc.addPage();
-  renderSectionHeading(doc, branding, 'Recurring Themes, Assurance Coverage & Outlook', 18);
-  autoTable(doc, {
-    startY: 30,
-    head: [['Recurring / cross-audit theme', 'Findings', 'Audits affected']],
-    body: themes.length
-      ? themes.map((t) => [t.theme_name, String(t.finding_count), String(t.audit_count)])
-      : [['No recurring themes identified', '—', '—']],
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.2 },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-    margin: { left: margin, right: margin },
-  });
-  autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 8,
-    head: [['Assurance coverage', 'Value', 'Outlook to year end', 'Value']],
-    body: [
-      ['Planned vs completed audits', `${coverage.completed_total ?? 0} / ${coverage.planned_total ?? 0}`, 'Fiscal year end', fmtDate(forecast.fiscal_year_end)],
-      ['Critical risk areas covered', `${coverage.critical_completed ?? 0} / ${coverage.critical_planned ?? 0}`, 'Expected plan completion', `${forecast.expected_completion_pct ?? 0}%`],
-      ['High risk areas covered', `${coverage.high_completed ?? 0} / ${coverage.high_planned ?? 0}`, 'Likely to close', String(forecast.likely_to_close ?? 0)],
-      ['Departments covered', `${coverage.departments_covered ?? 0} / ${coverage.departments_planned ?? 0}`, 'Likely closed with actions pending', String(forecast.likely_actions_pending ?? 0)],
-      ['Functions covered', `${coverage.functions_covered ?? 0} / ${coverage.functions_planned ?? 0}`, 'At risk of delay', String(forecast.at_risk_of_delay ?? 0)],
-      ['High / Critical work deferred or cancelled', String(coverage.deferred_high_risk ?? 0), 'Likely carry-forward', String(forecast.likely_carry_forward ?? 0)],
-    ],
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.2 },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-    alternateRowStyles: { fillColor: branding.lightGray },
-    margin: { left: margin, right: margin },
-  });
-  if (forecast.basis || data.temporal_fidelity?.limitation) {
-    doc.setFontSize(7.5);
-    doc.setTextColor(110, 110, 110);
-    doc.text(
-      doc.splitTextToSize(
-        `${forecast.basis ? `Forecast basis: ${forecast.basis} ` : ''}${data.temporal_fidelity?.limitation ?? ''}`,
-        pw - margin * 2,
-      ),
-      margin,
-      (doc as any).lastAutoTable.finalY + 6,
-    );
-  }
-
-
-  // ── Engagement status ──
-  doc.addPage();
-  renderSectionHeading(doc, branding, 'Engagement Status', 18);
-  autoTable(doc, {
-    startY: 30,
-    head: [[
-      'Reference', 'Audit', 'Department', 'Risk', 'Qtr', 'Planned', 'Actual',
-      'Stage', 'Progress', 'Schedule', 'Var (d)', 'Lead', 'Find.', 'Open act.', 'Opinion', 'Next milestone',
-    ]],
-    body: (data.engagements ?? []).map((e) => [
-      e.engagement_code ?? '—',
-      e.engagement_name ?? '—',
-      e.department_name ?? '—',
-      e.risk_rating ?? '—',
-      e.quarter ?? '—',
-      `${fmtDate(e.planned_start)} → ${fmtDate(e.planned_end)}`,
-      `${fmtDate(e.actual_start)} → ${fmtDate(e.actual_end)}`,
-      e.lifecycle_status ?? '—',
-      `${e.progress_pct ?? 0}%`,
-      e.schedule_health ?? '—',
-      String(e.variance_days ?? 0),
-      e.lead_auditor ?? '—',
-      String(e.findings_total ?? 0),
-      String(e.open_actions ?? 0),
-      e.audit_opinion ?? '—',
-      e.next_milestone ?? '—',
-    ]),
-    theme: 'grid',
-    styles: { fontSize: 6.5, cellPadding: 1.8, overflow: 'linebreak' },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 6.5 },
-    alternateRowStyles: { fillColor: branding.lightGray },
-    margin: { left: margin, right: margin },
-  });
-
-  // ── Findings, actions, prior issues, capacity ──
-  doc.addPage();
-  renderSectionHeading(doc, branding, 'Findings, Corrective Actions, Prior Issues & Capacity', 18);
-  const sev = data.findings?.by_severity ?? {};
-  autoTable(doc, {
-    startY: 30,
-    head: [['Findings & risk', 'Value', 'Corrective actions', 'Value', 'Prior issues / follow-up', 'Value']],
-    body: [
-      ['Critical', String(sev.CRITICAL ?? 0), 'Open', String(data.actions?.open ?? 0), 'Prior open actions', String(data.prior_history?.prior_open_actions ?? 0)],
-      ['High', String(sev.HIGH ?? 0), 'In progress', String(data.actions?.in_progress ?? 0), 'Prior Critical/High findings', String(data.prior_history?.prior_critical_high_findings ?? 0)],
-      ['Medium', String(sev.MEDIUM ?? 0), 'Awaiting verification', String(data.actions?.awaiting_verification ?? 0), 'Follow-ups due', String(data.prior_history?.follow_ups_due ?? 0)],
-      ['Low', String(sev.LOW ?? 0), 'Verified / closed', String(data.actions?.verified ?? 0), 'Follow-ups overdue', String(data.prior_history?.follow_ups_overdue ?? 0)],
-      ['Open Critical / High', String(data.findings?.open_critical_high ?? 0), 'Overdue', String(data.actions?.overdue ?? 0), 'Partially implemented', String(data.prior_history?.partially_implemented ?? 0)],
-      ['Disputed findings', String(data.findings?.disputed ?? 0), 'Due within 30 days', String(data.actions?.due_soon ?? 0), 'Repeat / prior-year findings', String(data.findings?.repeat_prior_year ?? 0)],
-      ['Overdue management responses', String(data.findings?.overdue_responses ?? 0), 'Overdue > 90 days', String(data.actions?.ageing?.gt_90 ?? 0), 'Allocated vs available hours',
-        `${data.capacity?.allocated_hours ?? 0} / ${data.capacity?.available_hours ?? 0}`],
-    ],
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.2 },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-    alternateRowStyles: { fillColor: branding.lightGray },
-    margin: { left: margin, right: margin },
-  });
-
-  // ── Changes since previous report ──
-  if (meta.comparison) {
-    const c = meta.comparison;
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 8,
-      head: [[`Changes since ${c.previous_report_number ?? 'previous report'} (${fmtDate(c.previous_as_at)})`, 'Count']],
-      body: [
-        ['Engagements started', String(c.engagements_started ?? 0)],
-        ['Engagements closed', String(c.engagements_closed ?? 0)],
-        ['New delays', String(c.new_delays ?? 0)],
-        ['New Critical / High findings', String(c.new_critical_high_findings ?? 0)],
-        ['Actions closed', String(c.actions_closed ?? 0)],
-        ['Actions newly overdue', String(c.actions_newly_overdue ?? 0)],
-        ['Audits rescheduled', String(c.rescheduled ?? 0)],
-        ['Audits cancelled', String(c.newly_cancelled ?? 0)],
-        ['Audits carried forward', String(c.newly_carried_forward ?? 0)],
-        ['Plan amendments', String(c.plan_amendments ?? 0)],
-        ['Plan completion change', `${c.plan_completion_delta ?? 0}%`],
-      ],
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2.2 },
-      headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-      margin: { left: margin, right: margin },
-    });
-  }
-
-  // ── Management attention / decisions required ──
-  doc.addPage();
-  renderSectionHeading(doc, branding, 'Management Attention & Decisions Required', 18);
-  const attention = data.management_attention ?? [];
-  autoTable(doc, {
-    startY: 30,
-    head: [['Severity', 'Category', 'Matter', 'Source']],
-    body: attention.length
-      ? attention.map((a) => [a.severity, a.category, a.title, a.link])
-      : [['—', 'None', 'No exceptional matters requiring management decision at this date.', '—']],
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak' },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-    columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 62 }, 3: { cellWidth: 78 } },
-    margin: { left: margin, right: margin },
-  });
-
-  // ── Plan change governance + outlook ──
-  const amendments: any[] = data.plan_changes?.amendments ?? [];
-  autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 8,
-    head: [['Plan change governance (original commitments retained)', 'Detail', 'Reason', 'Status', 'Date']],
-    body: amendments.length
-      ? amendments.map((a) => [
-          a.amendment_type ?? '—',
-          `${a.field ?? ''} ${a.old_value ?? ''} → ${a.new_value ?? ''}`.trim(),
-          a.reason ?? '—',
-          a.status ?? '—',
-          fmtDate(a.date),
-        ])
-      : [['No amendments', '—', '—', '—', '—']],
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2.2, overflow: 'linebreak' },
-    headStyles: { fillColor: branding.primaryColor, textColor: branding.white, fontSize: 8 },
-    margin: { left: margin, right: margin },
-  });
 
   renderFooter(doc, branding);
   return doc;
 }
+
 
 export function downloadManagementStatusPdf(
   data: ManagementStatusPayload,
