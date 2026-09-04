@@ -54,9 +54,29 @@ const DEFAULT_TRANSPORT: RuntimeTransport = {
       OMNI_COMMS_RUNTIME_FUNCTION,
       { body: input },
     );
+    // The runtime answers governance refusals with a non-2xx status AND a
+    // canonical contract body. supabase-js surfaces those as an error with a
+    // null data payload, which previously collapsed every governed refusal
+    // into `runtime_transport_failed` and hid the real blockers from the
+    // operator. Recover the contract body from the error response.
+    if (error && !data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.clone().json();
+          if (body && typeof body === 'object') {
+            return { data: body, error: null };
+          }
+        } catch {
+          /* fall through to transport error handling */
+        }
+      }
+    }
     return { data: data ?? null, error: error ?? null };
   },
 };
+
 
 function blocked(
   input: SendCommunicationInput,

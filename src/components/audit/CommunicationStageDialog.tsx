@@ -73,6 +73,20 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [policyValid, setPolicyValid] = useState<boolean | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  // DEF IA-FULL-E2E-013: meeting and draft-circulation events declare mandatory
+  // facts (meeting date/time, location, draft version, comment due date). They
+  // must be captured on this screen or the producer blocks the obligation.
+  const [meetingDateTime, setMeetingDateTime] = useState('');
+  const [meetingLocation, setMeetingLocation] = useState('');
+  const [versionNumber, setVersionNumber] = useState('');
+  const [commentDueDate, setCommentDueDate] = useState('');
+
+  const isMeetingStage = stageCode === 'ENTRANCE_MEETING' || stageCode === 'EXIT_MEETING';
+  const isDraftDiscussionStage = stageCode === 'DRAFT_FINDING_DISCUSSION';
+  const stageFactsMissing =
+    (isMeetingStage && (!meetingDateTime || !meetingLocation.trim())) ||
+    (isDraftDiscussionStage && (!versionNumber.trim() || !commentDueDate));
+
 
   // Build document request table for DOC_REQUEST stage
   const pendingDocs = (docRequests as any[]).filter(r => r.status === 'Pending' || r.status === 'Partially Received');
@@ -118,6 +132,10 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
     setIsEditing(false);
     setNotes('');
     setAckRequired(mode === 'reminder');
+    setMeetingDateTime('');
+    setMeetingLocation('');
+    setVersionNumber('');
+    setCommentDueDate('');
 
     if (matchingTemplate) {
       setSelectedTemplateId(matchingTemplate.id);
@@ -197,6 +215,19 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
           dueDate: docDue ? formatDateForDisplay(docDue) : plannedEnd,
           issuedOn: formatDateForDisplay(new Date().toISOString()),
           launchedOn: plannedStart,
+          ...(isMeetingStage
+            ? {
+                meetingDateTime: formatDateForDisplay(meetingDateTime) + (meetingDateTime.includes('T') ? ' at ' + meetingDateTime.split('T')[1] : ''),
+                meetingLocation: meetingLocation.trim(),
+              }
+            : {}),
+          ...(isDraftDiscussionStage
+            ? {
+                versionNumber: versionNumber.trim(),
+                commentDueDate: formatDateForDisplay(commentDueDate),
+              }
+            : {}),
+
         },
       });
       if (result.outcome === 'blocked') {
@@ -365,7 +396,33 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
               <Input id="ia-recipient-email" type="email" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="email@example.com" className="h-8 text-sm" />
             </div>
 
+            {isMeetingStage && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-meeting-datetime" className="text-xs">Meeting Date &amp; Time *</Label>
+                  <Input id="ia-meeting-datetime" type="datetime-local" value={meetingDateTime} onChange={e => setMeetingDateTime(e.target.value)} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-meeting-location" className="text-xs">Meeting Location *</Label>
+                  <Input id="ia-meeting-location" value={meetingLocation} onChange={e => setMeetingLocation(e.target.value)} placeholder="Boardroom / Teams link" className="h-8 text-sm" />
+                </div>
+              </>
+            )}
+
+            {isDraftDiscussionStage && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-version-number" className="text-xs">Draft Report Version *</Label>
+                  <Input id="ia-version-number" value={versionNumber} onChange={e => setVersionNumber(e.target.value)} placeholder="1" className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="ia-comment-due" className="text-xs">Comment Due Date *</Label>
+                  <Input id="ia-comment-due" type="date" value={commentDueDate} onChange={e => setCommentDueDate(e.target.value)} className="h-8 text-sm" />
+                </div>
+              </>
+            )}
           </div>
+
 
           {/* Communication Content */}
           <div className="space-y-1">
@@ -401,7 +458,7 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} size="sm">Cancel</Button>
-          <Button onClick={handleSend} disabled={!recipientEmail || isPending || policyValid === false} size="sm">
+          <Button onClick={handleSend} disabled={!recipientEmail || stageFactsMissing || isPending || policyValid === false} size="sm">
             {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <modeConfig.btnIcon className="h-4 w-4 mr-1" />}
             {modeConfig.btnLabel}
           </Button>
