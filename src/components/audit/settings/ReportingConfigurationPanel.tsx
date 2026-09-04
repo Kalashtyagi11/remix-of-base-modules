@@ -321,10 +321,10 @@ export function ReportingConfigurationPanel() {
                 {auditRows.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="text-xs">{new Date(r.created_at).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs">{r.entity_type} {r.entity_code ?? ''}</TableCell>
+                    <TableCell className="text-xs">{r.entity_type} {r.entity_key ?? ''}</TableCell>
                     <TableCell className="text-xs">{r.action}</TableCell>
                     <TableCell className="text-[11px] text-muted-foreground max-w-[420px] truncate">
-                      {JSON.stringify(r.new_value ?? r.detail ?? {})}
+                      {r.reason ?? JSON.stringify(r.after_value ?? {})}
                     </TableCell>
                   </TableRow>
                 ))}
