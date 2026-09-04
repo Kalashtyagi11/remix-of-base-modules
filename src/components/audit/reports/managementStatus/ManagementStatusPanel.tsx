@@ -270,11 +270,30 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
       return;
     }
     setBusy(true);
+    // A sealed report is always rendered with the configuration recorded at
+    // generation time, never with today's configuration.
+    const sealed = (distributing.config_provenance ?? {}) as Record<string, any>;
     const blob = managementStatusPdfBlob(distributing.snapshot, {
       reportNumber: distributing.report_number,
       reportingPeriod: distributing.reporting_period,
       comparison: distributing.comparison,
+      branding: pdfConfig.branding,
+      sections: (sealed.sections ?? [])
+        .filter((s: any) => s.is_visible !== false)
+        .map((s: any) => ({
+          sectionKey: s.section_key,
+          heading: s.heading,
+          startOnNewPage: !!s.start_on_new_page,
+          displayMode: s.display_mode ?? 'detail',
+        })),
+      metrics: (sealed.metrics ?? []).map((m: any) => ({
+        metricCode: m.metric_code,
+        label: m.label,
+        formatter: m.formatter ?? null,
+        sourcePath: m.source_path ?? null,
+      })),
     });
+
     const res = await distributeManagementStatusReport({
       reportId: distributing.id,
       reportNumber: distributing.report_number,
