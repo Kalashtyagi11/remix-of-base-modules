@@ -2,11 +2,12 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Printer, Download, FileText, Shield, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Printer, Download, FileText, Shield, CheckCircle2, Send } from 'lucide-react';
 import { StatusBadge } from '@/components/common';
 import { formatDateForDisplay } from '@/lib/format-config';
 import { AuditFindingCard } from './AuditFindingCard';
 import { generateAuditReportPDF } from './AuditReportPDFExport';
+import { IssuedReportDistributionDialog } from './IssuedReportDistributionDialog';
 import { resolveReportTemplate } from '@/lib/audit/documentTemplateResolver';
 import { DEFAULT_AUDIT_REPORT_CONFIG, type AuditReportTemplateConfig, type TemplateSectionRef } from '@/lib/audit/documentTemplateDefaults';
 import { mapReportOutput } from '@/lib/audit/reportOutputMapper';
@@ -63,8 +64,20 @@ export function AuditReportPreview({
   const primaryColor = foundation?.colorPalette?.primary || '#0E5F3A';
   const goldColor = foundation?.colorPalette?.gold || '#F4C430';
 
+  const pdfParams = { reportData, findings, responses, actions, engagement, departmentName, templateConfig: config, dbSectionRefs, foundation, priorMatters };
+
   const handleExportPDF = () => {
-    generateAuditReportPDF({ reportData, findings, responses, actions, engagement, departmentName, templateConfig: config, dbSectionRefs, foundation, priorMatters });
+    generateAuditReportPDF(pdfParams);
+  };
+
+  // Formal distribution is only available once the report has been issued.
+  const isIssued = reportData.status === 'Issued' || reportData.status === 'Final';
+  const [distributeOpen, setDistributeOpen] = React.useState(false);
+
+  /** Produces the exact issued bytes for governed sealing. Never downloaded. */
+  const buildIssuedPdf = async () => {
+    const out = generateAuditReportPDF({ ...pdfParams, output: 'blob' });
+    return out ?? null;
   };
 
   // Section numbering — driven by mapped output
@@ -334,6 +347,19 @@ export function AuditReportPreview({
 
   return (
     <div className="min-h-screen bg-muted/30 print:bg-white">
+      {isIssued && reportData.id && (
+        <IssuedReportDistributionDialog
+          open={distributeOpen}
+          onOpenChange={setDistributeOpen}
+          reportId={reportData.id}
+          reportNumber={reportData.report_number}
+          reportTitle={reportData.title}
+          engagementTitle={engagement?.title ?? engagement?.engagement_title ?? null}
+          overallOpinion={reportData.overall_assessment}
+          issuedOn={reportData.issued_at ?? reportData.generated_on ?? null}
+          buildPdf={buildIssuedPdf}
+        />
+      )}
       {/* Fixed Top Bar */}
       <div className="sticky top-0 z-50 bg-background border-b px-4 py-2.5 flex items-center justify-between no-print">
         <div className="flex items-center gap-3">
@@ -352,6 +378,11 @@ export function AuditReportPreview({
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
             <Download className="h-4 w-4 mr-1" /> Export PDF
           </Button>
+          {isIssued && reportData.id && (
+            <Button size="sm" onClick={() => setDistributeOpen(true)}>
+              <Send className="h-4 w-4 mr-1" /> Distribute Report
+            </Button>
+          )}
         </div>
       </div>
 
