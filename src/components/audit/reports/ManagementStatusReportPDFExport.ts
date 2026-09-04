@@ -110,7 +110,7 @@ export function buildManagementStatusPdf(
     renderSectionHeading(
       doc,
       branding,
-      `Reporting Period Activity — ${data.period?.label ?? 'Selected period'} (${fmtDate(data.period?.start)} to ${fmtDate(data.period?.end)})`,
+      `Reporting Period Activity — ${data.period?.label ?? 'Selected period'}`,
       18,
     );
     autoTable(doc, {
