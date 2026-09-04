@@ -151,6 +151,13 @@ const auditMenuItemsRaw = [
         description: "Create and manage audit reports"
       },
       {
+        title: "Plan Status & Management Report",
+        url: "/audit/reports/management-status",
+        icon: BarChart3,
+        requiresPermission: "generate_reports",
+        description: "Live plan status and governed point-in-time management status reports"
+      },
+      {
         title: "Engagement Summary",
         url: "/audit/reports/engagement-summary",
         icon: BarChart3,
