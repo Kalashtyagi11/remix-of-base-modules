@@ -133391,6 +133391,10 @@ export type Database = {
       ia_is_ia_user: { Args: never; Returns: boolean }
       ia_is_quality_reviewer: { Args: never; Returns: boolean }
       ia_is_risk_band_label: { Args: { _value: string }; Returns: boolean }
+      ia_issue_management_status_report: {
+        Args: { p_note?: string; p_report_id: string }
+        Returns: Json
+      }
       ia_issue_report: {
         Args: { p_notes?: string; p_report_id: string }
         Returns: Json
