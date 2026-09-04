@@ -238,10 +238,30 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
     qc.invalidateQueries({ queryKey: ['ia-msr-snapshots', effectivePlanId] });
   }
 
+  const pdfConfig = useMemo(
+    () => ({
+      sections: visibleSections.map((s) => ({
+        sectionKey: s.sectionKey,
+        heading: s.heading,
+        startOnNewPage: s.startOnNewPage,
+        displayMode: s.displayMode,
+      })),
+      metrics: activeMetrics.map((m) => ({
+        metricCode: m.metricCode,
+        label: m.label,
+        formatter: m.formatter,
+        sourcePath: m.sourcePath,
+      })),
+      branding: foundation ? brandingFromFoundation(foundation) : undefined,
+    }),
+    [visibleSections, activeMetrics, foundation],
+  );
+
   function handlePdf() {
     if (!shown) return;
-    downloadManagementStatusPdf(shown, shownMeta);
+    downloadManagementStatusPdf(shown, { ...shownMeta, ...pdfConfig });
   }
+
 
   async function handleDistribute() {
     if (!distributing) return;
