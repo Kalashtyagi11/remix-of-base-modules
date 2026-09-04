@@ -79441,6 +79441,88 @@ export type Database = {
           },
         ]
       }
+      ia_management_status_report: {
+        Row: {
+          artifact_id: string | null
+          audience: string
+          comparison: Json | null
+          comparison_report_id: string | null
+          created_at: string
+          department_id: string | null
+          fiscal_year: string | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          plan_id: string
+          plan_version_number: number | null
+          report_number: string | null
+          reporting_period: string | null
+          snapshot: Json
+          status: string
+          status_as_at: string
+        }
+        Insert: {
+          artifact_id?: string | null
+          audience: string
+          comparison?: Json | null
+          comparison_report_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          fiscal_year?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          plan_id: string
+          plan_version_number?: number | null
+          report_number?: string | null
+          reporting_period?: string | null
+          snapshot: Json
+          status?: string
+          status_as_at: string
+        }
+        Update: {
+          artifact_id?: string | null
+          audience?: string
+          comparison?: Json | null
+          comparison_report_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          fiscal_year?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          plan_id?: string
+          plan_version_number?: number | null
+          report_number?: string | null
+          reporting_period?: string | null
+          snapshot?: Json
+          status?: string
+          status_as_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_management_status_report_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "ia_document_artifact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_management_status_report_comparison_report_id_fkey"
+            columns: ["comparison_report_id"]
+            isOneToOne: false
+            referencedRelation: "ia_management_status_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_management_status_report_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ia_annual_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_mitigation_templates: {
         Row: {
           category: string | null
@@ -132507,6 +132589,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_attach_management_status_artifact: {
+        Args: { p_artifact_id: string; p_report_id: string }
+        Returns: Json
+      }
       ia_auditor_profile: { Args: { _auditor_id: string }; Returns: string }
       ia_build_followup_carry_forward: {
         Args: {
@@ -132788,6 +132874,41 @@ export type Database = {
         Args: { p_engagement_id: string }
         Returns: Json
       }
+      ia_engagement_status_model: {
+        Args: { p_as_at?: string; p_department_id?: string; p_plan_id: string }
+        Returns: {
+          actual_end: string
+          actual_start: string
+          audit_opinion: string
+          audit_type: string
+          coverage_category: string
+          department_id: string
+          department_name: string
+          engagement_code: string
+          engagement_id: string
+          engagement_name: string
+          findings_critical_high: number
+          findings_total: number
+          forecast_end: string
+          function_id: string
+          key_blocker: string
+          lead_auditor: string
+          lifecycle_status: string
+          next_milestone: string
+          open_actions: number
+          overdue_actions: number
+          planned_end: string
+          planned_start: string
+          progress_components: Json
+          progress_pct: number
+          quarter: string
+          report_number: string
+          risk_rating: string
+          schedule_health: string
+          variance_days: number
+          workflow_stage: string
+        }[]
+      }
       ia_escalate_finding_dispute: {
         Args: {
           p_authority: string
@@ -132867,6 +132988,17 @@ export type Database = {
         Args: { p_fiscal_year?: string; p_plan_id: string }
         Returns: Json
       }
+      ia_generate_management_status_report: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_compare_report_id?: string
+          p_department_id?: string
+          p_plan_id: string
+          p_reporting_period?: string
+        }
+        Returns: Json
+      }
       ia_generate_resource_recommendations: {
         Args: { p_candidate_id?: string; p_plan_id: string }
         Returns: Json
@@ -132928,6 +133060,15 @@ export type Database = {
           _source_command?: string
         }
         Returns: string
+      }
+      ia_management_status_live: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_department_id?: string
+          p_plan_id: string
+        }
+        Returns: Json
       }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
