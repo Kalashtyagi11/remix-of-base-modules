@@ -190,7 +190,7 @@ export function EngagementBuilder({ planId, planStatus, planFiscalYear }: Engage
 
   // Summary stats
   const totalDays = engagements.reduce((sum: number, e: any) => sum + (Number(e.estimated_days) || 0), 0);
-  const totalWeeks = engagements.reduce((sum: number, e: any) => sum + (Number(e.estimated_hours) || 0), 0);
+  const totalWeeks = Math.round((totalDays / 5) * 10) / 10;
   const byQuarter = ['Q1','Q2','Q3','Q4'].map(q => ({
     quarter: q,
     count: engagements.filter((e: any) => e.quarter === q).length,
