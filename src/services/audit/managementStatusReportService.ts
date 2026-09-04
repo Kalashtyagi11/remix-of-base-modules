@@ -486,3 +486,81 @@ export function healthTone(rating: string | undefined): 'success' | 'warning' | 
   if (rating === 'AMBER') return 'warning';
   return 'success';
 }
+
+/**
+ * INTEGRITY GATE — resolve any material KPI back to the underlying governed records.
+ * When `reportId` refers to an issued report the records come from that report's
+ * sealed evidence, so the historical figure always reconciles.
+ */
+export async function fetchManagementKpiDrilldown(input: {
+  planId: string;
+  kpiCode: string;
+  asAt?: string | null;
+  departmentId?: string | null;
+  periodCode?: string;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  reportId?: string | null;
+}): Promise<{ ok: boolean; code?: string; source?: string; count: number; records: DrilldownRecord[] }> {
+  const { data, error } = await supabase.rpc('ia_management_status_drilldown', {
+    p_plan_id: input.planId,
+    p_kpi_code: input.kpiCode,
+    p_as_at: input.asAt || new Date().toISOString(),
+    p_department_id: input.departmentId ?? null,
+    p_period_code: input.periodCode ?? 'CURRENT',
+    p_period_start: input.periodStart ?? null,
+    p_period_end: input.periodEnd ?? null,
+    p_report_id: input.reportId ?? null,
+  } as never);
+  if (error) return { ok: false, code: 'drilldown_unavailable', count: 0, records: [] };
+  const row = (data ?? {}) as any;
+  return {
+    ok: !!row.ok,
+    code: row.code,
+    source: row.source,
+    count: row.count ?? 0,
+    records: (row.records ?? []) as DrilldownRecord[],
+  };
+}
+
+/** Reporting-critical data conditions, surfaced rather than silently excluded. */
+export async function fetchManagementDataQuality(planId: string, departmentId?: string | null) {
+  const { data, error } = await supabase.rpc('ia_management_data_quality', {
+    p_plan_id: planId,
+    p_department_id: departmentId ?? null,
+  } as never);
+  if (error) return { ok: false, exception_count: 0, exceptions: [] as DataQualityException[] };
+  const row = (data ?? {}) as any;
+  return {
+    ok: !!row.ok,
+    exception_count: row.exception_count ?? 0,
+    exceptions: (row.exceptions ?? []) as DataQualityException[],
+  };
+}
+
+/**
+ * Issue (seal) a draft management report. Separate authority from generation:
+ * only report/plan approvers may issue. The authoritative IA-MSR number is
+ * allocated here, never by the browser.
+ */
+export async function issueManagementStatusReport(reportId: string, note?: string | null) {
+  const { data, error } = await supabase.rpc('ia_issue_management_status_report', {
+    p_report_id: reportId,
+    p_note: note ?? null,
+  } as never);
+  if (error) return { ok: false, code: 'issue_failed' as string, reportNumber: null as string | null };
+  const row = (data ?? {}) as any;
+  return { ok: !!row.ok, code: row.code as string | undefined, reportNumber: (row.report_number ?? null) as string | null };
+}
+
+/** May the current user generate a draft management report for this plan? */
+export async function canGenerateManagementReport(planId: string): Promise<boolean> {
+  const { data } = await supabase.rpc('ia_can_generate_management_report', { p_plan_id: planId } as never);
+  return data === true;
+}
+
+/** May the current user issue/seal a management report for this plan? */
+export async function canIssueManagementReport(planId: string): Promise<boolean> {
+  const { data } = await supabase.rpc('ia_can_issue_management_report', { p_plan_id: planId } as never);
+  return data === true;
+}
