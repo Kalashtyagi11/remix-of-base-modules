@@ -49,7 +49,7 @@ export function AuditReportCenter() {
   // DEF-S1B-35: only report makers may see report authoring controls.
   const canCreateReport = useHasPermission('audit_report_center', 'create');
 
-  const { data: reports = [] } = useIAAuditReports();
+  const { data: reports = [], isLoading: reportsLoading, isSuccess: reportsLoaded } = useIAAuditReports();
   const { data: engagements = [] } = useIAEngagements();
   const { data: departments = [] } = useIADepartments();
   const { data: findings = [] } = useIAFindings();
@@ -97,14 +97,25 @@ export function AuditReportCenter() {
   const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
     if (!engagementIdFromUrl || autoCreating) return;
-    // Wait until reports and engagement data are loaded
-    if (!reports || !allEngagements.length) return;
+    // IA-FULL-E2E-017: never act before the report list has actually loaded, otherwise a
+    // spurious duplicate draft is created for engagements that already have a report.
+    if (reportsLoading || !reportsLoaded || !allEngagements.length) return;
 
     const engReports = reports.filter((r: any) => r.engagement_id === engagementIdFromUrl);
-    if (engReports.length > 0) return;
+    if (engReports.length > 0) {
+      // Open the authoritative report: the issued one where present, otherwise the newest draft.
+      const issued = engReports.find((r: any) => r.status === 'Issued');
+      const target = issued || [...engReports].sort((a: any, b: any) =>
+        String(b.created_at || '').localeCompare(String(a.created_at || '')))[0];
+      if (target) navigate(`/audit/report-builder?id=${target.id}`, { replace: true });
+      return;
+    }
 
     const eng = allEngagements.find((e: any) => e.id === engagementIdFromUrl);
     if (!eng) return;
+    // A closed or cancelled engagement must not silently spawn a new draft report.
+    const engState = String(eng.execution_status || eng.status || '');
+    if (engState.startsWith('Closed') || engState === 'Cancelled') return;
 
     setAutoCreating(true);
     const newReport = {
@@ -129,7 +140,7 @@ export function AuditReportCenter() {
           setAutoCreating(false);
         }
       });
-  }, [engagementIdFromUrl, reports, allEngagements, autoCreating, navigate]);
+  }, [engagementIdFromUrl, reports, reportsLoading, reportsLoaded, allEngagements, autoCreating, navigate]);
 
   const departmentNameById = useMemo(
     () => Object.fromEntries(departments.map((d: any) => [d.id, d.name])),
