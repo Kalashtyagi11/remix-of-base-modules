@@ -293,7 +293,25 @@ export interface ManagementStatusPayload {
     source_type: string;
     source_id: string;
   }>;
-  health: { rating: 'GREEN' | 'AMBER' | 'RED'; score: number; basis: string };
+  health: {
+    rating: 'GREEN' | 'AMBER' | 'RED';
+    score: number;
+    basis: string;
+    methodology_version?: number | string;
+    rules_triggered?: Array<{
+      rule: string;
+      label: string;
+      severity: string;
+      metric: string;
+      observed: number;
+      threshold: number;
+      score: number;
+    }>;
+    bands?: Record<string, number>;
+  };
+  /** Configuration versions used to calculate this payload. */
+  provenance?: Record<string, any>;
+
   /** V2 — reporting period activity and completed-audit reporting. */
   period?: ManagementPeriod;
   period_movement?: Record<string, number>;
