@@ -793,23 +793,26 @@ function NewDelegationDialog({
 }
 
 function NewAssignmentDialog({
-  open, onOpenChange, userId, staffProfileId, offices, onCreate,
+  open, onOpenChange, userId, staffProfileId, offices, departments, onCreate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   userId: string;
   staffProfileId?: string;
   offices: any[];
+  departments: any[];
   onCreate: (payload: any) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     office_code: '',
+    department_id: '',
     assignment_type: 'PRIMARY',
     effective_from: new Date().toISOString().slice(0, 10),
     effective_to: '',
     is_primary: true,
     reason: '',
   });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
