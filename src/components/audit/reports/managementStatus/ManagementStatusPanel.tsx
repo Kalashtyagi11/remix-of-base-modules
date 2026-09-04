@@ -83,6 +83,11 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const [departmentId, setDepartmentId] = useState<string>('all');
   const [asAt, setAsAt] = useState<string>(new Date().toISOString().slice(0, 10));
   const [reportingPeriod, setReportingPeriod] = useState<string>('');
+  const [periodCode, setPeriodCode] = useState<ManagementPeriodCode>('CURRENT');
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
+  const [reportMode, setReportMode] = useState<ManagementReportMode>('Detailed Management Report');
+
   const [compareId, setCompareId] = useState<string>('none');
   const [viewing, setViewing] = useState<ManagementStatusSnapshot | null>(null);
   const [distributing, setDistributing] = useState<ManagementStatusSnapshot | null>(null);
