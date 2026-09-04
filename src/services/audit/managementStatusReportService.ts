@@ -86,15 +86,16 @@ export interface ManagementReportingConfiguration {
 async function fetchReferenceOptions(type: string): Promise<ReferenceOption[]> {
   const { data } = await supabase
     .from('ia_reference_value')
-    .select('code, name, sort_order, is_active')
+    .select('code, name, display_order, is_active')
     .eq('reference_type', type)
     .eq('is_active', true)
-    .order('sort_order');
-  return ((data ?? []) as Array<{ code: string; name: string; sort_order: number | null }>).map((r) => ({
+    .order('display_order');
+  return ((data ?? []) as Array<{ code: string; name: string; display_order: number | null }>).map((r) => ({
     code: r.code,
     name: r.name ?? r.code,
-    sortOrder: r.sort_order ?? 0,
+    sortOrder: r.display_order ?? 0,
   }));
+
 }
 
 /** Resolve the complete governed reporting configuration (no hard-coded lists). */
