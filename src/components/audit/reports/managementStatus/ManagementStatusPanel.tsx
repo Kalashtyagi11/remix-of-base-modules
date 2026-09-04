@@ -119,16 +119,20 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const effectiveDept = audience === 'Department Management' && departmentId !== 'all' ? departmentId : null;
 
   const live = useQuery({
-    queryKey: ['ia-msr-live', effectivePlanId, audience, effectiveDept, asAt],
+    queryKey: ['ia-msr-live', effectivePlanId, audience, effectiveDept, asAt, periodCode, customStart, customEnd],
     queryFn: () =>
       fetchLiveManagementStatus({
         planId: effectivePlanId!,
         audience,
         departmentId: effectiveDept,
         asAt: new Date(`${asAt}T23:59:59Z`).toISOString(),
+        periodCode,
+        periodStart: periodCode === 'CUSTOM' ? customStart || null : null,
+        periodEnd: periodCode === 'CUSTOM' ? customEnd || null : null,
       }),
     enabled: !!effectivePlanId,
   });
+
 
   const snapshots = useQuery({
     queryKey: ['ia-msr-snapshots', effectivePlanId],
