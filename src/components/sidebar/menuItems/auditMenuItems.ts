@@ -151,6 +151,13 @@ const auditMenuItemsRaw = [
         description: "Create and manage audit reports"
       },
       {
+        title: "Reporting Configuration",
+        url: "/audit/settings/reporting-configuration",
+        icon: BarChart3,
+        requiresPermission: "generate_reports",
+        description: "Governed methodologies, report structure and metric registry for management reporting"
+      },
+      {
         title: "Plan Status & Management Report",
         url: "/audit/reports/management-status",
         icon: BarChart3,

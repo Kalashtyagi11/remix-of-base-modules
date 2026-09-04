@@ -1241,6 +1241,7 @@ const EngagementSummaryReport = lazy(() => import('@/pages/reports/audit/Engagem
 const CommunicationComplianceReport = lazy(() => import('@/pages/reports/audit/CommunicationComplianceReport'));
 const PlanSlippageReport = lazy(() => import('@/pages/reports/audit/PlanSlippageReport'));
 const ManagementStatusReporting = lazy(() => import('@/pages/audit/ManagementStatusReporting'));
+const ReportingConfiguration = lazy(() => import('@/pages/audit/ReportingConfiguration'));
 const OverdueActionsReport = lazy(() => import('@/pages/reports/audit/OverdueActionsReport'));
 const CarryForwardAgingReport = lazy(() => import('@/pages/reports/audit/CarryForwardAgingReport'));
 const AccountRolesReport = lazy(() => import('@/pages/reports/admin/AccountRolesReport'));
@@ -3013,6 +3014,7 @@ export const AppRoutes = () => {
       <Route path="/audit/reports/communication-compliance" element={<CommunicationComplianceReport />} />
       <Route path="/audit/reports/plan-slippage" element={<PlanSlippageReport />} />
       <Route path="/audit/reports/management-status" element={<ManagementStatusReporting />} />
+      <Route path="/audit/settings/reporting-configuration" element={<ReportingConfiguration />} />
       <Route path="/audit/reports/overdue-actions" element={<OverdueActionsReport />} />
       <Route path="/audit/reports/carry-forward-aging" element={<CarryForwardAgingReport />} />
       

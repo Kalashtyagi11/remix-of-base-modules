@@ -86,15 +86,16 @@ export interface ManagementReportingConfiguration {
 async function fetchReferenceOptions(type: string): Promise<ReferenceOption[]> {
   const { data } = await supabase
     .from('ia_reference_value')
-    .select('code, name, sort_order, is_active')
+    .select('code, name, display_order, is_active')
     .eq('reference_type', type)
     .eq('is_active', true)
-    .order('sort_order');
-  return ((data ?? []) as Array<{ code: string; name: string; sort_order: number | null }>).map((r) => ({
+    .order('display_order');
+  return ((data ?? []) as Array<{ code: string; name: string; display_order: number | null }>).map((r) => ({
     code: r.code,
     name: r.name ?? r.code,
-    sortOrder: r.sort_order ?? 0,
+    sortOrder: r.display_order ?? 0,
   }));
+
 }
 
 /** Resolve the complete governed reporting configuration (no hard-coded lists). */
@@ -293,7 +294,25 @@ export interface ManagementStatusPayload {
     source_type: string;
     source_id: string;
   }>;
-  health: { rating: 'GREEN' | 'AMBER' | 'RED'; score: number; basis: string };
+  health: {
+    rating: 'GREEN' | 'AMBER' | 'RED';
+    score: number;
+    basis: string;
+    methodology_version?: number | string;
+    rules_triggered?: Array<{
+      rule: string;
+      label: string;
+      severity: string;
+      metric: string;
+      observed: number;
+      threshold: number;
+      score: number;
+    }>;
+    bands?: Record<string, number>;
+  };
+  /** Configuration versions used to calculate this payload. */
+  provenance?: Record<string, any>;
+
   /** V2 — reporting period activity and completed-audit reporting. */
   period?: ManagementPeriod;
   period_movement?: Record<string, number>;
@@ -332,6 +351,9 @@ export interface ManagementStatusSnapshot {
   artifact_id: string | null;
   generated_by: string | null;
   generated_at: string;
+  /** Sealed configuration provenance — how this report was calculated. */
+  config_provenance?: Record<string, any> | null;
+
 }
 
 /** Live plan status + period activity — reads current state, never stored. */
