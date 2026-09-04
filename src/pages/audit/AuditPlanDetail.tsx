@@ -16,6 +16,7 @@ import { PlanVersionHistory } from '@/components/audit/PlanVersionHistory';
 import { CapacityCalendarPanel } from '@/components/audit/CapacityCalendarPanel';
 import { PlanApprovalHistoryTimeline } from '@/components/audit/PlanApprovalHistoryTimeline';
 import { PlanAmendmentHistory } from '@/components/audit/PlanAmendmentHistory';
+import { ManagementStatusPanel } from '@/components/audit/reports/managementStatus/ManagementStatusPanel';
 import { PlanApprovalBanner } from '@/components/audit/PlanApprovalBanner';
 import { PlanSubmissionReadiness } from '@/components/audit/PlanSubmissionReadiness';
 import { PlanRevisionDialog } from '@/components/audit/PlanRevisionDialog';
@@ -228,10 +229,15 @@ export default function AuditPlanDetail() {
           <TabsTrigger value="capacity">Capacity & Schedule</TabsTrigger>
           <TabsTrigger value="autoplan">Auto Plan</TabsTrigger>
           <TabsTrigger value="approval">Approval & Amendments</TabsTrigger>
+          <TabsTrigger value="status-report">Status & Management Report</TabsTrigger>
           <TabsTrigger value="boardpack">Board Pack</TabsTrigger>
           <TabsTrigger value="distribution">Distribution</TabsTrigger>
           <TabsTrigger value="closure">Closure</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="status-report">
+          <ManagementStatusPanel planId={id!} />
+        </TabsContent>
 
         <TabsContent value="portfolio">
           <PlanPortfolioPanel planId={id!} />
