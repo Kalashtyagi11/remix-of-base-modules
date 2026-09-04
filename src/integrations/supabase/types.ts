@@ -132870,6 +132870,28 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_document_distribution_history: {
+        Args: { p_entity_id: string }
+        Returns: {
+          attachment_outcome: string
+          attachment_outcome_reason: string
+          attachment_required: boolean
+          channel: string
+          completed_at: string
+          document_byte_size: number
+          document_checksum: string
+          document_file_name: string
+          event_code: string
+          failed_at: string
+          message_status: string
+          queued_at: string
+          recipient_email: string
+          recipient_name: string
+          request_id: string
+          request_status: string
+          requested_at: string
+        }[]
+      }
       ia_engagement_progress: {
         Args: { p_engagement_id: string }
         Returns: Json
