@@ -79484,6 +79484,10 @@ export type Database = {
           generated_at: string
           generated_by: string | null
           id: string
+          issue_note: string | null
+          issued_at: string | null
+          issued_by: string | null
+          lifecycle_state: string
           plan_id: string
           plan_version_number: number | null
           report_number: string | null
@@ -79504,6 +79508,10 @@ export type Database = {
           generated_at?: string
           generated_by?: string | null
           id?: string
+          issue_note?: string | null
+          issued_at?: string | null
+          issued_by?: string | null
+          lifecycle_state?: string
           plan_id: string
           plan_version_number?: number | null
           report_number?: string | null
@@ -79524,6 +79532,10 @@ export type Database = {
           generated_at?: string
           generated_by?: string | null
           id?: string
+          issue_note?: string | null
+          issued_at?: string | null
+          issued_by?: string | null
+          lifecycle_state?: string
           plan_id?: string
           plan_version_number?: number | null
           report_number?: string | null
@@ -79552,6 +79564,53 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "ia_annual_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_management_status_report_evidence: {
+        Row: {
+          attributes: Json
+          created_at: string
+          department_id: string | null
+          id: string
+          kpi_code: string
+          record_code: string | null
+          record_id: string | null
+          record_label: string | null
+          record_type: string
+          report_id: string
+        }
+        Insert: {
+          attributes?: Json
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          kpi_code: string
+          record_code?: string | null
+          record_id?: string | null
+          record_label?: string | null
+          record_type: string
+          report_id: string
+        }
+        Update: {
+          attributes?: Json
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          kpi_code?: string
+          record_code?: string | null
+          record_id?: string | null
+          record_label?: string | null
+          record_type?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_management_status_report_evidence_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "ia_management_status_report"
             referencedColumns: ["id"]
           },
         ]
@@ -132895,6 +132954,14 @@ export type Database = {
         Args: { _creating: boolean }
         Returns: boolean
       }
+      ia_can_generate_management_report: {
+        Args: { p_plan_id: string }
+        Returns: boolean
+      }
+      ia_can_issue_management_report: {
+        Args: { p_plan_id: string }
+        Returns: boolean
+      }
       ia_can_issue_report: { Args: { p_report_id: string }; Returns: Json }
       ia_can_manage_reporting_config: { Args: never; Returns: boolean }
       ia_can_read_all: { Args: never; Returns: boolean }
@@ -133324,6 +133391,10 @@ export type Database = {
       ia_is_ia_user: { Args: never; Returns: boolean }
       ia_is_quality_reviewer: { Args: never; Returns: boolean }
       ia_is_risk_band_label: { Args: { _value: string }; Returns: boolean }
+      ia_issue_management_status_report: {
+        Args: { p_note?: string; p_report_id: string }
+        Returns: Json
+      }
       ia_issue_report: {
         Args: { p_notes?: string; p_report_id: string }
         Returns: Json
@@ -133360,6 +133431,10 @@ export type Database = {
         }
         Returns: string
       }
+      ia_management_data_quality: {
+        Args: { p_department_id?: string; p_plan_id: string }
+        Returns: Json
+      }
       ia_management_period_bounds: {
         Args: {
           p_as_at?: string
@@ -133367,6 +133442,19 @@ export type Database = {
           p_custom_start?: string
           p_period_code?: string
           p_plan_id: string
+        }
+        Returns: Json
+      }
+      ia_management_status_drilldown: {
+        Args: {
+          p_as_at?: string
+          p_department_id?: string
+          p_kpi_code: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_plan_id: string
+          p_report_id?: string
         }
         Returns: Json
       }
@@ -133390,6 +133478,10 @@ export type Database = {
           p_plan_id: string
         }
         Returns: Json
+      }
+      ia_msr_capture_evidence: {
+        Args: { p_report_id: string }
+        Returns: number
       }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
