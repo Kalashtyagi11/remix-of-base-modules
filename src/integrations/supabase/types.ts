@@ -79477,6 +79477,7 @@ export type Database = {
           audience: string
           comparison: Json | null
           comparison_report_id: string | null
+          config_provenance: Json | null
           created_at: string
           department_id: string | null
           fiscal_year: string | null
@@ -79496,6 +79497,7 @@ export type Database = {
           audience: string
           comparison?: Json | null
           comparison_report_id?: string | null
+          config_provenance?: Json | null
           created_at?: string
           department_id?: string | null
           fiscal_year?: string | null
@@ -79515,6 +79517,7 @@ export type Database = {
           audience?: string
           comparison?: Json | null
           comparison_report_id?: string | null
+          config_provenance?: Json | null
           created_at?: string
           department_id?: string | null
           fiscal_year?: string | null
@@ -81343,6 +81346,245 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      ia_report_config_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          after_value: Json | null
+          before_value: Json | null
+          created_at: string
+          entity_key: string | null
+          entity_type: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          entity_key?: string | null
+          entity_type: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          entity_key?: string | null
+          entity_type?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      ia_report_definition: {
+        Row: {
+          audience_code: string
+          comparison_behaviour: string
+          created_at: string
+          display_order: number
+          distribution_policy: string
+          document_classification: string
+          filters: Json
+          id: string
+          is_active: boolean
+          metrics: string[]
+          permitted_scope: string
+          report_code: string
+          report_name: string
+          requires_approval: boolean
+          template_type: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          audience_code: string
+          comparison_behaviour?: string
+          created_at?: string
+          display_order?: number
+          distribution_policy?: string
+          document_classification?: string
+          filters?: Json
+          id?: string
+          is_active?: boolean
+          metrics?: string[]
+          permitted_scope?: string
+          report_code: string
+          report_name: string
+          requires_approval?: boolean
+          template_type?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          audience_code?: string
+          comparison_behaviour?: string
+          created_at?: string
+          display_order?: number
+          distribution_policy?: string
+          document_classification?: string
+          filters?: Json
+          id?: string
+          is_active?: boolean
+          metrics?: string[]
+          permitted_scope?: string
+          report_code?: string
+          report_name?: string
+          requires_approval?: boolean
+          template_type?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      ia_report_definition_section: {
+        Row: {
+          audiences: string[]
+          created_at: string
+          definition_id: string
+          display_mode: string
+          heading: string
+          id: string
+          is_appendix: boolean
+          is_visible: boolean
+          section_key: string
+          sort_order: number
+          start_on_new_page: boolean
+          updated_at: string
+        }
+        Insert: {
+          audiences?: string[]
+          created_at?: string
+          definition_id: string
+          display_mode?: string
+          heading: string
+          id?: string
+          is_appendix?: boolean
+          is_visible?: boolean
+          section_key: string
+          sort_order?: number
+          start_on_new_page?: boolean
+          updated_at?: string
+        }
+        Update: {
+          audiences?: string[]
+          created_at?: string
+          definition_id?: string
+          display_mode?: string
+          heading?: string
+          id?: string
+          is_appendix?: boolean
+          is_visible?: boolean
+          section_key?: string
+          sort_order?: number
+          start_on_new_page?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_report_definition_section_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "ia_report_definition"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_report_methodology: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          methodology_code: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          methodology_code: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          methodology_code?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      ia_report_metric: {
+        Row: {
+          audiences: string[]
+          created_at: string
+          dimensions: string[]
+          display_order: number
+          formatter: string
+          id: string
+          is_enabled: boolean
+          label: string
+          metric_code: string
+          source_path: string
+          updated_at: string
+        }
+        Insert: {
+          audiences?: string[]
+          created_at?: string
+          dimensions?: string[]
+          display_order?: number
+          formatter?: string
+          id?: string
+          is_enabled?: boolean
+          label: string
+          metric_code: string
+          source_path: string
+          updated_at?: string
+        }
+        Update: {
+          audiences?: string[]
+          created_at?: string
+          dimensions?: string[]
+          display_order?: number
+          formatter?: string
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          metric_code?: string
+          source_path?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       ia_report_versions: {
         Row: {
@@ -132654,6 +132896,7 @@ export type Database = {
         Returns: boolean
       }
       ia_can_issue_report: { Args: { p_report_id: string }; Returns: Json }
+      ia_can_manage_reporting_config: { Args: never; Returns: boolean }
       ia_can_read_all: { Args: never; Returns: boolean }
       ia_can_start_engagement: {
         Args: { p_engagement_id: string }
@@ -133179,6 +133422,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ia_org_country_code: { Args: never; Returns: string }
       ia_permission_reconciliation: {
         Args: { p_expected?: Json }
         Returns: Json
@@ -133336,6 +133580,44 @@ export type Database = {
       }
       ia_reopen_annual_plan: {
         Args: { p_plan_id: string; p_reason: string }
+        Returns: Json
+      }
+      ia_report_activate_methodology: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: Json
+      }
+      ia_report_configure_metric: {
+        Args: {
+          p_display_order?: number
+          p_is_enabled?: boolean
+          p_label?: string
+          p_metric_code: string
+        }
+        Returns: Json
+      }
+      ia_report_configure_section: {
+        Args: {
+          p_display_mode?: string
+          p_heading?: string
+          p_is_visible?: boolean
+          p_section_id: string
+          p_sort_order?: number
+          p_start_on_new_page?: boolean
+        }
+        Returns: Json
+      }
+      ia_report_methodology_active: { Args: { p_code: string }; Returns: Json }
+      ia_report_save_methodology_draft: {
+        Args: {
+          p_code: string
+          p_config: Json
+          p_name?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
+      ia_report_validate_methodology: {
+        Args: { p_code: string; p_config: Json }
         Returns: Json
       }
       ia_reschedule_engagement: {

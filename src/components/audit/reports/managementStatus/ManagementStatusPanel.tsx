@@ -5,7 +5,7 @@
  * Management, the Audit / Risk Committee and Department Management.
  * Every figure comes from the single server-side status engine.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,24 +28,27 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { Download, FileText, RefreshCw, Send, ShieldCheck } from 'lucide-react';
 import {
-  MANAGEMENT_AUDIENCES,
-  MANAGEMENT_PERIODS,
-  MANAGEMENT_REPORT_MODES,
   fetchLiveManagementStatus,
+  fetchManagementReportingConfiguration,
+  formatMetricValue,
   generateManagementStatusReport,
   listManagementStatusReports,
+  resolveMetricValue,
   type ManagementAudience,
   type ManagementPeriodCode,
   type ManagementReportMode,
   type ManagementStatusPayload,
   type ManagementStatusSnapshot,
 } from '@/services/audit/managementStatusReportService';
+import { useDocumentFoundation } from '@/hooks/useDocumentFoundation';
+import { brandingFromFoundation } from '@/lib/audit/auditExportPrimitives';
 
 import {
   downloadManagementStatusPdf,
   managementStatusPdfBlob,
 } from '../ManagementStatusReportPDFExport';
 import { distributeManagementStatusReport } from '@/services/audit/managementStatusDistributionService';
+
 
 interface Props {
   /** When provided the plan is fixed (plan workspace tab). */
@@ -79,14 +82,14 @@ function fmt(v: string | null | undefined) {
 export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const qc = useQueryClient();
   const [planId, setPlanId] = useState<string | undefined>(fixedPlanId);
-  const [audience, setAudience] = useState<ManagementAudience>('HIA');
+  const [audience, setAudience] = useState<ManagementAudience>('');
   const [departmentId, setDepartmentId] = useState<string>('all');
   const [asAt, setAsAt] = useState<string>(new Date().toISOString().slice(0, 10));
   const [reportingPeriod, setReportingPeriod] = useState<string>('');
-  const [periodCode, setPeriodCode] = useState<ManagementPeriodCode>('CURRENT');
+  const [periodCode, setPeriodCode] = useState<ManagementPeriodCode>('');
   const [customStart, setCustomStart] = useState<string>('');
   const [customEnd, setCustomEnd] = useState<string>('');
-  const [reportMode, setReportMode] = useState<ManagementReportMode>('Detailed Management Report');
+  const [reportMode, setReportMode] = useState<ManagementReportMode>('');
 
   const [compareId, setCompareId] = useState<string>('none');
   const [viewing, setViewing] = useState<ManagementStatusSnapshot | null>(null);
@@ -94,6 +97,45 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [busy, setBusy] = useState(false);
+
+  /** Governed reporting configuration — audiences, periods, definitions, metrics. */
+  const { data: config } = useQuery({
+    queryKey: ['ia-msr-config'],
+    queryFn: fetchManagementReportingConfiguration,
+    staleTime: 60_000,
+  });
+  const { data: foundation } = useDocumentFoundation();
+
+  useEffect(() => {
+    if (!config) return;
+    if (!audience && config.audiences.length) setAudience(config.audiences[0].code);
+    if (!periodCode && config.periods.length) setPeriodCode(config.periods[0].code);
+    if (!reportMode && config.definitions.length) setReportMode(config.definitions[0].reportName);
+  }, [config, audience, periodCode, reportMode]);
+
+  const definition = useMemo(
+    () =>
+      config?.definitions.find((d) => d.reportName === reportMode || d.reportCode === reportMode) ??
+      config?.definitions.find((d) => d.audienceCode === audience),
+    [config, reportMode, audience],
+  );
+  const departmentScoped = definition?.permittedScope === 'DEPARTMENT';
+  const customPeriod = periodCode === 'CUSTOM';
+
+  const visibleSections = useMemo(
+    () =>
+      (definition?.sections ?? []).filter(
+        (s) => s.isVisible && (s.audiences.length === 0 || s.audiences.includes(audience)),
+      ),
+    [definition, audience],
+  );
+
+  const activeMetrics = useMemo(() => {
+    const allowed = definition?.metrics ?? [];
+    return (config?.metrics ?? [])
+      .filter((m) => allowed.length === 0 || allowed.includes(m.metricCode))
+      .filter((m) => m.audiences.length === 0 || m.audiences.includes(audience));
+  }, [config, definition, audience]);
 
   const { data: plans = [] } = useQuery({
     queryKey: ['ia-msr-plans'],
@@ -116,7 +158,8 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
   });
 
   const effectivePlanId = fixedPlanId ?? planId;
-  const effectiveDept = audience === 'Department Management' && departmentId !== 'all' ? departmentId : null;
+  const effectiveDept = departmentScoped && departmentId !== 'all' ? departmentId : null;
+
 
   const live = useQuery({
     queryKey: ['ia-msr-live', effectivePlanId, audience, effectiveDept, asAt, periodCode, customStart, customEnd],
@@ -130,7 +173,8 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
         periodStart: periodCode === 'CUSTOM' ? customStart || null : null,
         periodEnd: periodCode === 'CUSTOM' ? customEnd || null : null,
       }),
-    enabled: !!effectivePlanId,
+    enabled: !!effectivePlanId && !!audience && !!periodCode,
+
   });
 
 
@@ -194,10 +238,30 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
     qc.invalidateQueries({ queryKey: ['ia-msr-snapshots', effectivePlanId] });
   }
 
+  const pdfConfig = useMemo(
+    () => ({
+      sections: visibleSections.map((s) => ({
+        sectionKey: s.sectionKey,
+        heading: s.heading,
+        startOnNewPage: s.startOnNewPage,
+        displayMode: s.displayMode,
+      })),
+      metrics: activeMetrics.map((m) => ({
+        metricCode: m.metricCode,
+        label: m.label,
+        formatter: m.formatter,
+        sourcePath: m.sourcePath,
+      })),
+      branding: foundation ? brandingFromFoundation(foundation) : undefined,
+    }),
+    [visibleSections, activeMetrics, foundation],
+  );
+
   function handlePdf() {
     if (!shown) return;
-    downloadManagementStatusPdf(shown, shownMeta);
+    downloadManagementStatusPdf(shown, { ...shownMeta, ...pdfConfig });
   }
+
 
   async function handleDistribute() {
     if (!distributing) return;
@@ -206,11 +270,30 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
       return;
     }
     setBusy(true);
+    // A sealed report is always rendered with the configuration recorded at
+    // generation time, never with today's configuration.
+    const sealed = (distributing.config_provenance ?? {}) as Record<string, any>;
     const blob = managementStatusPdfBlob(distributing.snapshot, {
       reportNumber: distributing.report_number,
       reportingPeriod: distributing.reporting_period,
       comparison: distributing.comparison,
+      branding: pdfConfig.branding,
+      sections: (sealed.sections ?? [])
+        .filter((s: any) => s.is_visible !== false)
+        .map((s: any) => ({
+          sectionKey: s.section_key,
+          heading: s.heading,
+          startOnNewPage: !!s.start_on_new_page,
+          displayMode: s.display_mode ?? 'detail',
+        })),
+      metrics: (sealed.metrics ?? []).map((m: any) => ({
+        metricCode: m.metric_code,
+        label: m.label,
+        formatter: m.formatter ?? null,
+        sourcePath: m.source_path ?? null,
+      })),
     });
+
     const res = await distributeManagementStatusReport({
       reportId: distributing.id,
       reportNumber: distributing.report_number,
@@ -259,18 +342,22 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           <div className="space-y-1.5">
             <Label className="text-xs">Audience</Label>
             <Select value={audience} onValueChange={(v) => setAudience(v as ManagementAudience)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_AUDIENCES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {(config?.audiences ?? []).map((a) => (
+                  <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Report mode</Label>
             <Select value={reportMode} onValueChange={(v) => setReportMode(v as ManagementReportMode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select report" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_REPORT_MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                {(config?.definitions ?? []).map((d) => (
+                  <SelectItem key={d.reportCode} value={d.reportName}>{d.reportName}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -279,7 +366,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             <Select
               value={departmentId}
               onValueChange={setDepartmentId}
-              disabled={audience !== 'Department Management'}
+              disabled={!departmentScoped}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -291,13 +378,16 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           <div className="space-y-1.5">
             <Label className="text-xs">Reporting period</Label>
             <Select value={periodCode} onValueChange={(v) => setPeriodCode(v as ManagementPeriodCode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select period" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_PERIODS.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}
+                {(config?.periods ?? []).map((p) => (
+                  <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
+
             </Select>
           </div>
-          {periodCode === 'CUSTOM' && (
+          {customPeriod && (
             <>
               <div className="space-y-1.5">
                 <Label className="text-xs">Period from</Label>
@@ -370,6 +460,16 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           </div>
 
           <p className="text-xs text-muted-foreground">{shown.health?.basis}</p>
+          {!!(shown.health as any)?.rules_triggered?.length && (
+            <ul className="text-[11px] text-muted-foreground list-disc pl-5">
+              {((shown.health as any).rules_triggered as any[]).map((r) => (
+                <li key={r.rule}>
+                  {r.label} — observed {String(r.observed)} against configured threshold {String(r.threshold)}
+                  {r.severity ? ` (${r.severity})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* ── Reporting period vs cumulative position ── */}
           <Card>
@@ -392,21 +492,22 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             </CardContent>
           </Card>
 
-          {/* ── KPI dashboard (cumulative) ── */}
+          {/* ── KPI dashboard — configured metric registry (cumulative) ── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            <Kpi label="Approved engagements" value={k.approved_engagements ?? 0} />
-            <Kpi label="Completed" value={`${k.closed ?? 0} + ${k.closed_actions_pending ?? 0} pending`} />
-            <Kpi label="In progress" value={k.in_progress ?? 0} />
-            <Kpi label="Not started" value={k.planned_not_started ?? 0} />
-            <Kpi label="Delayed / at risk" value={k.delayed_at_risk ?? 0} />
-            <Kpi label="Carried forward" value={k.carried_forward ?? 0} />
-            <Kpi label="Plan completion" value={`${k.plan_completion_pct ?? 0}%`} />
-            <Kpi label="Schedule adherence" value={`${k.schedule_adherence_pct ?? 0}%`} />
-            <Kpi label="Open Critical/High findings" value={shown.findings?.open_critical_high ?? 0} />
-            <Kpi label="Overdue responses" value={shown.findings?.overdue_responses ?? 0} />
-            <Kpi label="Open actions" value={shown.actions?.open ?? 0} />
-            <Kpi label="Overdue actions" value={shown.actions?.overdue ?? 0} />
+            {activeMetrics.map((m) => (
+              <Kpi
+                key={m.metricCode}
+                label={m.label}
+                value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
+              />
+            ))}
+            {activeMetrics.length === 0 && (
+              <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-4 xl:col-span-6">
+                No metrics are enabled for this report and audience.
+              </p>
+            )}
           </div>
+
 
           <Tabs defaultValue="period" className="space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
