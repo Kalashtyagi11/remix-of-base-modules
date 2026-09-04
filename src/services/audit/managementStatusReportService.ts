@@ -4,49 +4,178 @@
  * Thin client over the canonical server-side calculation. There is exactly one
  * status engine (`ia_management_status_live` / `ia_engagement_status_model`);
  * the browser never recomputes KPIs, progress, schedule health or plan health,
- * and never allocates the authoritative IA-MSR-SKN-… number.
+ * and never allocates the authoritative management report number.
+ *
+ * NO-HARDCODING RULE: audiences, reporting periods, report definitions,
+ * sections, metrics and methodology values are governed configuration read at
+ * runtime. Nothing organisation-specific is embedded in this module.
  */
 import { supabase } from '@/integrations/supabase/client';
 
-export type ManagementAudience =
-  | 'HIA'
-  | 'Executive Management'
-  | 'Audit / Risk Committee'
-  | 'Department Management';
+/** Audience codes are governed reference data (`MANAGEMENT_REPORT_AUDIENCE`). */
+export type ManagementAudience = string;
 
-export const MANAGEMENT_AUDIENCES: ManagementAudience[] = [
-  'HIA',
-  'Executive Management',
-  'Audit / Risk Committee',
-  'Department Management',
-];
+/** Reporting period selectors are governed reference data; boundaries come from the fiscal calendar. */
+export type ManagementPeriodCode = string;
 
-/** Reporting period selectors — quarter boundaries derive from the fiscal calendar. */
-export type ManagementPeriodCode = 'CURRENT' | 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'MONTH' | 'YTD' | 'CUSTOM';
+/** Report modes are governed report definitions (`ia_report_definition`). */
+export type ManagementReportMode = string;
 
-export const MANAGEMENT_PERIODS: Array<{ code: ManagementPeriodCode; label: string }> = [
-  { code: 'CURRENT', label: 'Current status (plan to date)' },
-  { code: 'Q1', label: 'Q1' },
-  { code: 'Q2', label: 'Q2' },
-  { code: 'Q3', label: 'Q3' },
-  { code: 'Q4', label: 'Q4' },
-  { code: 'MONTH', label: 'Month to date' },
-  { code: 'YTD', label: 'Year to date' },
-  { code: 'CUSTOM', label: 'Custom period' },
-];
+export interface ReferenceOption {
+  code: string;
+  name: string;
+  sortOrder: number;
+}
 
-export type ManagementReportMode =
-  | 'Executive Summary'
-  | 'Detailed Management Report'
-  | 'Committee / Board Pack'
-  | 'Departmental Report';
+export interface ReportSectionConfig {
+  id: string;
+  sectionKey: string;
+  heading: string;
+  sortOrder: number;
+  isVisible: boolean;
+  startOnNewPage: boolean;
+  displayMode: string;
+  isAppendix: boolean;
+  audiences: string[];
+}
 
-export const MANAGEMENT_REPORT_MODES: ManagementReportMode[] = [
-  'Executive Summary',
-  'Detailed Management Report',
-  'Committee / Board Pack',
-  'Departmental Report',
-];
+export interface ReportDefinitionConfig {
+  id: string;
+  reportCode: string;
+  reportName: string;
+  audienceCode: string | null;
+  permittedScope: string | null;
+  templateType: string | null;
+  documentClassification: string | null;
+  requiresApproval: boolean;
+  distributionPolicy: string | null;
+  comparisonBehaviour: string | null;
+  metrics: string[];
+  versionNumber: number;
+  displayOrder: number;
+  sections: ReportSectionConfig[];
+}
+
+export interface ReportMetricConfig {
+  metricCode: string;
+  label: string;
+  formatter: string | null;
+  sourcePath: string | null;
+  audiences: string[];
+  displayOrder: number;
+}
+
+export interface ReportMethodologyConfig {
+  id: string;
+  methodologyCode: string;
+  versionNumber: number;
+  name: string | null;
+  status: string;
+  effectiveFrom: string | null;
+  config: Record<string, any>;
+}
+
+export interface ManagementReportingConfiguration {
+  audiences: ReferenceOption[];
+  periods: ReferenceOption[];
+  definitions: ReportDefinitionConfig[];
+  metrics: ReportMetricConfig[];
+  methodologies: ReportMethodologyConfig[];
+}
+
+async function fetchReferenceOptions(type: string): Promise<ReferenceOption[]> {
+  const { data } = await supabase
+    .from('ia_reference_value')
+    .select('code, name, sort_order, is_active')
+    .eq('reference_type', type)
+    .eq('is_active', true)
+    .order('sort_order');
+  return ((data ?? []) as Array<{ code: string; name: string; sort_order: number | null }>).map((r) => ({
+    code: r.code,
+    name: r.name ?? r.code,
+    sortOrder: r.sort_order ?? 0,
+  }));
+}
+
+/** Resolve the complete governed reporting configuration (no hard-coded lists). */
+export async function fetchManagementReportingConfiguration(): Promise<ManagementReportingConfiguration> {
+  const [audiences, periods, defsRes, sectionsRes, metricsRes, methodRes] = await Promise.all([
+    fetchReferenceOptions('MANAGEMENT_REPORT_AUDIENCE'),
+    fetchReferenceOptions('MANAGEMENT_REPORT_PERIOD'),
+    supabase.from('ia_report_definition').select('*').eq('is_active', true).order('display_order'),
+    supabase.from('ia_report_definition_section').select('*').order('sort_order'),
+    supabase.from('ia_report_metric').select('*').eq('is_enabled', true).order('display_order'),
+    supabase.from('ia_report_methodology').select('*').eq('status', 'Active'),
+  ]);
+
+  const sections = (sectionsRes.data ?? []) as any[];
+  const definitions: ReportDefinitionConfig[] = ((defsRes.data ?? []) as any[]).map((d) => ({
+    id: d.id,
+    reportCode: d.report_code,
+    reportName: d.report_name,
+    audienceCode: d.audience_code ?? null,
+    permittedScope: d.permitted_scope ?? null,
+    templateType: d.template_type ?? null,
+    documentClassification: d.document_classification ?? null,
+    requiresApproval: !!d.requires_approval,
+    distributionPolicy: d.distribution_policy ?? null,
+    comparisonBehaviour: d.comparison_behaviour ?? null,
+    metrics: (d.metrics ?? []) as string[],
+    versionNumber: d.version_number ?? 1,
+    displayOrder: d.display_order ?? 0,
+    sections: sections
+      .filter((s) => s.definition_id === d.id)
+      .map((s) => ({
+        id: s.id,
+        sectionKey: s.section_key,
+        heading: s.heading,
+        sortOrder: s.sort_order ?? 0,
+        isVisible: s.is_visible !== false,
+        startOnNewPage: !!s.start_on_new_page,
+        displayMode: s.display_mode ?? 'detail',
+        isAppendix: !!s.is_appendix,
+        audiences: (s.audiences ?? []) as string[],
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder),
+  }));
+
+  return {
+    audiences,
+    periods,
+    definitions,
+    metrics: ((metricsRes.data ?? []) as any[]).map((m) => ({
+      metricCode: m.metric_code,
+      label: m.label,
+      formatter: m.formatter ?? null,
+      sourcePath: m.source_path ?? null,
+      audiences: (m.audiences ?? []) as string[],
+      displayOrder: m.display_order ?? 0,
+    })),
+    methodologies: ((methodRes.data ?? []) as any[]).map((m) => ({
+      id: m.id,
+      methodologyCode: m.methodology_code,
+      versionNumber: m.version_number,
+      name: m.name ?? null,
+      status: m.status,
+      effectiveFrom: m.effective_from ?? null,
+      config: (m.config ?? {}) as Record<string, any>,
+    })),
+  };
+}
+
+/** Resolve the value a configured metric points at inside the canonical payload. */
+export function resolveMetricValue(payload: any, path: string | null): unknown {
+  if (!path) return undefined;
+  return path.split('.').reduce<any>((acc, key) => (acc == null ? undefined : acc[key]), payload);
+}
+
+export function formatMetricValue(value: unknown, formatter: string | null): string {
+  if (value === null || value === undefined) return '—';
+  if (formatter === 'percent') return `${value}%`;
+  if (formatter === 'hours') return `${value} h`;
+  return String(value);
+}
+
 
 
 export interface EngagementStatusRow {
