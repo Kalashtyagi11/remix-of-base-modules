@@ -834,6 +834,15 @@ function NewAssignmentDialog({
             </Select>
           </div>
           <div>
+            <Label>Department</Label>
+            <Select value={form.department_id} onValueChange={(v) => setForm({ ...form, department_id: v })}>
+              <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+              <SelectContent>
+                {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label>Type</Label>
             <Select value={form.assignment_type} onValueChange={(v) => setForm({ ...form, assignment_type: v, is_primary: v === 'PRIMARY' })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -842,6 +851,7 @@ function NewAssignmentDialog({
               </SelectContent>
             </Select>
           </div>
+
           <div>
             <Label>Effective From</Label>
             <Input type="date" value={form.effective_from}
