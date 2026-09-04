@@ -870,13 +870,15 @@ function NewAssignmentDialog({
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
-            disabled={!staffProfileId || !form.office_code}
+            disabled={!staffProfileId || !form.office_code || !form.department_id}
             onClick={async () => {
               await onCreate({
                 staff_profile_id: staffProfileId!,
                 user_id: userId,
                 office_code: form.office_code,
+                department_id: form.department_id,
                 assignment_type: form.assignment_type,
+
                 assignment_status: 'ACTIVE',
                 effective_from: form.effective_from,
                 effective_to: form.effective_to || null,
