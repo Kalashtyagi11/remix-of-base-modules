@@ -254,8 +254,13 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
               <Label>Status</Label>
               <Select value={progressForm.status} onValueChange={(v) => setProgressForm((f) => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ACTION_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent>{ACTION_STATUSES.filter((s) => canCloseActions || !['Verified', 'Closed', 'Cancelled'].includes(s) || s === progressAction?.status).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {!canCloseActions && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Verification, closure and cancellation are reserved for the audit team.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Assigned To</Label><Input value={progressForm.responsible_person} onChange={(e) => setProgressForm((f) => ({ ...f, responsible_person: e.target.value }))} /></div>
