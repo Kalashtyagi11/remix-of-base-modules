@@ -460,6 +460,16 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           </div>
 
           <p className="text-xs text-muted-foreground">{shown.health?.basis}</p>
+          {!!(shown.health as any)?.rules_triggered?.length && (
+            <ul className="text-[11px] text-muted-foreground list-disc pl-5">
+              {((shown.health as any).rules_triggered as any[]).map((r) => (
+                <li key={r.rule}>
+                  {r.label} — observed {String(r.observed)} against configured threshold {String(r.threshold)}
+                  {r.severity ? ` (${r.severity})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* ── Reporting period vs cumulative position ── */}
           <Card>
@@ -482,21 +492,22 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             </CardContent>
           </Card>
 
-          {/* ── KPI dashboard (cumulative) ── */}
+          {/* ── KPI dashboard — configured metric registry (cumulative) ── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-            <Kpi label="Approved engagements" value={k.approved_engagements ?? 0} />
-            <Kpi label="Completed" value={`${k.closed ?? 0} + ${k.closed_actions_pending ?? 0} pending`} />
-            <Kpi label="In progress" value={k.in_progress ?? 0} />
-            <Kpi label="Not started" value={k.planned_not_started ?? 0} />
-            <Kpi label="Delayed / at risk" value={k.delayed_at_risk ?? 0} />
-            <Kpi label="Carried forward" value={k.carried_forward ?? 0} />
-            <Kpi label="Plan completion" value={`${k.plan_completion_pct ?? 0}%`} />
-            <Kpi label="Schedule adherence" value={`${k.schedule_adherence_pct ?? 0}%`} />
-            <Kpi label="Open Critical/High findings" value={shown.findings?.open_critical_high ?? 0} />
-            <Kpi label="Overdue responses" value={shown.findings?.overdue_responses ?? 0} />
-            <Kpi label="Open actions" value={shown.actions?.open ?? 0} />
-            <Kpi label="Overdue actions" value={shown.actions?.overdue ?? 0} />
+            {activeMetrics.map((m) => (
+              <Kpi
+                key={m.metricCode}
+                label={m.label}
+                value={formatMetricValue(resolveMetricValue(shown, m.sourcePath), m.formatter)}
+              />
+            ))}
+            {activeMetrics.length === 0 && (
+              <p className="text-sm text-muted-foreground sm:col-span-2 lg:col-span-4 xl:col-span-6">
+                No metrics are enabled for this report and audience.
+              </p>
+            )}
           </div>
+
 
           <Tabs defaultValue="period" className="space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
