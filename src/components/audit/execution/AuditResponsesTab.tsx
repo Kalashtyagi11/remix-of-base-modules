@@ -20,6 +20,7 @@ import {
   useReviewManagementResponse,
   type ManagementPosition,
 } from '@/hooks/useAuditLifecycleCommands';
+import { useIaCommandCapability } from '@/hooks/useIaCommandCapability';
 
 const POSITIONS: ManagementPosition[] = ['Accepted', 'Partially Accepted', 'Rejected'];
 
@@ -39,6 +40,9 @@ export function AuditResponsesTab({ auditId, auditFindings, auditResponses, depa
   const recordResponse = useRecordManagementResponse();
   const reviewResponse = useReviewManagementResponse();
   const { userCode } = useUserCode();
+  // SoD: only auditors with elevated finding-approval authority may review a
+  // management response, and never the author of that response.
+  const { data: canReviewResponses = false } = useIaCommandCapability('audit_findings', 'approve', auditId, true);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
@@ -188,12 +192,15 @@ export function AuditResponsesTab({ auditId, auditFindings, auditResponses, depa
           <DataTable columns={columns} data={auditResponses} emptyMessage="No management responses submitted yet."
             renderActions={(row) => (
               <div className="flex gap-1">
-                {!row.review_outcome && (
+                {!row.review_outcome && canReviewResponses && row.submitted_by !== userCode && (
                   <>
                     <Button size="sm" variant="outline" disabled={reviewResponse.isPending} onClick={() => handleReview(row.id, 'Accepted')}>Accept</Button>
                     <Button size="sm" variant="outline" disabled={reviewResponse.isPending} onClick={() => handleReview(row.id, 'Revision Requested')}>Request revision</Button>
                     <Button size="sm" variant="outline" disabled={reviewResponse.isPending} onClick={() => handleReview(row.id, 'Escalated')}>Escalate</Button>
                   </>
+                )}
+                {!row.review_outcome && (!canReviewResponses || row.submitted_by === userCode) && (
+                  <span className="text-xs text-muted-foreground italic">Awaiting audit team review</span>
                 )}
               </div>
             )}
