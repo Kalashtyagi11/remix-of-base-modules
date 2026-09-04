@@ -28,6 +28,14 @@ const STAGE_TO_CATEGORY: Record<string, string> = {
   ACTION_PLAN_REMINDER: 'Action Reminder',
 };
 
+// Stage-specific template name hints, used when a category is shared by more
+// than one stage (DEF IA-FULL-E2E-014).
+const STAGE_TO_TEMPLATE_NAME: Record<string, string> = {
+  ENTRANCE_MEETING: 'Entrance Meeting',
+  EXIT_MEETING: 'Exit Meeting',
+};
+
+
 export interface EngagementContext {
   engagement_name?: string;
   department_name?: string;
@@ -104,8 +112,17 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
     if (!requiredCategory) return null;
     const activeTemplates = (templates as any[]).filter(t => t.is_active && t.category === requiredCategory);
     if (activeTemplates.length === 0) return null;
-    return activeTemplates.sort((a, b) => (b.version_number || 0) - (a.version_number || 0))[0];
+    // DEF IA-FULL-E2E-014: several stages share a single category (Entrance and
+    // Exit Meeting are both "Meeting Notice"). Disambiguate on the stage-specific
+    // template name before falling back to the newest template in the category.
+    const nameHint = STAGE_TO_TEMPLATE_NAME[stageCode];
+    const pool = nameHint
+      ? (activeTemplates.filter(t => String(t.name || '').toLowerCase().includes(nameHint.toLowerCase())) || [])
+      : [];
+    const candidates = pool.length > 0 ? pool : activeTemplates;
+    return candidates.sort((a, b) => (b.version_number || 0) - (a.version_number || 0))[0];
   }, [templates, stageCode]);
+
 
   const mergeData = useMemo(() => {
     const ctx = engagementContext || {};
