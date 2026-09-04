@@ -342,18 +342,22 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           <div className="space-y-1.5">
             <Label className="text-xs">Audience</Label>
             <Select value={audience} onValueChange={(v) => setAudience(v as ManagementAudience)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select audience" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_AUDIENCES.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {(config?.audiences ?? []).map((a) => (
+                  <SelectItem key={a.code} value={a.code}>{a.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Report mode</Label>
             <Select value={reportMode} onValueChange={(v) => setReportMode(v as ManagementReportMode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select report" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_REPORT_MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                {(config?.definitions ?? []).map((d) => (
+                  <SelectItem key={d.reportCode} value={d.reportName}>{d.reportName}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -362,7 +366,7 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             <Select
               value={departmentId}
               onValueChange={setDepartmentId}
-              disabled={audience !== 'Department Management'}
+              disabled={!departmentScoped}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -374,10 +378,13 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
           <div className="space-y-1.5">
             <Label className="text-xs">Reporting period</Label>
             <Select value={periodCode} onValueChange={(v) => setPeriodCode(v as ManagementPeriodCode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select period" /></SelectTrigger>
               <SelectContent>
-                {MANAGEMENT_PERIODS.map((p) => <SelectItem key={p.code} value={p.code}>{p.label}</SelectItem>)}
+                {(config?.periods ?? []).map((p) => (
+                  <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>
+                ))}
               </SelectContent>
+
             </Select>
           </div>
           {periodCode === 'CUSTOM' && (
