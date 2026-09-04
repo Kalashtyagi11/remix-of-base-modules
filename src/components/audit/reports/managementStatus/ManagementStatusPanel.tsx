@@ -173,7 +173,8 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
         periodStart: periodCode === 'CUSTOM' ? customStart || null : null,
         periodEnd: periodCode === 'CUSTOM' ? customEnd || null : null,
       }),
-    enabled: !!effectivePlanId,
+    enabled: !!effectivePlanId && !!audience && !!periodCode,
+
   });
 
 
