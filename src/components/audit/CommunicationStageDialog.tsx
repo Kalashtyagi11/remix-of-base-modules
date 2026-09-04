@@ -73,6 +73,20 @@ export function CommunicationStageDialog({ engagementId, engagementName, stageCo
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [policyValid, setPolicyValid] = useState<boolean | null>(null);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  // DEF IA-FULL-E2E-013: meeting and draft-circulation events declare mandatory
+  // facts (meeting date/time, location, draft version, comment due date). They
+  // must be captured on this screen or the producer blocks the obligation.
+  const [meetingDateTime, setMeetingDateTime] = useState('');
+  const [meetingLocation, setMeetingLocation] = useState('');
+  const [versionNumber, setVersionNumber] = useState('');
+  const [commentDueDate, setCommentDueDate] = useState('');
+
+  const isMeetingStage = stageCode === 'ENTRANCE_MEETING' || stageCode === 'EXIT_MEETING';
+  const isDraftDiscussionStage = stageCode === 'DRAFT_FINDING_DISCUSSION';
+  const stageFactsMissing =
+    (isMeetingStage && (!meetingDateTime || !meetingLocation.trim())) ||
+    (isDraftDiscussionStage && (!versionNumber.trim() || !commentDueDate));
+
 
   // Build document request table for DOC_REQUEST stage
   const pendingDocs = (docRequests as any[]).filter(r => r.status === 'Pending' || r.status === 'Partially Received');
