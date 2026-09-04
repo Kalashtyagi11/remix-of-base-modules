@@ -132901,6 +132901,16 @@ export type Database = {
         Args: { p_engagement_id: string; p_same_function_only?: boolean }
         Returns: Json
       }
+      ia_progress_corrective_action: {
+        Args: {
+          p_action_id: string
+          p_notes?: string
+          p_responsible_person?: string
+          p_status: string
+          p_target_date?: string
+        }
+        Returns: Json
+      }
       ia_q_action_centre_counts: { Args: { p_filters?: Json }; Returns: Json }
       ia_q_closure_blockers: { Args: { p_filters?: Json }; Returns: Json }
       ia_q_followup_queue: { Args: { p_filters?: Json }; Returns: Json }

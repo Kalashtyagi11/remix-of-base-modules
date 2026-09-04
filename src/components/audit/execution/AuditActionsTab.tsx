@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +39,7 @@ const ACTION_STATUSES = [...ACTION_STATES];
 
 export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, auditResponses, auditEvidence = [], onClose }: AuditActionsTabProps) {
   const { create, update } = useIAActionTrackingMutations();
+  const queryClient = useQueryClient();
   const { userCode } = useUserCode();
   const { toast } = useToast();
   const { can } = useInternalAuditPermissions();
@@ -49,6 +52,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
   const [progressAction, setProgressAction] = useState<any>(null);
   const [progressForm, setProgressForm] = useState({ status: 'Open', target_date: '', responsible_person: '', notes: '' });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
+  const [savingProgress, setSavingProgress] = useState(false);
 
 
   const isOverdue = (action: any) => {
@@ -75,11 +79,11 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
   const toggleEvidence = (id: string) =>
     setEvidenceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const handleProgressSave = () => {
+  const handleProgressSave = async () => {
     if (!progressAction) return;
-    const closing = ['Verified', 'Closed'].includes(progressForm.status);
+    const closing = ['Verified', 'Closed', 'Cancelled'].includes(progressForm.status);
     if (closing && !canCloseActions) {
-      toast({ title: 'Not permitted', description: 'You do not have permission to close or verify audit actions.', variant: 'destructive' });
+      toast({ title: 'Not permitted', description: 'Only the audit team may verify, close or cancel a corrective action.', variant: 'destructive' });
       return;
     }
     if (closing && !progressForm.notes.trim()) {
@@ -91,28 +95,37 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       originalEvidence.length !== evidenceIds.length ||
       originalEvidence.some((id) => !evidenceIds.includes(id));
 
-    update.mutate({
-      id: progressAction.id,
-      status: progressForm.status,
-      action_status: progressForm.status,
-      target_date: progressForm.target_date || null,
-      responsible_person: progressForm.responsible_person || null,
-      notes: progressForm.notes || null,
-      updated_by: userCode || null,
-      ...(closing ? { verified_by: userCode || null, verified_date: new Date().toISOString() } : {}),
-    } as any, {
-      onSuccess: () => {
-        if (evidenceChanged) {
-          linkEvidence.mutate(
-            { actionId: progressAction.id, evidenceIds },
-            { onSettled: () => setProgressAction(null) },
-          );
-        } else {
-          setProgressAction(null);
-        }
-      },
-    });
+    setSavingProgress(true);
+    try {
+      // Governed command: the responsible manager may progress the action,
+      // while verification/closure/cancellation stays with the audit team.
+      const { data, error } = await (supabase.rpc as any)('ia_progress_corrective_action', {
+        p_action_id: progressAction.id,
+        p_status: progressForm.status,
+        p_notes: progressForm.notes || null,
+        p_target_date: progressForm.target_date || null,
+        p_responsible_person: progressForm.responsible_person || null,
+      });
+      if (error) throw error;
+      if (data && data.success === false) {
+        toast({ title: 'Action blocked', description: data.error || 'Update rejected', variant: 'destructive' });
+        return;
+      }
+      if (evidenceChanged) {
+        await new Promise<void>((resolve) =>
+          linkEvidence.mutate({ actionId: progressAction.id, evidenceIds }, { onSettled: () => resolve() }),
+        );
+      }
+      toast({ title: 'Action Updated' });
+      setProgressAction(null);
+      queryClient.invalidateQueries({ queryKey: ['ia_action_tracking'] });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Update failed', variant: 'destructive' });
+    } finally {
+      setSavingProgress(false);
+    }
   };
+
 
 
   const handleCreate = () => {
@@ -158,7 +171,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       </div>
     )},
     { key: 'row_actions', header: 'Update', render: (r) => (
-      <Button size="sm" variant="outline" disabled={!canProgress || isClosed} onClick={() => openProgress(r)}>
+      <Button size="sm" variant="outline" disabled={(!canProgress && !canCloseActions) || isClosed} onClick={() => openProgress(r)}>
         Update
       </Button>
     )},
@@ -263,7 +276,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProgressAction(null)}>Cancel</Button>
-            <Button onClick={handleProgressSave} disabled={update.isPending}>Save Update</Button>
+            <Button onClick={handleProgressSave} disabled={savingProgress}>Save Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
