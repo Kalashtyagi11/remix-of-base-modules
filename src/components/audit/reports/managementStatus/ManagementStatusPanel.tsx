@@ -371,7 +371,28 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
 
           <p className="text-xs text-muted-foreground">{shown.health?.basis}</p>
 
-          {/* ── KPI dashboard ── */}
+          {/* ── Reporting period vs cumulative position ── */}
+          <Card>
+            <CardContent className="p-4 grid gap-3 md:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Reporting period activity</p>
+                <p className="text-sm font-medium">{period?.label ?? 'Current status'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Cumulative status as at</p>
+                <p className="text-sm font-medium">{fmt(shown.as_at)}</p>
+              </div>
+              {fidelity && (
+                <p className="md:col-span-2 text-[11px] text-muted-foreground border-t pt-2">
+                  {fidelity.as_at_is_historical
+                    ? `Historical view — ${fidelity.limitation}`
+                    : fidelity.limitation}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* ── KPI dashboard (cumulative) ── */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
             <Kpi label="Approved engagements" value={k.approved_engagements ?? 0} />
             <Kpi label="Completed" value={`${k.closed ?? 0} + ${k.closed_actions_pending ?? 0} pending`} />
@@ -387,15 +408,148 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
             <Kpi label="Overdue actions" value={shown.actions?.overdue ?? 0} />
           </div>
 
-          <Tabs defaultValue="engagements" className="space-y-4">
+          <Tabs defaultValue="period" className="space-y-4">
             <TabsList className="flex-wrap h-auto gap-1">
+              <TabsTrigger value="period">Period Activity</TabsTrigger>
+              <TabsTrigger value="completed">Completed Audits ({completedAudits.length})</TabsTrigger>
               <TabsTrigger value="engagements">Engagements ({engagementRows.length})</TabsTrigger>
               <TabsTrigger value="findings">Findings & Actions</TabsTrigger>
+              <TabsTrigger value="themes">Themes & Coverage</TabsTrigger>
+              <TabsTrigger value="outlook">Outlook</TabsTrigger>
               <TabsTrigger value="prior">Prior Issues & Capacity</TabsTrigger>
               <TabsTrigger value="changes">Plan Changes</TabsTrigger>
               <TabsTrigger value="attention">Attention ({attention.length})</TabsTrigger>
               <TabsTrigger value="snapshots">Snapshots ({snapshots.data?.length ?? 0})</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="period">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">
+                    What happened during {period?.label ?? 'the reporting period'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-sm">
+                  {Object.entries(movement).map(([key, val]) => (
+                    <div key={key} className="flex justify-between border-b py-1">
+                      <span className="capitalize">{key.replace(/_/g, ' ')}</span>
+                      <span className="tabular-nums font-medium">{String(val)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(movement).length === 0 && (
+                    <p className="text-muted-foreground">No period activity recorded.</p>
+                  )}
+                </CardContent>
+              </Card>
+              <p className="text-xs text-muted-foreground mt-2">
+                Period activity counts movement inside the selected period only. The KPI cards above show the
+                cumulative position as at {fmt(shown.as_at)}.
+              </p>
+            </TabsContent>
+
+            <TabsContent value="completed" className="space-y-4">
+              {completedAudits.map((c) => (
+                <Card key={c.engagement_id}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-xs">{c.engagement_code ?? '—'}</span>
+                      {c.title ?? 'Untitled engagement'}
+                      <Badge variant="outline">{c.disposition ?? '—'}</Badge>
+                      {c.audit_opinion && <Badge variant="outline">Opinion: {c.audit_opinion}</Badge>}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm space-y-2">
+                    <div className="grid gap-1 sm:grid-cols-3 text-xs text-muted-foreground">
+                      <span>Department: {c.department ?? '—'}</span>
+                      <span>Lead auditor: {c.lead_auditor ?? '—'}</span>
+                      <span>Completed on: {fmt(c.completed_on)}</span>
+                      <span>Planned: {fmt(c.planned_start)} → {fmt(c.planned_end)}</span>
+                      <span>Actual: {fmt(c.actual_start)} → {fmt(c.actual_end)}</span>
+                      <span>Report: {c.report_number ?? 'Not issued'}</span>
+                    </div>
+                    {c.report_objective && <p><span className="text-muted-foreground">Objective: </span>{c.report_objective}</p>}
+                    {c.report_scope && <p><span className="text-muted-foreground">Scope: </span>{c.report_scope}</p>}
+                    {c.conclusion && <p><span className="text-muted-foreground">Conclusion: </span>{c.conclusion}</p>}
+                    {c.executive_summary && (
+                      <p><span className="text-muted-foreground">Summary: </span>{c.executive_summary}</p>
+                    )}
+                    <div className="text-xs">
+                      Findings: {c.findings_total} ({Object.entries(c.findings_by_severity ?? {})
+                        .map(([s, n]) => `${s} ${n}`).join(', ') || 'none'}) · Responses received:{' '}
+                      {c.responses_received} · Actions: {c.actions_total} ({c.actions_outstanding} outstanding)
+                      {c.next_target_date ? ` · Next target ${fmt(c.next_target_date)}` : ''}
+                      {c.follow_up_required ? ` · Follow-up ${fmt(c.follow_up_date)}` : ''}
+                    </div>
+                    {(c.significant_findings ?? []).length > 0 && (
+                      <div className="border-t pt-2 space-y-1">
+                        <p className="text-xs font-medium">Significant findings</p>
+                        {c.significant_findings.map((f) => (
+                          <p key={f.id} className="text-xs">
+                            <Badge variant="outline" className="mr-2">{f.severity}</Badge>
+                            {f.title} — {f.status}
+                            {f.recommendation ? ` · Recommendation: ${f.recommendation}` : ''}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+              {completedAudits.length === 0 && (
+                <Card><CardContent className="p-6 text-sm text-muted-foreground">
+                  No audits were completed during this reporting period.
+                </CardContent></Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="themes">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Recurring / cross-audit themes</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1.5">
+                    {themes.map((t) => (
+                      <div key={t.theme_code} className="flex justify-between border-b py-1">
+                        <span>{t.theme_name}</span>
+                        <span className="tabular-nums">{t.finding_count} finding(s) across {t.audit_count} audit(s)</span>
+                      </div>
+                    ))}
+                    {themes.length === 0 && (
+                      <p className="text-muted-foreground">No recurring themes identified in this plan.</p>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Assurance / risk coverage</CardTitle></CardHeader>
+                  <CardContent className="text-sm space-y-1.5">
+                    <div className="flex justify-between"><span>Planned vs completed audits</span><span className="tabular-nums">{coverage.completed_total ?? 0} / {coverage.planned_total ?? 0}</span></div>
+                    <div className="flex justify-between"><span>Critical risk areas covered</span><span className="tabular-nums">{coverage.critical_completed ?? 0} / {coverage.critical_planned ?? 0}</span></div>
+                    <div className="flex justify-between"><span>High risk areas covered</span><span className="tabular-nums">{coverage.high_completed ?? 0} / {coverage.high_planned ?? 0}</span></div>
+                    <div className="flex justify-between"><span>Departments covered</span><span className="tabular-nums">{coverage.departments_covered ?? 0} / {coverage.departments_planned ?? 0}</span></div>
+                    <div className="flex justify-between"><span>Functions covered</span><span className="tabular-nums">{coverage.functions_covered ?? 0} / {coverage.functions_planned ?? 0}</span></div>
+                    <div className="flex justify-between border-t pt-1.5"><span>High / Critical work deferred or cancelled</span><span className="tabular-nums">{coverage.deferred_high_risk ?? 0}</span></div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="outlook">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Outlook to fiscal year end</CardTitle></CardHeader>
+                <CardContent className="text-sm space-y-1.5">
+                  <div className="flex justify-between"><span>Fiscal year end</span><span>{fmt(forecast.fiscal_year_end)}</span></div>
+                  <div className="flex justify-between"><span>Expected plan completion</span><span className="tabular-nums">{forecast.expected_completion_pct ?? 0}%</span></div>
+                  <div className="flex justify-between"><span>Likely to close</span><span className="tabular-nums">{forecast.likely_to_close ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Likely to close with actions pending</span><span className="tabular-nums">{forecast.likely_actions_pending ?? 0}</span></div>
+                  <div className="flex justify-between"><span>At risk of delay</span><span className="tabular-nums">{forecast.at_risk_of_delay ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Likely carry-forward</span><span className="tabular-nums">{forecast.likely_carry_forward ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Findings awaiting an overdue management response</span><span className="tabular-nums">{forecast.management_response_delay ?? 0}</span></div>
+                  <div className="flex justify-between"><span>Capacity constrained</span><span>{forecast.capacity_constrained ? 'Yes' : 'No'}</span></div>
+                  <p className="text-xs text-muted-foreground border-t pt-2">{forecast.basis}</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+
 
             <TabsContent value="engagements">
               <Card><CardContent className="p-0 overflow-x-auto">
