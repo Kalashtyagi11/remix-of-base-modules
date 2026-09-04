@@ -608,6 +608,7 @@ Deno.serve(async (req: Request) => {
           attachment_id: a.attachmentId,
           disposition: a.disposition,
           required_for_delivery: a.requiredForDelivery,
+          requirement_scope: a.requirementScope ?? "all_channels",
         })),
       },
     );
