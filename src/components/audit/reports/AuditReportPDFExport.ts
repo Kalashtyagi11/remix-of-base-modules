@@ -38,11 +38,22 @@ interface PDFExportParams {
   foundation?: DocumentFoundationConfig;
   /** Resolved prior employer matters for the "Prior Compliance History" section (Phase E) */
   priorMatters?: ResolvedPriorMatter[];
+  /**
+   * `save` (default) downloads the file in the browser.
+   * `blob` returns the exact bytes so they can be sealed as a governed
+   * Internal Audit document artifact instead of being handed to the user.
+   */
+  output?: 'save' | 'blob';
+}
+
+export interface AuditReportPdfBytes {
+  blob: Blob;
+  fileName: string;
 }
 
 export function generateAuditReportPDF({
-  reportData, findings, responses, actions, engagement, departmentName, templateConfig, dbSectionRefs, foundation, priorMatters = [],
-}: PDFExportParams) {
+  reportData, findings, responses, actions, engagement, departmentName, templateConfig, dbSectionRefs, foundation, priorMatters = [], output = 'save',
+}: PDFExportParams): AuditReportPdfBytes | void {
   const baseConfig = templateConfig || DEFAULT_AUDIT_REPORT_CONFIG;
   // If DB sections are provided, inject them into the config
   const config = dbSectionRefs && dbSectionRefs.length > 0
@@ -337,6 +348,9 @@ export function generateAuditReportPDF({
   renderFooter(doc, branding);
 
   // Save
-  const fileName = `${(reportData.title || 'Audit-Report').replace(/[^a-zA-Z0-9]/g, '-')}-${reportData.status || 'Draft'}`;
+  const fileName = `${(reportData.report_number || reportData.title || 'Audit-Report').replace(/[^a-zA-Z0-9]/g, '-')}-${reportData.status || 'Draft'}`;
+  if (output === 'blob') {
+    return { blob: doc.output('blob') as Blob, fileName: `${fileName}.pdf` };
+  }
   doc.save(`${fileName}.pdf`);
 }
