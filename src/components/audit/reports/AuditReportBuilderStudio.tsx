@@ -76,6 +76,8 @@ export function AuditReportBuilderStudio() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const createVersion = useCreateReportVersion();
+  const issueReport = useIssueReport();
   const { userCode } = useUserCode();
 
   const reportId = searchParams.get('id');
