@@ -155,6 +155,13 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
 
   const k = shown?.kpis ?? {};
   const attention = shown?.management_attention ?? [];
+  const movement = shown?.period_movement ?? {};
+  const completedAudits = shown?.completed_audits ?? [];
+  const themes = shown?.themes ?? [];
+  const coverage = shown?.coverage ?? {};
+  const forecast = shown?.forecast ?? {};
+  const period = shown?.period;
+  const fidelity = shown?.temporal_fidelity;
 
   const engagementRows = useMemo(() => shown?.engagements ?? [], [shown]);
 
@@ -164,11 +171,16 @@ export function ManagementStatusPanel({ planId: fixedPlanId }: Props) {
     const res = await generateManagementStatusReport({
       planId: effectivePlanId,
       audience,
-      reportingPeriod: reportingPeriod || null,
+      reportingPeriod: reportingPeriod || period?.label || null,
       asAt: new Date(`${asAt}T23:59:59Z`).toISOString(),
       departmentId: effectiveDept,
       compareReportId: compareId === 'none' ? null : compareId,
+      periodCode,
+      periodStart: periodCode === 'CUSTOM' ? customStart || null : null,
+      periodEnd: periodCode === 'CUSTOM' ? customEnd || null : null,
+      reportMode,
     });
+
     setBusy(false);
     if (!res.ok) {
       toast.error(
