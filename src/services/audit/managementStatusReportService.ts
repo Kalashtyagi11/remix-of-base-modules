@@ -350,6 +350,9 @@ export interface ManagementStatusSnapshot {
   artifact_id: string | null;
   generated_by: string | null;
   generated_at: string;
+  /** Sealed configuration provenance — how this report was calculated. */
+  config_provenance?: Record<string, any> | null;
+
 }
 
 /** Live plan status + period activity — reads current state, never stored. */
