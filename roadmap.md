@@ -1,79 +1,19 @@
+# Roadmap — IA Methodology/Programme/Execution/Template/UX Integrity Gate
 
-## Compliance Workbench Queue Filtering & Sorting (Aug 31)
-- [ ] /compliance/workbench/queues — enterprise filters, quick chips, sortable headers, counts, empty/error states
-- [ ] /compliance/workbench/review-queue — review filters, waiting-time, default urgency sort, server-side paging
-- [ ] /compliance/workbench/reassignment — work-item filters + sortable officer workload, preserve reassignment controls
+## Phase 0 — Rebaseline (read-only, no changes)
+- [ ] Git HEAD + migration baseline
+- [ ] Inventory live/test DB `ia_*` objects
+- [ ] Inspect IA routes/screens, Programme/RCM, control tests, evidence, workpapers, findings, QA/review
+- [ ] Inspect checklist/template structures, plan templates, Action Centre/My Work, dashboard, Workload & Capacity, RBAC
+- [ ] Locate hardcoded question banks, mock/static programme content, duplicate/legacy audit engines, Compliance cross-coupling
 
-## Internal Audit — Post-UAT Wave 2 Corrective (Aug 31 / Sep 1)
-- [x] Working-paper storage path contract corrected to `internal-audit/<engagement>/<class>/<owner>/<file>`
-- [x] Compensating-rollback primitive + regression tests (20 passing)
-- [ ] Live upload proof + respondent RLS denial proof — BLOCKED: cannot mint a session as a specific auth user (workspace admin only)
-- [ ] Follow-Up runtime verification
+## Phase 1 — Preservation & Impact-Control Matrix + Concept Mapping (sections A, BX, BY)
+## Phase 2 — Methodology execution layer gaps (objectives→risk→criteria→control→procedure→test→sample→evidence→exception→finding)
+## Phase 3 — Exception/evaluation model, sampling, evidence linkage, workpaper de-duplication
+## Phase 4 — Template Library (AO–AX), versioning/snapshots (AE–AH), tailoring
+## Phase 5 — UX: stage-aware workspace, My Work dashboard, Continue Audit, Action Centre front-door
+## Phase 6 — RBAC/SoD small-team model, scalability 2→4→10
+## Phase 7 — Deterministic tests (BP 1–35), BQ fixture E2E, BR usability E2E
+## Phase 8 — Deliverable doc IA-METHODOLOGY-PROGRAMME-EXECUTION-TEMPLATE-UX-INTEGRITY-GATE.md + verdict
 
-## Internal Audit — Consolidated Business Convergence Wave (Sep 1)
-- [x] Phase 0 baseline: `docs/audit/INTERNAL-AUDIT-BUSINESS-CONVERGENCE-REBASE-2026-09-01.md`
-- [x] Annual plan submission converged to one governed command (permission + server readiness + lock + approval action + event)
-- [x] Governed engagement upsert extended to all planning fields; governed removal command with change log
-- [x] Server-authoritative readiness in plan register and plan workspace
-- [x] Plan header edit no longer resets lifecycle status; active-flag handling aligned with server
-- [x] Final corrective checkpoint: status contract, server authorization, actor identity, workspace-only editing, governed plan header updates (`docs/audit/INTERNAL-AUDIT-ANNUAL-PLAN-FINAL-CORRECTIVE-CHECKPOINT.md`)
-- [ ] Annual plan portfolio workspace enhancements (portfolio KPIs, coverage rollups)
-- [ ] Prior Audit History convergence (not started — deliberately deferred)
-- [ ] Access / permission matrix review (not started — deliberately deferred)
-
-- [ ] Prior audit history visibility on engagement/auditable area
-- [ ] Enterprise access management matrix (IA roles vs capabilities)
-
-## Compliance — Legal Review / Handover Queue Enterprise Upgrade (Sep 1)
-- [ ] Confirm canonical purpose of /compliance/enforcement/legal-queue vs Recommendation Queue / Pack Preparation / Approved Escalations
-- [ ] Server-side RPC: search, filters, sorting, pagination (25/50/100/200), scoped counts (replace .limit(100))
-- [ ] KPI strip + Requires Attention (config-driven SLA, no hardcoded deadlines)
-- [ ] Status tabs: Action Required / Tracking / History with business labels only
-- [ ] Enterprise table register, drill-downs (Employer 360, Case, Referral, Legal Intake)
-- [ ] Approval review dialog + maker-checker (server-side), rejection context, returned-by-Legal rework
-- [ ] Transactionally safe submit-to-Legal (RPC), double-submission prevention
-- [ ] URL state preservation, error state, RBAC separation (view/approve/submit)
-- [ ] E2E lifecycle verification + completion report
-
-## Compliance — Approved Escalations Enterprise Register (Sep 1)
-- [x] Ref data, register view + governed RPCs (register/detail) with financial masking
-- [x] `useApprovedEscalationRegister` hook (URL state, facets, KPIs, attention)
-- [x] `EscalationDetailDialog` + rewritten `ApprovedEscalationsPage`
-- [ ] Playwright end-to-end verification
-
-## Compliance — Returned From Legal Rework Queue (Sep 1, requested) — DONE
-- [x] Analyse `legalHandoffService.listReturns/resolveReturn`, `ce_legal_returns`, referral status coupling
-- [x] Server-side register RPC `ce_legal_return_register_v1`: referral/employer/case/legal refs, reason, required action, owner, rework age/SLA, pack readiness
-- [x] Governed `ce_legal_return_complete_rework_v1` (pack-readiness gated, identity-required, no SYSTEM fallback) + resubmission via `ce_legal_pack_submit_v1`
-- [x] Rework owner/tasks (`ce_legal_return_assign_v1`), repeat-return history, pack version retention, referral RETURNED status coherence
-- [x] Enterprise UI: KPIs, Requires Attention, filters/sort/pagination, detail workspace, error/empty states, RBAC split
-
-
-## Compliance — Legal Referral Launcher Eligibility Workspace (Sep 1) — DONE
-- [x] Establish canonical referral paths (Recommend Legal vs Wizard vs Quick Forward) and whether Launcher is retained/consolidated
-- [x] Canonical eligibility service/RPC (shared with Case Detail, Wizard, Recommendation Queue)
-- [x] Candidate register RPC replacing `.limit(50)`: search, filters, sorting, paging, counts, exposure, violation/enforcement context
-- [x] Duplicate-referral prevention + context-sensitive primary action per state
-- [x] Eligibility preview + server-side revalidation before initiation, audit trail, RBAC/maker-checker
-- [x] Enterprise UI + E2E verification
-
-## Compliance — Legal Recommendation Queue Enterprise Workspace (Sep 1) — DONE
-- [x] Analyse legalEscalationService/generateRecommendations, approveLegalReferral/rejectLegalReferral, ce_legal_recommendations
-- [x] Server-side register RPC: search, filters, sort, paging, KPIs, rule explainability, linked referral state
-- [x] Review/Approve + structured Reject dialogs (no prompt()), maker-checker surfaced, identity-required (no SYSTEM fallback)
-- [x] Resolve duplicate "Create Referral" vs approval-minted referral; context-sensitive next action to Legal Pack
-- [x] Enterprise UI: KPIs, Requires Attention, table register, URL state, error/empty states, RBAC split
-
-
-## Benefits defect register (2026-09-03)
-- [x] ELIG-01 shared catalogue rule mapper + import-time evaluability guard
-- [x] ELIG-02 verified already fail-closed; regression test added
-- [x] ELIG-03 single eligibility field registry (builders derive from authoritative list)
-- [x] AMND-01 amendment policy seed trigger + backfill (staged migration, applies on accept)
-- [x] AMND-02 banner shows the computed locked reason
-- [ ] SAP-SANCHIT v4 config corrections (reported, not auto-applied)
-
-## Benefits — Award Setup hand-off guard (Sep 3)
-- [x] Block "Send to Payment" (action layer + execution) when the claim has no award record
-- [x] Staged database guard on AWARD_SETUP → PAYMENT_QUEUE
-- [x] Fix preview build failure: mixed static/dynamic imports (identityService, auditPublicResponseService)
+STOP after this gate. No Production deployment. No data reset.
