@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { useIAFindingMutations } from '@/hooks/useAuditDataExtended2';
 import { useAuditFields } from '@/hooks/useAuditTrail';
+import { EvidencePanel } from './EvidencePanel';
+import { inheritExceptionEvidence } from '@/lib/audit/auditEvidenceService';
 
 
 const ITEM_RESULTS = ['Pass', 'Exception', 'Not Applicable'];
@@ -209,6 +211,12 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
       });
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.error || 'Finding created but could not be linked');
+      // Carry supporting evidence forward — relationships only, no file is copied.
+      try {
+        await inheritExceptionEvidence(evalTarget.id, created.id);
+      } catch (e: any) {
+        console.error('[TestExecutionPanel] evidence inheritance failed', e?.message);
+      }
       return created;
     },
     onSuccess: () => {
