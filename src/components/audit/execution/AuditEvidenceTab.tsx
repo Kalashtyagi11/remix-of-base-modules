@@ -13,6 +13,8 @@ import { useIAEvidenceMutations } from '@/hooks/useAuditDataExtended';
 import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
 import { formatDateForDisplay } from '@/lib/format-config';
 import { supabase } from '@/integrations/supabase/client';
+import { createAuditEvidence, openAuditEvidence } from '@/lib/audit/auditEvidenceService';
+import { AUDIT_ACCEPT_ATTRIBUTE } from '@/lib/audit/auditAttachmentUpload';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -77,46 +79,70 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
 
   const handleSave = async () => {
     // Evidence reference is allocated by the server on insert.
-    let fileUrl = form.file_url;
-    let fileName = form.file_name;
-    let fileType = form.file_type;
-    let fileSize: number | null = null;
-
     const fileInput = fileInputRef.current;
-    if (fileInput?.files?.[0]) {
-      const file = fileInput.files[0];
-      if (!ALLOWED_FILE_TYPES.includes(file.type) || file.size > MAX_FILE_SIZE) {
-        toast({ title: 'Invalid File', description: 'Check file type or size (max 20MB)', variant: 'destructive' });
+    const file = fileInput?.files?.[0];
+
+    // CANONICAL PATH — a new file always goes through the shared evidence
+    // service: private bucket upload, SHA-256 integrity, object path persisted
+    // (never a signed URL), compensating cleanup on database failure.
+    if (formMode === 'create') {
+      if (!file) {
+        toast({ title: 'Attach a file', description: 'Select the evidence file to upload.', variant: 'destructive' });
+        return;
+      }
+      if (!form.description.trim()) {
+        toast({ title: 'Description required', description: 'State what this evidence supports.', variant: 'destructive' });
         return;
       }
       setUploading(true);
-      const path = `evidence/${auditId}/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from('audit-attachments').upload(path, file);
-      setUploading(false);
-      if (error) { toast({ title: 'Upload Failed', variant: 'destructive' }); return; }
-      // Private bucket: persist the object path, resolve a signed URL on read.
-      fileUrl = path;
-      fileName = file.name;
-      fileType = file.type;
-      fileSize = file.size;
+      try {
+        await createAuditEvidence({
+          engagementId: auditId,
+          file,
+          description: form.description,
+          referenceNo: form.reference_no || null,
+          uploadedBy: userCode || null,
+          activityId: form.activity_id || null,
+          links: [
+            ...(form.activity_id ? [{ linked_type: 'activity' as const, linked_id: form.activity_id }] : []),
+            ...(form.finding_id ? [{ linked_type: 'finding' as const, linked_id: form.finding_id }] : []),
+          ],
+        });
+        toast({ title: 'Evidence added', description: 'Stored securely with an integrity value.' });
+        closeForm();
+      } catch (err: any) {
+        toast({ title: 'Evidence not saved', description: err.message, variant: 'destructive' });
+      } finally {
+        setUploading(false);
+      }
+      return;
     }
 
-    const tagsArray = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : null;
-    const payload = {
-      reference_no: form.reference_no || null,
-      description: form.description || null, file_name: fileName || null,
-      file_url: fileUrl || null, file_type: fileType || null, file_size: fileSize,
-      tags: tagsArray, activity_id: form.activity_id || null, finding_id: form.finding_id || null,
-      engagement_id: auditId, uploaded_by: userCode || null, upload_date: new Date().toISOString(),
-    };
+    // Edit = business metadata only. The stored file and its integrity value are
+    // immutable; a replacement file is a new evidence record.
+    if (formMode === 'edit' && editRecord) {
+      const tagsArray = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : null;
+      update.mutate({
+        id: editRecord.id,
+        reference_no: form.reference_no || null,
+        description: form.description || null,
+        tags: tagsArray,
+        activity_id: form.activity_id || null,
+        finding_id: form.finding_id || null,
+        updated_by: userCode || null,
+      } as any, { onSuccess: () => closeForm() });
+    }
+  };
 
-    if (formMode === 'create') {
-      create.mutate({ ...payload, created_by: userCode || null } as any, {
-        onSuccess: () => closeForm(),
-      });
-    } else if (formMode === 'edit' && editRecord) {
-      update.mutate({ id: editRecord.id, ...payload, updated_by: userCode || null } as any, {
-        onSuccess: () => closeForm(),
+  const viewFile = async (r: any) => {
+    const state = await openAuditEvidence(r);
+    if (!state.ok) {
+      toast({
+        title: state.missingFile ? 'File unavailable' : 'No file attached',
+        description: state.missingFile
+          ? 'This evidence record exists but its stored file could not be reached.'
+          : 'No file was ever attached to this evidence record.',
+        variant: 'destructive',
       });
     }
   };
@@ -128,7 +154,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
     { key: 'file_name', header: 'File', render: (r) => {
       if (!r.file_url && !r.file_name) return <span className="text-muted-foreground text-xs">None</span>;
       return (
-        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={(e) => { e.stopPropagation(); if (r.file_url) window.open(r.file_url, '_blank'); }}>
+        <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={(e) => { e.stopPropagation(); void viewFile(r); }}>
           <Paperclip className="h-3 w-3 mr-1" />{r.file_name || 'View'}
         </Button>
       );
@@ -179,7 +205,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
             {formMode !== 'view' && (
               <div>
                 <Label>Attach File</Label>
-                <Input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" className="text-xs" />
+                <Input ref={fileInputRef} type="file" accept={AUDIT_ACCEPT_ATTRIBUTE} className="text-xs" />
                 <p className="text-xs text-muted-foreground mt-1">PDF, DOC, XLS, PNG, JPG — max 20MB</p>
               </div>
             )}
@@ -187,7 +213,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
               <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border/30">
                 <Paperclip className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm">{form.file_name}</span>
-                {form.file_url && <Button variant="link" size="sm" className="h-auto p-0 text-xs ml-auto" onClick={() => window.open(form.file_url, '_blank')}><ExternalLink className="h-3 w-3 mr-1" />Open</Button>}
+                {form.file_url && <Button variant="link" size="sm" className="h-auto p-0 text-xs ml-auto" onClick={() => void viewFile(editRecord ?? form)}><ExternalLink className="h-3 w-3 mr-1" />Open</Button>}
               </div>
             )}
 
