@@ -171,8 +171,70 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
+  /**
+   * Explicit auditor action: raise a NEW finding from this exception, reusing the
+   * canonical ia_findings lifecycle (useIAFindingMutations) — no second engine.
+   * Context is carried over automatically; nothing is created without this click.
+   */
+  const createFindingFromException = useMutation({
+    mutationFn: async () => {
+      if (!findingForm.title.trim() || !findingForm.condition.trim()) {
+        throw new Error('Title and condition are required');
+      }
+      const created: any = await new Promise((resolve, reject) => {
+        createFinding.mutate(
+          {
+            title: findingForm.title,
+            condition: findingForm.condition,
+            criteria: findingForm.criteria || null,
+            effect: findingForm.effect || null,
+            risk_rating: findingForm.risk_rating,
+            recommendation: findingForm.recommendation || null,
+            status: 'Draft',
+            engagement_id: auditId,
+            department_id: departmentId || null,
+            control_test_id: test.id,
+            activity_id: test.activity_id || null,
+            annual_plan_id: null,
+            ...getCreateFields(),
+          } as any,
+          { onSuccess: resolve, onError: reject },
+        );
+      });
+      const { data, error } = await (supabase as any).rpc('ia_evaluate_test_exception', {
+        p_exception_id: evalTarget.id,
+        p_disposition: 'Finding Raised',
+        p_rationale: null,
+        p_finding_id: created.id,
+      });
+      if (error) throw error;
+      if (data && data.success === false) throw new Error(data.error || 'Finding created but could not be linked');
+      return created;
+    },
+    onSuccess: () => {
+      toast({ title: 'Finding raised', description: 'The exception is now linked to the new finding.' });
+      setFindingMode(false);
+      setEvalTarget(null);
+      qc.invalidateQueries({ queryKey: ['ia_findings'] });
+      refresh();
+    },
+    onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+  });
+
+  const openEvaluate = (exc: any) => {
+    setEvalTarget(exc);
+    setEvalForm({ disposition: 'No Finding - Isolated', rationale: '', finding_id: '' });
+    setFindingMode(false);
+    setFindingForm({
+      title: `Control exception — ${test.remarks || 'control test'}`,
+      condition: exc.condition || '',
+      criteria: '', effect: '', risk_rating: exc.severity || 'Medium', recommendation: '',
+    });
+  };
+
   const exceptionForItem = (itemId: string) => exceptions.find((x: any) => x.sample_result_id === itemId);
   const concluded = !!test.concluded_at || test.status === 'Concluded';
+
 
   return (
     <Card className="border-primary/40">
