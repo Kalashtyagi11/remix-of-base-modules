@@ -75959,6 +75959,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_key: boolean
+          na_rationale_requirement: string
           objective: string | null
           planned_sample_size: number | null
           procedure_no: string | null
@@ -75981,6 +75982,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_key?: boolean
+          na_rationale_requirement?: string
           objective?: string | null
           planned_sample_size?: number | null
           procedure_no?: string | null
@@ -76003,6 +76005,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_key?: boolean
+          na_rationale_requirement?: string
           objective?: string | null
           planned_sample_size?: number | null
           procedure_no?: string | null
@@ -77512,6 +77515,7 @@ export type Database = {
           evidence_id: string | null
           exception_detail: string | null
           id: string
+          na_rationale: string | null
           observation: string | null
           result: string | null
           sample_reference: string | null
@@ -77530,6 +77534,7 @@ export type Database = {
           evidence_id?: string | null
           exception_detail?: string | null
           id?: string
+          na_rationale?: string | null
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
@@ -77548,6 +77553,7 @@ export type Database = {
           evidence_id?: string | null
           exception_detail?: string | null
           id?: string
+          na_rationale?: string | null
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
@@ -77601,6 +77607,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           linked_evidence_ids: Json | null
+          na_rationale_requirement: string | null
           no_finding_rationale: string | null
           rcm_control_id: string | null
           remarks: string | null
@@ -77626,6 +77633,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           linked_evidence_ids?: Json | null
+          na_rationale_requirement?: string | null
           no_finding_rationale?: string | null
           rcm_control_id?: string | null
           remarks?: string | null
@@ -77651,6 +77659,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           linked_evidence_ids?: Json | null
+          na_rationale_requirement?: string | null
           no_finding_rationale?: string | null
           rcm_control_id?: string | null
           remarks?: string | null
@@ -78537,6 +78546,7 @@ export type Database = {
           is_key: boolean
           is_tailored: boolean
           na_rationale: string | null
+          na_rationale_requirement: string
           objective: string | null
           planned_sample_size: number | null
           rcm_control_id: string | null
@@ -78567,6 +78577,7 @@ export type Database = {
           is_key?: boolean
           is_tailored?: boolean
           na_rationale?: string | null
+          na_rationale_requirement?: string
           objective?: string | null
           planned_sample_size?: number | null
           rcm_control_id?: string | null
@@ -78597,6 +78608,7 @@ export type Database = {
           is_key?: boolean
           is_tailored?: boolean
           na_rationale?: string | null
+          na_rationale_requirement?: string
           objective?: string | null
           planned_sample_size?: number | null
           rcm_control_id?: string | null
@@ -83066,6 +83078,9 @@ export type Database = {
         Row: {
           condition: string
           control_test_id: string | null
+          corrected_at: string | null
+          corrected_by: string | null
+          correction_description: string | null
           created_at: string
           created_by: string | null
           criteria: string | null
@@ -83078,6 +83093,7 @@ export type Database = {
           evaluation_status: string
           exception_no: string | null
           finding_id: string | null
+          further_work_required: boolean
           id: string
           sample_result_id: string | null
           severity: string
@@ -83087,6 +83103,9 @@ export type Database = {
         Insert: {
           condition: string
           control_test_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          correction_description?: string | null
           created_at?: string
           created_by?: string | null
           criteria?: string | null
@@ -83099,6 +83118,7 @@ export type Database = {
           evaluation_status?: string
           exception_no?: string | null
           finding_id?: string | null
+          further_work_required?: boolean
           id?: string
           sample_result_id?: string | null
           severity?: string
@@ -83108,6 +83128,9 @@ export type Database = {
         Update: {
           condition?: string
           control_test_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          correction_description?: string | null
           created_at?: string
           created_by?: string | null
           criteria?: string | null
@@ -83120,6 +83143,7 @@ export type Database = {
           evaluation_status?: string
           exception_no?: string | null
           finding_id?: string | null
+          further_work_required?: boolean
           id?: string
           sample_result_id?: string | null
           severity?: string
@@ -134002,6 +134026,10 @@ export type Database = {
       ia_msr_capture_evidence: {
         Args: { p_report_id: string }
         Returns: number
+      }
+      ia_na_rationale_requirement: {
+        Args: { p_test_id: string }
+        Returns: string
       }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
