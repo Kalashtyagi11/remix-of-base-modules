@@ -128280,7 +128280,7 @@ export type Database = {
       ce_arrangement_facets_v1: { Args: never; Returns: Json }
       ce_arrangement_grace_days:
         | { Args: never; Returns: number }
-        | { Args: { p_scope_key?: string }; Returns: number }
+        | { Args: { p_scope_key: string }; Returns: number }
       ce_arrangement_register_v1: { Args: { p_params?: Json }; Returns: Json }
       ce_arrangement_reject_v1: {
         Args: { p_arrangement_id: string; p_reason: string }
