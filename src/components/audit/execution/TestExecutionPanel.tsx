@@ -338,45 +338,93 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
 
         {evalTarget && (
           <div className="space-y-3 rounded-md border border-primary/40 p-3">
-            <p className="text-sm font-semibold">Evaluate exception</p>
+            <p className="text-sm font-semibold">Auditor evaluation of the exception</p>
             <p className="text-xs text-muted-foreground">{evalTarget.condition}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div><Label>Disposition *</Label>
-                <Select value={evalForm.disposition} onValueChange={v => setEvalForm(f => ({ ...f, disposition: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{DISPOSITIONS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                </Select>
+
+            {findingMode ? (
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Raising a new finding from this exception. Audit, control test, procedure and exception context is carried
+                  over automatically — you can complete the remaining detail on the Findings tab.
+                </p>
+                <div><Label>Finding title *</Label><Input value={findingForm.title} onChange={e => setFindingForm(f => ({ ...f, title: e.target.value }))} /></div>
+                <div><Label>Condition *</Label><Textarea rows={2} value={findingForm.condition} onChange={e => setFindingForm(f => ({ ...f, condition: e.target.value }))} /></div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div><Label>Criteria</Label><Textarea rows={2} value={findingForm.criteria} onChange={e => setFindingForm(f => ({ ...f, criteria: e.target.value }))} /></div>
+                  <div><Label>Effect</Label><Textarea rows={2} value={findingForm.effect} onChange={e => setFindingForm(f => ({ ...f, effect: e.target.value }))} /></div>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div><Label>Risk rating</Label>
+                    <Select value={findingForm.risk_rating} onValueChange={v => setFindingForm(f => ({ ...f, risk_rating: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{['Low', 'Medium', 'High', 'Critical'].map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label>Recommendation</Label><Textarea rows={2} value={findingForm.recommendation} onChange={e => setFindingForm(f => ({ ...f, recommendation: e.target.value }))} /></div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => createFindingFromException.mutate()} disabled={createFindingFromException.isPending}>
+                    {createFindingFromException.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Create finding and link
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setFindingMode(false)}>Back</Button>
+                </div>
               </div>
-              {evalForm.disposition === 'Finding Raised' ? (
-                <div><Label>Linked finding *</Label>
-                  <Select value={evalForm.finding_id} onValueChange={v => setEvalForm(f => ({ ...f, finding_id: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select the finding" /></SelectTrigger>
-                    <SelectContent>
-                      {findings.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.finding_id ? `${f.finding_id} — ` : ''}{f.title}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {findings.length === 0 && <p className="mt-1 text-[11px] text-muted-foreground">Raise the finding on the Findings tab first.</p>}
+            ) : (
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div><Label>Disposition *</Label>
+                    <Select value={evalForm.disposition} onValueChange={v => setEvalForm(f => ({ ...f, disposition: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{DISPOSITIONS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  {evalForm.disposition === 'Finding Raised' ? (
+                    <div><Label>Link an existing finding *</Label>
+                      <Select value={evalForm.finding_id} onValueChange={v => setEvalForm(f => ({ ...f, finding_id: v }))}>
+                        <SelectTrigger><SelectValue placeholder="Select the finding" /></SelectTrigger>
+                        <SelectContent>
+                          {findings.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.finding_id ? `${f.finding_id} — ` : ''}{f.title}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Link several exceptions to one finding when they show the same systemic issue, or create a new finding below.
+                      </p>
+                    </div>
+                  ) : (
+                    <div><Label>Severity</Label>
+                      <Select value={evalTarget.severity} disabled>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div><Label>Severity</Label>
-                  <Select value={evalTarget.severity} disabled>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{SEVERITIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
+                {evalForm.disposition !== 'Finding Raised' && (
+                  <div>
+                    <Label>{RATIONALE_LABEL[evalForm.disposition] || 'Rationale *'}</Label>
+                    <Textarea rows={2} value={evalForm.rationale} onChange={e => setEvalForm(f => ({ ...f, rationale: e.target.value }))} />
+                    {evalForm.disposition === 'More Testing Required' && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">The test cannot be concluded until this further work is resolved.</p>
+                    )}
+                    {evalForm.disposition === 'Corrected During Fieldwork' && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">The original exception stays on record together with the correction.</p>
+                    )}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => evaluate.mutate()} disabled={evaluate.isPending}>
+                    {evaluate.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Save evaluation
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => setFindingMode(true)}>
+                    <AlertTriangle className="h-3.5 w-3.5 mr-1" />Create finding from this exception
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setEvalTarget(null)}>Cancel</Button>
                 </div>
-              )}
-            </div>
-            {evalForm.disposition !== 'Finding Raised' && (
-              <div><Label>Rationale *</Label><Textarea rows={2} value={evalForm.rationale} onChange={e => setEvalForm(f => ({ ...f, rationale: e.target.value }))} placeholder="Why no finding is raised for this exception" /></div>
+              </>
             )}
-            <div className="flex gap-2">
-              <Button size="sm" onClick={() => evaluate.mutate()} disabled={evaluate.isPending}>
-                {evaluate.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Save evaluation
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setEvalTarget(null)}>Cancel</Button>
-            </div>
           </div>
         )}
+
       </CardContent>
     </Card>
   );
