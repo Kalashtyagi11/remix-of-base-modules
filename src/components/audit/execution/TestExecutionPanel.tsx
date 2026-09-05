@@ -278,9 +278,9 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
                         <AlertTriangle className="h-3.5 w-3.5 mr-1" />Raise exception
                       </Button>
                     )}
-                    {exc && exc.evaluation_status === 'Open' && !concluded && (
-                      <Button size="sm" onClick={() => { setEvalTarget(exc); setEvalForm({ disposition: 'No Finding - Isolated', rationale: '', finding_id: '' }); }}>
-                        Evaluate
+                    {exc && (exc.evaluation_status === 'Open' || exc.evaluation_status === 'Further Work Required') && !concluded && (
+                      <Button size="sm" onClick={() => openEvaluate(exc)}>
+                        {exc.evaluation_status === 'Open' ? 'Evaluate' : 'Resolve further work'}
                       </Button>
                     )}
                   </div>
