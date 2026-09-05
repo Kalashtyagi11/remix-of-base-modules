@@ -19,11 +19,22 @@ const DISPOSITIONS = [
   'No Finding - Isolated',
   'No Finding - Compensating Control',
   'Not an Exception',
+  'More Testing Required',
+  'Corrected During Fieldwork',
 ];
+
+const RATIONALE_LABEL: Record<string, string> = {
+  'No Finding - Isolated': 'Why this is isolated and no finding is raised *',
+  'No Finding - Compensating Control': 'Compensating / alternate control relied on *',
+  'Not an Exception': 'Why this is not an exception *',
+  'More Testing Required': 'What further testing is required *',
+  'Corrected During Fieldwork': 'What was corrected, by whom, and supporting evidence *',
+};
 
 interface Props {
   auditId: string;
   test: any;
+  departmentId?: string;
   onClose: () => void;
 }
 
@@ -34,14 +45,19 @@ interface Props {
  * items recorded here. Exceptions never auto-create findings — an auditor must
  * evaluate each one, and unevaluated exceptions block test conclusion.
  */
-export function TestExecutionPanel({ auditId, test, onClose }: Props) {
+export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { userCode } = useUserCode();
-  const [itemForm, setItemForm] = useState({ sample_reference: '', result: 'Pass', observation: '', exception_detail: '' });
+  const { create: createFinding } = useIAFindingMutations();
+  const { getCreateFields } = useAuditFields();
+  const [itemForm, setItemForm] = useState({ sample_reference: '', result: 'Pass', observation: '', exception_detail: '', na_rationale: '' });
   const [showItemForm, setShowItemForm] = useState(false);
   const [evalTarget, setEvalTarget] = useState<any>(null);
   const [evalForm, setEvalForm] = useState({ disposition: 'No Finding - Isolated', rationale: '', finding_id: '' });
+  const [findingMode, setFindingMode] = useState(false);
+  const [findingForm, setFindingForm] = useState({ title: '', condition: '', criteria: '', effect: '', risk_rating: 'Medium', recommendation: '' });
+
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['ia_control_test_results', test.id],
