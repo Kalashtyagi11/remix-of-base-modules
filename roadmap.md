@@ -8,8 +8,8 @@
 - [ ] Locate hardcoded question banks, mock/static programme content, duplicate/legacy audit engines, Compliance cross-coupling
 
 ## Phase 1 — Preservation & Impact-Control Matrix + Concept Mapping (sections A, BX, BY)
-## Phase 2 — Methodology execution layer gaps (objectives→risk→criteria→control→procedure→test→sample→evidence→exception→finding)
-## Phase 3 — Exception/evaluation model, sampling, evidence linkage, workpaper de-duplication
+## Phase 2 — [x] Programme snapshot foundation + executable procedures (bind/approve/freeze proven in TEST)
+## Phase 3 — [x] Sampling + exception/evaluation model proven; [ ] evidence upload convergence & hash population
 ## Phase 4 — Template Library (AO–AX), versioning/snapshots (AE–AH), tailoring
 ## Phase 5 — UX: stage-aware workspace, My Work dashboard, Continue Audit, Action Centre front-door
 ## Phase 6 — RBAC/SoD small-team model, scalability 2→4→10

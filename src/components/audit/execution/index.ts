@@ -13,3 +13,5 @@ export { AuditControlTestsTab } from './AuditControlTestsTab';
 export { AuditFollowUpsTab } from './AuditFollowUpsTab';
 export { AuditProgrammeRcmTab } from './AuditProgrammeRcmTab';
 export { AuditQualityReviewTab } from './AuditQualityReviewTab';
+export { EngagementProgrammePanel } from './EngagementProgrammePanel';
+export { TestExecutionPanel } from './TestExecutionPanel';

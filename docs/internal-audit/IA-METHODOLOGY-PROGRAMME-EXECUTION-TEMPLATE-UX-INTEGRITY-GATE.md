@@ -204,3 +204,58 @@ Target: Approved Programme Template (objectives→risks→controls→procedures�
 | Close audit | 3 | no | governed, fine | unchanged | none |
 
 _Phases 2–8 (implementation, tests, E2E, verdict) pending. No changes made during rebaseline._
+
+---
+
+## 10. Phase 2–3 Implementation Evidence (TEST, authenticated)
+
+All proofs below were executed against the TEST project through the REST API using a genuine
+authenticated Internal Audit session (no SQL bypass, no service role).
+
+### 10.1 Programme snapshot foundation — PROVEN
+
+| # | Check | Result |
+|---|-------|--------|
+| P1 | Master programme frozen once Approved | `IA_PROGRAMME_FROZEN` on `program_name` update |
+| P2 | Procedures of an approved master frozen | `IA_PROGRAMME_FROZEN: parent programme is Approved` |
+| P3 | Bind master → engagement snapshot | `{"success": true, "steps": 2, "engagement_programme_id": "a297ce54-…"}` |
+| P4 | Approve snapshot materialises control tests | `{"success": true, "steps": 2, "control_tests_created": 1}` (1 of 2 steps carries an RCM control) |
+| P5 | Approved snapshot planning fields frozen | `IA_PROGRAMME_SNAPSHOT_FROZEN: field "title" is frozen…` |
+| P6 | Execution fields still mutable after approval | `execution_status` → `In Progress` accepted |
+
+No methodology-version history was invented for pre-existing audits; the single legacy engagement
+keeps its original control test untouched.
+
+### 10.2 Sample-item execution — PROVEN
+
+Sample items recorded on `ia_control_test_results` derive the parent test metrics:
+`{"sample_size": 3, "exceptions_found": 1}` — no manual entry of either number.
+
+### 10.3 Exception / potential-finding model — PROVEN
+
+| # | Check | Result |
+|---|-------|--------|
+| E1 | Conclude with an unevaluated exception | blocked — `IA_EXCEPTIONS_UNEVALUATED` |
+| E2 | Evaluate "No Finding" without rationale | blocked — `IA_RATIONALE_REQUIRED` |
+| E3 | Evaluate "Finding Raised" without a finding | blocked — `IA_FINDING_REQUIRED` |
+| E4 | Evaluate with documented rationale | accepted |
+| E5 | Conclude after evaluation | accepted, `exceptions: 1, linked_findings: 0` |
+
+No failed test, failed sample, partial or ineffective result creates a finding automatically at any
+point in the chain. Findings remain an explicit auditor act on the Findings tab.
+
+### 10.4 UI surfaces added (additive, no mature capability removed)
+
+- `EngagementProgrammePanel` — bind / tailor / approve the engagement programme, shown at the top of
+  the existing **Programme / RCM** tab. Approved snapshots show a lock and per-step execution state.
+- `TestExecutionPanel` — sample-item capture, exception raising and exception evaluation, opened from
+  a new action on each row of the existing **Control Tests** tab.
+- Findings, responses, actions, follow-up, quality review, reporting, sealing, Management Reporting
+  and Omni-Comms were not modified.
+
+### 10.5 Status
+
+Phases 0–3 of this gate are complete and proven. **Not yet complete:** evidence upload convergence
+onto the canonical signed-URL/attachment path with hash population, the Template Library front door,
+the stage-grouped workspace / Continue Audit UX, and the full deterministic + usability + scalability
+test suite. The gate verdict therefore remains **IN PROGRESS — no PASS issued.**

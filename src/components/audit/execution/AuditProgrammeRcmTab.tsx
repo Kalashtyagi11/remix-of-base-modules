@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
+import { EngagementProgrammePanel } from './EngagementProgrammePanel';
 
 const CONTROL_TYPES = ['Preventive', 'Detective', 'Corrective', 'Directive'];
 const FREQUENCIES = ['Continuous', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annually', 'Ad Hoc'];
@@ -198,6 +199,8 @@ export function AuditProgrammeRcmTab({ auditId, departmentId, functionId }: Audi
 
   return (
     <div className="space-y-4">
+      <EngagementProgrammePanel auditId={auditId} />
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {processes.length} process(es) · {risks.length} risk(s) · {controls.length} control(s) · {tests.length} test(s) in this audit

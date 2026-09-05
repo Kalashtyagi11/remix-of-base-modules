@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Loader2, Eye, Edit, Shield, X, Gavel } from 'lucide-react';
+import { Plus, Loader2, Eye, Edit, Shield, X, Gavel, ListChecks } from 'lucide-react';
 import { StatusBadge, DataTable } from '@/components/common';
 import type { DataTableColumn } from '@/components/common';
 import { useEngagementControlTests } from '@/hooks/useEngagementData';
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useConcludeControlTest } from '@/hooks/useAuditLifecycleCommands';
+import { TestExecutionPanel } from './TestExecutionPanel';
 
 const TEST_RESULTS = ['Effective', 'Partially Effective', 'Ineffective', 'Not Tested'];
 const CONCLUSION_RESULTS = ['Effective', 'Partially Effective', 'Ineffective'];
@@ -51,6 +52,7 @@ export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
   const concludeCommand = useConcludeControlTest();
   const [concludeRecord, setConcludeRecord] = useState<any>(null);
   const [concludeForm, setConcludeForm] = useState({ result: 'Effective', conclusion: '', no_finding_rationale: '' });
+  const [executeRecord, setExecuteRecord] = useState<any>(null);
 
 
   const createMutation = useMutation({
@@ -201,6 +203,14 @@ export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
         </Card>
       )}
 
+      {executeRecord && (
+        <TestExecutionPanel
+          auditId={auditId}
+          test={tests.find((t: any) => t.id === executeRecord.id) || executeRecord}
+          onClose={() => setExecuteRecord(null)}
+        />
+      )}
+
       {/* Governed conclusion */}
       {concludeRecord && (
         <Card className="border-primary/40">
@@ -240,6 +250,7 @@ export function AuditControlTestsTab({ auditId }: AuditControlTestsTabProps) {
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openView(row); }}><Eye className="h-3.5 w-3.5" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); openEdit(row); }}><Edit className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Sample execution" onClick={(e) => { e.stopPropagation(); setExecuteRecord(row); }}><ListChecks className="h-3.5 w-3.5" /></Button>
                 {!isConcluded(row) && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" title="Conclude test" onClick={(e) => { e.stopPropagation(); openConclude(row); }}><Gavel className="h-3.5 w-3.5" /></Button>
                 )}
