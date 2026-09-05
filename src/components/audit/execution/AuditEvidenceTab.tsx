@@ -66,7 +66,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
       acc[l.linked_type] = (acc[l.linked_type] || 0) + 1;
       return acc;
     }, {});
-    return Object.entries(counts).map(([t, n]) => `${t.replace('_', ' ')}${n > 1 ? ` ×${n}` : ''}`).join(', ');
+    return Object.entries(counts as Record<string, number>).map(([t, n]) => `${t.replace('_', ' ')}${n > 1 ? ` ×${n}` : ''}`).join(', ');
   };
 
 
