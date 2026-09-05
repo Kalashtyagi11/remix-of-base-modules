@@ -78903,11 +78903,15 @@ export type Database = {
           reference_no: string | null
           storage_bucket: string | null
           storage_path: string | null
+          superseded_by_evidence_id: string | null
           tags: string[] | null
           updated_at: string | null
           updated_by: string | null
           upload_date: string | null
           uploaded_by: string | null
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
         }
         Insert: {
           activity_id?: string | null
@@ -78929,11 +78933,15 @@ export type Database = {
           reference_no?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          superseded_by_evidence_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
           upload_date?: string | null
           uploaded_by?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Update: {
           activity_id?: string | null
@@ -78955,11 +78963,15 @@ export type Database = {
           reference_no?: string | null
           storage_bucket?: string | null
           storage_path?: string | null
+          superseded_by_evidence_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
           upload_date?: string | null
           uploaded_by?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Relationships: [
           {
@@ -78988,6 +79000,13 @@ export type Database = {
             columns: ["engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_evidence_superseded_by_evidence_id_fkey"
+            columns: ["superseded_by_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -133837,6 +133856,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_evidence_is_relied_upon: {
+        Args: { p_evidence_id: string }
+        Returns: boolean
+      }
       ia_extend_action_target: {
         Args: {
           p_action_id: string
@@ -133927,6 +133950,10 @@ export type Database = {
         Returns: Json
       }
       ia_has: { Args: { _action: string; _module: string }; Returns: boolean }
+      ia_inherit_exception_evidence: {
+        Args: { p_exception_id: string; p_finding_id: string }
+        Returns: number
+      }
       ia_is_audit_admin: { Args: never; Returns: boolean }
       ia_is_department_respondent: {
         Args: { _department_id: string }
@@ -133950,6 +133977,15 @@ export type Database = {
       ia_link_action_evidence: {
         Args: { p_action_id: string; p_evidence_ids: string[] }
         Returns: Json
+      }
+      ia_link_evidence: {
+        Args: {
+          p_evidence_id: string
+          p_link_role?: string
+          p_linked_id: string
+          p_linked_type: string
+        }
+        Returns: string
       }
       ia_link_prior_action: {
         Args: {
@@ -134391,6 +134427,7 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_unlink_evidence: { Args: { p_link_id: string }; Returns: boolean }
       ia_unlink_prior_action: {
         Args: { p_reference_id: string }
         Returns: Json
