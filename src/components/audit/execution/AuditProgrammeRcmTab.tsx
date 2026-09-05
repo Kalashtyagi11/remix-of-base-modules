@@ -199,6 +199,8 @@ export function AuditProgrammeRcmTab({ auditId, departmentId, functionId }: Audi
 
   return (
     <div className="space-y-4">
+      <EngagementProgrammePanel auditId={auditId} />
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           {processes.length} process(es) · {risks.length} risk(s) · {controls.length} control(s) · {tests.length} test(s) in this audit
