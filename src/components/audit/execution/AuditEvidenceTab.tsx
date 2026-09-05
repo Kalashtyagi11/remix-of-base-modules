@@ -14,6 +14,7 @@ import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
 import { formatDateForDisplay } from '@/lib/format-config';
 import { supabase } from '@/integrations/supabase/client';
 import { createAuditEvidence, openAuditEvidence } from '@/lib/audit/auditEvidenceService';
+import { useQuery } from '@tanstack/react-query';
 import { AUDIT_ACCEPT_ATTRIBUTE } from '@/lib/audit/auditAttachmentUpload';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
@@ -21,8 +22,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
-const ALLOWED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/png', 'image/jpeg'];
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 const emptyForm = {
   evidence_id: '', reference_no: '', description: '', file_name: '',
@@ -46,6 +45,29 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
   const [editRecord, setEditRecord] = useState<any>(null);
   const [form, setForm] = useState(emptyForm);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Relationship register — one physical evidence file may support many objects.
+  const { data: links = [] } = useQuery({
+    queryKey: ['ia_evidence_links_engagement', auditId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('ia_evidence_links')
+        .select('evidence_id, linked_type')
+        .eq('engagement_id', auditId);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as any[];
+    },
+    enabled: !!auditId,
+  });
+  const linkLabel = (evId: string) => {
+    const mine = links.filter((l: any) => l.evidence_id === evId);
+    if (!mine.length) return null;
+    const counts = mine.reduce((acc: Record<string, number>, l: any) => {
+      acc[l.linked_type] = (acc[l.linked_type] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([t, n]) => `${t.replace('_', ' ')}${n > 1 ? ` ×${n}` : ''}`).join(', ');
+  };
 
 
   const openCreate = () => {
@@ -168,6 +190,10 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
       if (!r.finding_id) return <span className="text-muted-foreground text-xs">—</span>;
       const finding = auditFindings.find((f: any) => f.id === r.finding_id);
       return <span className="text-xs">{finding?.title || r.finding_id.slice(0, 8)}</span>;
+    }},
+    { key: 'linked_to', header: 'Linked To', render: (r) => {
+      const label = linkLabel(r.id);
+      return <span className="text-xs">{label || '—'}</span>;
     }},
     { key: 'tags', header: 'Tags', render: (r) => {
       if (!r.tags?.length) return <span className="text-muted-foreground text-xs">—</span>;
