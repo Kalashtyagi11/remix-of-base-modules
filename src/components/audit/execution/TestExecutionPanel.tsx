@@ -13,6 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { useIAFindingMutations } from '@/hooks/useAuditDataExtended2';
 import { useAuditFields } from '@/hooks/useAuditTrail';
+import { EvidencePanel } from './EvidencePanel';
+import { inheritExceptionEvidence } from '@/lib/audit/auditEvidenceService';
 
 
 const ITEM_RESULTS = ['Pass', 'Exception', 'Not Applicable'];
@@ -209,6 +211,12 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
       });
       if (error) throw error;
       if (data && data.success === false) throw new Error(data.error || 'Finding created but could not be linked');
+      // Carry supporting evidence forward — relationships only, no file is copied.
+      try {
+        await inheritExceptionEvidence(evalTarget.id, created.id);
+      } catch (e: any) {
+        console.error('[TestExecutionPanel] evidence inheritance failed', e?.message);
+      }
       return created;
     },
     onSuccess: () => {
@@ -255,7 +263,8 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
             {items.map((it: any) => {
               const exc = exceptionForItem(it.id);
               return (
-                <div key={it.id} className="flex items-start justify-between gap-3 p-3">
+                <div key={it.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
                       <span className="text-muted-foreground mr-2">#{it.test_item_no}</span>
@@ -291,12 +300,56 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
                       </Button>
                     )}
                   </div>
+                  </div>
+                  <div className="mt-2 pl-6">
+                    <EvidencePanel
+                      engagementId={auditId}
+                      linkedType="sample_item"
+                      linkedId={it.id}
+                      inheritedLinks={[{ linked_type: 'control_test', linked_id: test.id, link_role: 'Test evidence' }]}
+                      title="Evidence for this sample"
+                      readOnly={concluded}
+                      compact
+                    />
+                    {exc && (
+                      <div className="mt-2">
+                        <EvidencePanel
+                          engagementId={auditId}
+                          linkedType="exception"
+                          linkedId={exc.id}
+                          inheritedLinks={[
+                            { linked_type: 'control_test', linked_id: test.id, link_role: 'Test evidence' },
+                            { linked_type: 'sample_item', linked_id: it.id, link_role: 'Sample evidence' },
+                          ]}
+                          title="Exception evidence"
+                          readOnly={!!exc.evaluated_at}
+                          compact
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
+
               );
             })}
             {items.length === 0 && <p className="p-3 text-xs text-muted-foreground">No sample items recorded yet.</p>}
           </div>
         )}
+
+        <div className="rounded-md border p-3">
+          <EvidencePanel
+            engagementId={auditId}
+            linkedType="control_test"
+            linkedId={test.id}
+            inheritedLinks={test.engagement_programme_step_id
+              ? [{ linked_type: 'programme_step', linked_id: test.engagement_programme_step_id, link_role: 'Procedure evidence' }]
+              : []}
+            title="Test-level evidence"
+            readOnly={concluded}
+          />
+        </div>
+
+
 
         {!concluded && (showItemForm ? (
           <div className="space-y-3 rounded-md border p-3">
