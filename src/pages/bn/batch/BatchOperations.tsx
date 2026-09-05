@@ -49,7 +49,25 @@ export default function BatchOperations() {
 
   const handleAction = async (params: any) => {
     try {
-      await executeMutation.mutateAsync(params);
+      const result: any = await executeMutation.mutateAsync(params);
+
+      // ISSUE reports per-item outcomes: zero issued with failures is a failure,
+      // not a success, and must not be reported as a completed action.
+      if (params.action === 'ISSUE' && result && typeof result.issued === 'number') {
+        const { issued, failed, firstError } = result;
+        if (issued === 0 && failed > 0) {
+          toast.error(firstError ? `Issue failed: ${firstError}` : 'Issue failed for all items');
+          return;
+        }
+        if (failed > 0) {
+          toast.warning(`Issued ${issued}, failed ${failed}${firstError ? ` — ${firstError}` : ''}`);
+          return;
+        }
+        toast.success(`Issued ${issued} payment${issued === 1 ? '' : 's'}`);
+        setSelectedBatchId(null);
+        return;
+      }
+
       toast.success(`Batch action "${params.action}" completed`);
     } catch (err: any) {
       toast.error(err.message || 'Action failed');

@@ -324,6 +324,7 @@ export const READINESS_RULES: ReadinessRule[] = [
   { code: 'EVIDENCE_COMPLETE', label: 'Evidence Complete', description: 'All required evidence must be verified', blocking: false },
   { code: 'ENTITLEMENT_BALANCE', label: 'Entitlement Balance', description: 'Remaining entitlement balance must cover this amount', blocking: true },
   { code: 'SCHEDULE_DUE', label: 'Schedule Due', description: 'Scheduled date must be on or before current date', blocking: false },
+  { code: 'BANK_DETAILS_ON_FILE', label: 'Bank Details On File', description: 'No bank account on the claim — payable fell back to CHEQUE and will not match a DIRECT_DEPOSIT batch', blocking: false },
 ];
 
 export function evaluateReadiness(instruction: Partial<PayableInstruction>, context: {
@@ -343,6 +344,8 @@ export function evaluateReadiness(instruction: Partial<PayableInstruction>, cont
 
   const scheduled = instruction.scheduled_date ? new Date(instruction.scheduled_date) <= new Date() : true;
   flags['SCHEDULE_DUE'] = scheduled;
+  flags['BANK_DETAILS_ON_FILE'] =
+    instruction.payment_method !== 'CHEQUE' || !!instruction.bank_account;
   flags['EVIDENCE_COMPLETE'] = true; // Default; overridden by caller with actual evidence check
 
   for (const rule of READINESS_RULES) {

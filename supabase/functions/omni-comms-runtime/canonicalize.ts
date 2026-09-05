@@ -32,6 +32,7 @@ export interface CanonicalAttachment {
   attachmentId: string;
   disposition: string;
   requiredForDelivery: boolean;
+  requirementScope: 'all_channels' | 'attachment_capable_channels';
 }
 
 export interface CanonicalCallerContext {
@@ -288,6 +289,9 @@ export function canonicalizeAttachments(
       attachmentId: key,
       disposition,
       requiredForDelivery: e.requiredForDelivery === true,
+      requirementScope: e.requirementScope === 'attachment_capable_channels'
+        ? 'attachment_capable_channels'
+        : 'all_channels',
     });
   }
   return out;

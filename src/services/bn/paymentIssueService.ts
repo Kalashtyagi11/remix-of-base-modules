@@ -28,6 +28,7 @@
  *   - Reissue-safe: voided cheques can be reissued with new cheque number.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { ensurePostIssueTasks } from '@/services/bn/postIssueService';
 
 const db = supabase as any;
 
@@ -401,6 +402,9 @@ export async function executeIssue(issueIds: string[], userCode: string): Promis
       if (linkErr) throw new Error(`Cheque written but payable back-link failed: ${linkErr.message}`);
 
 
+      // Post-issue checklist must exist for every issued payment.
+      await ensurePostIssueTasks(record.batch_id ?? null, userCode, { issueRecordId: id });
+
       result.issued++;
       result.details.push({ id, ssn: record.ssn, status: 'ISSUED' });
 
@@ -539,7 +543,11 @@ async function nextLegacyChequeNumber(): Promise<string> {
   return String(next);
 }
 
-async function writeToLegacyTable(record: IssueRecord, userCode: string): Promise<LegacyWriteResult> {
+async function writeToLegacyTable(
+  record: IssueRecord,
+  userCode: string,
+  preferredChequeNumber?: string | null,
+): Promise<LegacyWriteResult> {
   if (!record.claim_number) throw new Error('Issue record has no claim number — cannot write to cl_cheques');
 
   const now = new Date().toISOString();
@@ -552,7 +560,12 @@ async function writeToLegacyTable(record: IssueRecord, userCode: string): Promis
   }
 
   const claimNumber = await resolveLegacyClaimNumber(record);
-  const chequeNumber = await nextLegacyChequeNumber();
+  // A cheque already assigned from physical stock is authoritative; only fall
+  // back to the generated sequence when no stock number exists.
+  const assigned = (preferredChequeNumber || '').trim();
+  const chequeNumber = assigned && assigned.length <= 11
+    ? assigned
+    : await nextLegacyChequeNumber();
   const chequeItem = await nextChequeItem(claimNumber, claimSeq);
 
   const { data: batch } = await db
@@ -606,6 +619,46 @@ async function writeToLegacyTable(record: IssueRecord, userCode: string): Promis
 
   return { cheque_number: chequeNumber, dd_reference: null };
 }
+
+/**
+ * Shared legacy writer for the Batch Operations "Issue" action.
+ *
+ * Batch Operations previously wrote its own row into cl_cheques using modern
+ * bn_* column names, which the database rejected. It now reuses this single
+ * canonical writer so both issue paths persist identical legacy structures.
+ */
+export async function writeBatchItemToLegacyPayment(params: {
+  batchId: string;
+  instructionId: string;
+  claimNumber: string;
+  ssn: string;
+  amount: number;
+  paymentMethod: string;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  instructionType?: string | null;
+  chequeNumber?: string | null;
+  userCode: string;
+}): Promise<LegacyWriteResult> {
+  const record = {
+    batch_id: params.batchId,
+    instruction_id: params.instructionId,
+    claim_number: params.claimNumber,
+    ssn: params.ssn,
+    amount: params.amount,
+    issue_method: params.paymentMethod === 'DIRECT_DEPOSIT' || params.paymentMethod === 'EFT'
+      ? 'DIRECT_DEPOSIT'
+      : 'CHEQUE',
+    period_start: params.periodStart || null,
+    period_end: params.periodEnd || null,
+    instruction_type: params.instructionType || null,
+    target_table: 'cl_cheques',
+    hold_reason: null,
+  } as unknown as IssueRecord;
+
+  return writeToLegacyTable(record, params.userCode, params.chequeNumber ?? null);
+}
+
 
 
 // ─── Void / Reissue / Stop ──────────────────────────────────────────

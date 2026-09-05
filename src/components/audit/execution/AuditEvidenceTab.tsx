@@ -45,10 +45,9 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
   const [form, setForm] = useState(emptyForm);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const generateEvidenceId = () => `EVD-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
   const openCreate = () => {
-    setForm({ ...emptyForm, evidence_id: generateEvidenceId() });
+    setForm({ ...emptyForm });
     setFormMode('create');
     setEditRecord(null);
     setAdvancedOpen(false);
@@ -77,7 +76,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
   };
 
   const handleSave = async () => {
-    if (!form.evidence_id) return;
+    // Evidence reference is allocated by the server on insert.
     let fileUrl = form.file_url;
     let fileName = form.file_name;
     let fileType = form.file_type;
@@ -104,7 +103,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
 
     const tagsArray = form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : null;
     const payload = {
-      evidence_id: form.evidence_id, reference_no: form.reference_no || null,
+      reference_no: form.reference_no || null,
       description: form.description || null, file_name: fileName || null,
       file_url: fileUrl || null, file_type: fileType || null, file_size: fileSize,
       tags: tagsArray, activity_id: form.activity_id || null, finding_id: form.finding_id || null,
@@ -172,7 +171,7 @@ export function AuditEvidenceTab({ auditId, auditFindings = [], auditActivities 
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Evidence ID *</Label><Input value={form.evidence_id} onChange={e => setForm(f => ({ ...f, evidence_id: e.target.value }))} disabled={formMode !== 'create'} className={formMode !== 'create' ? 'bg-muted' : ''} /></div>
+              <div><Label>Evidence ID</Label><Input value={form.evidence_id || 'Assigned automatically on save'} disabled className="bg-muted" /></div>
               <div><Label>Reference No.</Label><Input value={form.reference_no} onChange={e => setForm(f => ({ ...f, reference_no: e.target.value }))} disabled={formMode === 'view'} placeholder="e.g. EVD-REF-001" /></div>
             </div>
             <div><Label>Description *</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} disabled={formMode === 'view'} className="text-sm" placeholder="Describe what this evidence is" /></div>

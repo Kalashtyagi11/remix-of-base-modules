@@ -25,8 +25,15 @@
  *   - Batch is an orchestration control layer — not the payment ledger.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { writeBatchItemToLegacyPayment } from '@/services/bn/paymentIssueService';
+import { isBenefitsAdmin } from '@/services/bn/bnActorService';
+import { ensurePostIssueTasks } from '@/services/bn/postIssueService';
 
 const db = supabase as any;
+
+/** Administrators hold full Benefits privilege, including self-approval. */
+const currentUserIsAdmin = isBenefitsAdmin;
+
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -71,6 +78,7 @@ export interface BnPaymentBatch {
   payment_method: BatchPaymentMethod;
   status: BatchStatus;
   office_code: string;
+  bank_account_ref: string | null;
 
   // Counts & totals
   total_items: number;
@@ -214,26 +222,54 @@ export async function fetchBatchItems(batchId: string): Promise<BatchPayableItem
 
 // ─── Fetch Available Payables (READY status, not yet batched) ───────
 
+export interface AvailablePayablesResult {
+  matching: any[];
+  all: any[];
+  totalReady: number;
+  excludedByMethod: number;
+  excludedByOffice: number;
+}
+
 export async function fetchAvailablePayables(
   paymentMethod?: string,
   officeCode?: string
 ): Promise<any[]> {
-  let query = db
+  const res = await fetchAvailablePayablesDetailed(paymentMethod, officeCode);
+  return res.matching;
+}
+
+/**
+ * Returns matching payables plus the full unfiltered READY pool so the UI can
+ * explain WHY nothing matched instead of showing a bare empty state.
+ * Office rule: a payable with no office matches any batch office (legacy rows
+ * were created without an office stamp).
+ */
+export async function fetchAvailablePayablesDetailed(
+  paymentMethod?: string,
+  officeCode?: string
+): Promise<AvailablePayablesResult> {
+  const { data, error } = await db
     .from('bn_payment_instruction')
     .select('*')
     .eq('status', 'READY')
     .is('batch_id', null)
     .order('created_at', { ascending: true });
-
-  if (paymentMethod && paymentMethod !== 'MIXED') {
-    query = query.eq('payment_method', paymentMethod);
-  }
-  if (officeCode) query = query.eq('office_code', officeCode);
-
-  const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+
+  const all: any[] = data || [];
+  const methodOk = (p: any) =>
+    !paymentMethod || paymentMethod === 'MIXED' || p.payment_method === paymentMethod;
+  const officeOk = (p: any) => !officeCode || !p.office_code || p.office_code === officeCode;
+
+  return {
+    matching: all.filter((p) => methodOk(p) && officeOk(p)),
+    all,
+    totalReady: all.length,
+    excludedByMethod: all.filter((p) => !methodOk(p)).length,
+    excludedByOffice: all.filter((p) => methodOk(p) && !officeOk(p)).length,
+  };
 }
+
 
 // ─── Batch Actions ──────────────────────────────────────────────────
 
@@ -246,6 +282,7 @@ export interface ExecuteBatchActionParams {
   removeItemId?: string;       // For REMOVE_PAYABLE
   paymentMethod?: BatchPaymentMethod;
   officeCode?: string;
+  bankAccountRef?: string;     // For CREATE (cheque batches)
   batchDate?: string;
   notes?: string;
 }
@@ -288,6 +325,7 @@ async function createBatch(params: ExecuteBatchActionParams): Promise<BnPaymentB
     payment_method: params.paymentMethod || 'MIXED',
     status: 'OPEN',
     office_code: params.officeCode || 'HQ',
+    bank_account_ref: params.bankAccountRef?.trim() || null,
     total_items: 0,
     total_amount: 0,
     currency: 'XCD',
@@ -523,7 +561,12 @@ async function validateBatch(batchId: string, userCode: string): Promise<BatchVa
 async function approveBatch(batchId: string, userCode: string, narrative?: string): Promise<void> {
   const batch = await fetchBatchDetail(batchId);
   if (batch.status !== 'VALIDATED') throw new Error('Batch must be VALIDATED before approval');
-  if (batch.created_by === userCode) throw new Error('Batch cannot be approved by creator (maker-checker)');
+
+  const makerCheckerViolated = batch.created_by === userCode;
+  const adminExempt = makerCheckerViolated ? await currentUserIsAdmin() : false;
+  if (makerCheckerViolated && !adminExempt) {
+    throw new Error('Batch cannot be approved by creator (maker-checker)');
+  }
 
   await db.from('bn_payment_batch').update({
     status: 'APPROVED',
@@ -531,7 +574,10 @@ async function approveBatch(batchId: string, userCode: string, narrative?: strin
     approved_at: new Date().toISOString(),
   }).eq('id', batchId);
 
-  await logBatchEvent(batchId, null, 'APPROVE', userCode, narrative || 'Batch approved for release', {});
+  await logBatchEvent(batchId, null, 'APPROVE', userCode, narrative || 'Batch approved for release', {
+    maker_checker_violated: makerCheckerViolated,
+    admin_exempt: adminExempt,
+  });
 }
 
 // ─── Release Batch ──────────────────────────────────────────────────
@@ -551,7 +597,10 @@ async function releaseBatch(batchId: string, userCode: string, narrative?: strin
 
 // ─── Issue Batch (writes to cl_cheques*) ────────────────────────────
 
-async function issueBatch(batchId: string, userCode: string): Promise<{ issued: number; failed: number }> {
+async function issueBatch(
+  batchId: string,
+  userCode: string,
+): Promise<{ issued: number; failed: number; firstError?: string }> {
   const batch = await fetchBatchDetail(batchId);
   if (batch.status !== 'RELEASED' && batch.status !== 'PARTIALLY_ISSUED') {
     throw new Error('Batch must be RELEASED or PARTIALLY_ISSUED for issue');
@@ -570,50 +619,140 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
 
   let issued = 0;
   let failed = 0;
+  const errors: string[] = [];
+
+  // Cheque numbers already assigned from physical stock for this batch.
+  const { data: registerRows } = await db
+    .from('bn_cheque_register')
+    .select('batch_item_id, cheque_number, status')
+    .eq('batch_id', batchId);
+  const assignedByItem = new Map<string, string>();
+  for (const r of (registerRows || [])) {
+    if (r.batch_item_id && r.cheque_number && r.status !== 'CANCELLED') {
+      assignedByItem.set(r.batch_item_id, String(r.cheque_number));
+    }
+  }
 
   for (const item of (items || [])) {
+    // Register the payment in the single issue register that Payment Issue and
+    // Post-Issue Review read from. Without this, batch-issued payments were
+    // invisible on those screens.
+    let issueRecordId: string | null = null;
     try {
-      // Write to cl_cheques (legacy outbound payment table)
-      const chequeData = {
+      const { data: existing } = await db
+        .from('bn_issue_record')
+        .select('id')
+        .eq('batch_item_id', item.id)
+        .not('status', 'in', '("VOIDED")')
+        .maybeSingle();
+
+      if (existing?.id) {
+        issueRecordId = existing.id;
+      } else {
+        const { data: created, error: recErr } = await db
+          .from('bn_issue_record')
+          .insert({
+            batch_id: batchId,
+            batch_item_id: item.id,
+            instruction_id: item.instruction_id,
+            ssn: item.ssn,
+            claim_number: item.claim_number,
+            beneficiary_name: item.beneficiary_name,
+            amount: Number(item.amount || 0),
+            currency: item.currency || 'XCD',
+            issue_method: item.payment_method === 'DIRECT_DEPOSIT' || item.payment_method === 'EFT'
+              ? 'DIRECT_DEPOSIT'
+              : 'CHEQUE',
+            period_start: item.period_start,
+            period_end: item.period_end,
+            instruction_type: item.instruction_type,
+            target_table: 'cl_cheques',
+            status: 'ISSUING',
+          })
+          .select('id')
+          .single();
+        if (recErr) throw recErr;
+        issueRecordId = created?.id ?? null;
+      }
+    } catch (regErr: any) {
+      // Registration failure must not be silent — treat it as an item failure.
+      const message = `Could not register payment: ${regErr?.message || 'unknown error'}`;
+      errors.push(message);
+      await db.from('bn_batch_item').update({ item_status: 'ISSUE_FAILED', issue_error: message }).eq('id', item.id);
+      failed++;
+      continue;
+    }
+
+    try {
+      // Single canonical legacy writer (shared with Payment Issue) — the legacy
+      // cl_cheques table uses PowerBuilder column names, not bn_* names.
+      const writeResult = await writeBatchItemToLegacyPayment({
+        batchId,
+        instructionId: item.instruction_id,
+        claimNumber: item.claim_number,
         ssn: item.ssn,
-        claim_number: item.claim_number,
-        amount: item.amount,
-        payment_method: item.payment_method,
-        period_start: item.period_start,
-        period_end: item.period_end,
-        batch_number: batch.batch_number,
-        issued_by: userCode,
-        issued_date: new Date().toISOString(),
-        status: 'ISSUED',
-      };
+        amount: Number(item.amount || 0),
+        paymentMethod: item.payment_method,
+        periodStart: item.period_start,
+        periodEnd: item.period_end,
+        instructionType: item.instruction_type,
+        chequeNumber: assignedByItem.get(item.id) || item.cheque_number || null,
+        userCode,
+      });
 
-      const { data: cheque, error: cErr } = await db
-        .from('cl_cheques')
-        .insert(chequeData)
-        .select('cheque_no')
-        .single();
+      const reference = writeResult.cheque_number || writeResult.dd_reference || null;
+      const now = new Date().toISOString();
 
-      if (cErr) throw cErr;
+      if (issueRecordId) {
+        await db.from('bn_issue_record').update({
+          status: 'ISSUED',
+          cheque_number: writeResult.cheque_number,
+          dd_reference: writeResult.dd_reference,
+          issued_at: now,
+          issued_by: userCode,
+          error_message: null,
+        }).eq('id', issueRecordId);
+      }
 
       // Update batch item
-      await db.from('bn_batch_item').update({
+      const { error: itemErr } = await db.from('bn_batch_item').update({
         item_status: 'ISSUED',
-        cl_cheque_no: cheque?.cheque_no || null,
-        issued_at: new Date().toISOString(),
+        cl_cheque_no: reference,
+        issued_at: now,
+        issue_error: null,
       }).eq('id', item.id);
+      if (itemErr) throw itemErr;
 
-      // Update instruction status
-      await db.from('bn_payment_instruction').update({
+      // Update instruction status. `payment_reference` is the real column on
+      // bn_payment_instruction (there is no cl_cheque_no there).
+      const { error: instrErr } = await db.from('bn_payment_instruction').update({
         status: 'ISSUED_PENDING',
-        cl_cheque_no: cheque?.cheque_no || null,
+        payment_reference: reference,
+        paid_date: now.slice(0, 10),
       }).eq('id', item.instruction_id);
+      if (instrErr) throw new Error(`Payment written but payable back-link failed: ${instrErr.message}`);
+
+      // Post-issue checklist must exist for every issued payment.
+      if (issueRecordId) {
+        await ensurePostIssueTasks(batchId, userCode, { issueRecordId });
+      }
 
       issued++;
     } catch (err: any) {
+      const message = err?.message || 'Issue failed';
+      errors.push(message);
+
+      if (issueRecordId) {
+        await db.from('bn_issue_record').update({
+          status: 'FAILED',
+          error_message: message,
+        }).eq('id', issueRecordId);
+      }
+
       // Mark as failed
       await db.from('bn_batch_item').update({
         item_status: 'ISSUE_FAILED',
-        issue_error: err.message,
+        issue_error: message,
       }).eq('id', item.id);
 
       // Create exception record
@@ -621,14 +760,16 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
         instruction_id: item.instruction_id,
         batch_id: batchId,
         exception_type: 'ISSUE_FAILURE',
-        description: err.message,
+        description: message,
         status: 'OPEN',
         raised_by: userCode,
       });
 
       failed++;
+
     }
   }
+
 
   // Update batch final status
   const finalStatus = failed === 0 ? 'ISSUED' : (issued > 0 ? 'PARTIALLY_ISSUED' : 'RELEASED');
@@ -642,9 +783,11 @@ async function issueBatch(batchId: string, userCode: string): Promise<{ issued: 
   await logBatchEvent(batchId, null, 'ISSUE', userCode, `Issued: ${issued}, Failed: ${failed}`, {
     issued_count: issued,
     failed_count: failed,
+    first_error: errors[0] || null,
   });
 
-  return { issued, failed };
+  return { issued, failed, firstError: errors[0] };
+
 }
 
 // ─── Cancel Batch ───────────────────────────────────────────────────

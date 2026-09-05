@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +39,7 @@ const ACTION_STATUSES = [...ACTION_STATES];
 
 export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, auditResponses, auditEvidence = [], onClose }: AuditActionsTabProps) {
   const { create, update } = useIAActionTrackingMutations();
+  const queryClient = useQueryClient();
   const { userCode } = useUserCode();
   const { toast } = useToast();
   const { can } = useInternalAuditPermissions();
@@ -49,6 +52,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
   const [progressAction, setProgressAction] = useState<any>(null);
   const [progressForm, setProgressForm] = useState({ status: 'Open', target_date: '', responsible_person: '', notes: '' });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
+  const [savingProgress, setSavingProgress] = useState(false);
 
 
   const isOverdue = (action: any) => {
@@ -59,7 +63,13 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
 
   const overdueCount = auditActions.filter(isOverdue).length;
   const openFindingsCount = auditFindings.filter((f: any) => !['Closed', 'Resolved'].includes(f.status || '')).length;
-  const isClosed = audit?.status === 'Closed' || audit?.execution_status === 'Closed';
+  // IA-FULL-E2E-015: an engagement closed as "Closed – Actions Pending" must keep
+  // its outstanding corrective actions workable; only a full closure/cancellation locks them.
+  const closureState = String(audit?.execution_status || audit?.status || '');
+  const isClosureRecorded = closureState.startsWith('Closed') || closureState === 'Cancelled';
+  const isClosed = closureState === 'Closed' || closureState === 'Cancelled';
+  const canCreateActions = can('create_audit_actions');
+
 
   const openProgress = (row: any) => {
     setProgressAction(row);
@@ -75,11 +85,11 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
   const toggleEvidence = (id: string) =>
     setEvidenceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
-  const handleProgressSave = () => {
+  const handleProgressSave = async () => {
     if (!progressAction) return;
-    const closing = ['Verified', 'Closed'].includes(progressForm.status);
+    const closing = ['Verified', 'Closed', 'Cancelled'].includes(progressForm.status);
     if (closing && !canCloseActions) {
-      toast({ title: 'Not permitted', description: 'You do not have permission to close or verify audit actions.', variant: 'destructive' });
+      toast({ title: 'Not permitted', description: 'Only the audit team may verify, close or cancel a corrective action.', variant: 'destructive' });
       return;
     }
     if (closing && !progressForm.notes.trim()) {
@@ -91,28 +101,37 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       originalEvidence.length !== evidenceIds.length ||
       originalEvidence.some((id) => !evidenceIds.includes(id));
 
-    update.mutate({
-      id: progressAction.id,
-      status: progressForm.status,
-      action_status: progressForm.status,
-      target_date: progressForm.target_date || null,
-      responsible_person: progressForm.responsible_person || null,
-      notes: progressForm.notes || null,
-      updated_by: userCode || null,
-      ...(closing ? { verified_by: userCode || null, verified_date: new Date().toISOString() } : {}),
-    } as any, {
-      onSuccess: () => {
-        if (evidenceChanged) {
-          linkEvidence.mutate(
-            { actionId: progressAction.id, evidenceIds },
-            { onSettled: () => setProgressAction(null) },
-          );
-        } else {
-          setProgressAction(null);
-        }
-      },
-    });
+    setSavingProgress(true);
+    try {
+      // Governed command: the responsible manager may progress the action,
+      // while verification/closure/cancellation stays with the audit team.
+      const { data, error } = await (supabase.rpc as any)('ia_progress_corrective_action', {
+        p_action_id: progressAction.id,
+        p_status: progressForm.status,
+        p_notes: progressForm.notes || null,
+        p_target_date: progressForm.target_date || null,
+        p_responsible_person: progressForm.responsible_person || null,
+      });
+      if (error) throw error;
+      if (data && data.success === false) {
+        toast({ title: 'Action blocked', description: data.error || 'Update rejected', variant: 'destructive' });
+        return;
+      }
+      if (evidenceChanged) {
+        await new Promise<void>((resolve) =>
+          linkEvidence.mutate({ actionId: progressAction.id, evidenceIds }, { onSettled: () => resolve() }),
+        );
+      }
+      toast({ title: 'Action Updated' });
+      setProgressAction(null);
+      queryClient.invalidateQueries({ queryKey: ['ia_action_tracking'] });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Update failed', variant: 'destructive' });
+    } finally {
+      setSavingProgress(false);
+    }
   };
+
 
 
   const handleCreate = () => {
@@ -158,7 +177,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       </div>
     )},
     { key: 'row_actions', header: 'Update', render: (r) => (
-      <Button size="sm" variant="outline" disabled={!canProgress || isClosed} onClick={() => openProgress(r)}>
+      <Button size="sm" variant="outline" disabled={(!canProgress && !canCloseActions) || isClosed} onClick={() => openProgress(r)}>
         Update
       </Button>
     )},
@@ -190,7 +209,9 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
 
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{auditActions.length} action(s)</p>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />New Action</Button>
+        {canCreateActions && !isClosed && (
+          <Button size="sm" onClick={() => setShowForm(!showForm)}><Plus className="h-4 w-4 mr-1" />New Action</Button>
+        )}
       </div>
 
       {showForm && (
@@ -216,7 +237,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
       )}
 
       {auditActions.length === 0 && !showForm ? (
-        <AuditEmptyState icon={CheckCircle} title="No corrective actions yet" description="Actions will be created from audit findings" actionLabel="Create Action" onAction={() => setShowForm(true)} />
+        <AuditEmptyState icon={CheckCircle} title="No corrective actions yet" description="Actions will be created from audit findings" actionLabel={canCreateActions && !isClosed ? 'Create Action' : undefined} onAction={canCreateActions && !isClosed ? () => setShowForm(true) : undefined} />
       ) : (
         <Card><CardContent className="pt-4">
           <DataTable columns={columns} data={auditActions} emptyMessage="No corrective actions assigned."
@@ -233,8 +254,13 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
               <Label>Status</Label>
               <Select value={progressForm.status} onValueChange={(v) => setProgressForm((f) => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ACTION_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                <SelectContent>{ACTION_STATUSES.filter((s) => canCloseActions || !['Verified', 'Closed', 'Cancelled'].includes(s) || s === progressAction?.status).map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
+              {!canCloseActions && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Verification, closure and cancellation are reserved for the audit team.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Assigned To</Label><Input value={progressForm.responsible_person} onChange={(e) => setProgressForm((f) => ({ ...f, responsible_person: e.target.value }))} /></div>
@@ -263,7 +289,7 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setProgressAction(null)}>Cancel</Button>
-            <Button onClick={handleProgressSave} disabled={update.isPending}>Save Update</Button>
+            <Button onClick={handleProgressSave} disabled={savingProgress}>Save Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -278,22 +304,26 @@ export function AuditActionsTab({ auditId, audit, auditFindings, auditActions, a
           { label: `Actions assigned (${auditActions.length})`, passed: auditFindings.length === 0 || auditActions.length > 0, required: true },
         ]}
       />
-      {isClosed ? (
+      {isClosureRecorded ? (
         <Card className="border-primary/30">
           <CardContent className="pt-6 space-y-2">
-            <div className="flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /><span className="font-medium">Audit Closed</span></div>
+            <div className="flex items-center gap-2 text-primary"><Lock className="h-4 w-4" /><span className="font-medium">{closureState}</span></div>
             {audit?.closure_date && <p className="text-sm text-muted-foreground">Closed on: {formatDateForDisplay(audit.closure_date)}</p>}
             {audit?.closed_by && <p className="text-sm text-muted-foreground">Closed by: {audit.closed_by}</p>}
             {audit?.closure_notes && <p className="text-sm mt-2">{audit.closure_notes}</p>}
+            {!isClosed && (
+              <p className="text-sm text-muted-foreground">
+                Outstanding corrective actions remain open and can still be progressed, verified and closed here.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (
         <Card>
-          <CardContent className="pt-6 space-y-3">
-            <div><Label>Closure Notes</Label><Textarea value={closureNotes} onChange={e => setClosureNotes(e.target.value)} placeholder="Final remarks..." /></div>
-            <Button onClick={onClose} disabled={openFindingsCount > 0}>
-              {openFindingsCount === 0 ? <><Lock className="h-4 w-4 mr-1" />Close Audit</> : 'Cannot close — resolve open findings first'}
-            </Button>
+          <CardContent className="pt-6 space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Closure is performed on the Closure tab, where every closure requirement is checked and the disposition is recorded.
+            </p>
           </CardContent>
         </Card>
       )}

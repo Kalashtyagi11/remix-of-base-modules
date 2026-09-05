@@ -75146,6 +75146,162 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_archive_engagement_execution_log: {
+        Row: {
+          archived_at: string
+          created_at: string | null
+          engagement_id: string
+          event_description: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_status: string | null
+          old_status: string | null
+          performed_at: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          archived_at?: string
+          created_at?: string | null
+          engagement_id: string
+          event_description?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          archived_at?: string
+          created_at?: string | null
+          engagement_id?: string
+          event_description?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_status?: string | null
+          old_status?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Relationships: []
+      }
+      ia_archive_plan_change_log: {
+        Row: {
+          after_state: Json | null
+          archived_at: string
+          before_state: Json | null
+          change_classification: string | null
+          change_date: string | null
+          change_type: string
+          changed_by: string | null
+          created_at: string | null
+          description: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          plan_id: string
+          requires_reapproval: boolean | null
+          version_number: number | null
+        }
+        Insert: {
+          after_state?: Json | null
+          archived_at?: string
+          before_state?: Json | null
+          change_classification?: string | null
+          change_date?: string | null
+          change_type: string
+          changed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          plan_id: string
+          requires_reapproval?: boolean | null
+          version_number?: number | null
+        }
+        Update: {
+          after_state?: Json | null
+          archived_at?: string
+          before_state?: Json | null
+          change_classification?: string | null
+          change_date?: string | null
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          plan_id?: string
+          requires_reapproval?: boolean | null
+          version_number?: number | null
+        }
+        Relationships: []
+      }
+      ia_archive_report_versions: {
+        Row: {
+          archived_at: string
+          change_summary: string | null
+          content: Json
+          content_hash: string | null
+          created_at: string
+          created_by: string | null
+          engagement_id: string | null
+          id: string
+          is_issued: boolean
+          issued_at: string | null
+          issued_by: string | null
+          report_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          version_label: string | null
+          version_number: number
+        }
+        Insert: {
+          archived_at?: string
+          change_summary?: string | null
+          content?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string | null
+          id?: string
+          is_issued?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          report_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_label?: string | null
+          version_number: number
+        }
+        Update: {
+          archived_at?: string
+          change_summary?: string | null
+          content?: Json
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string | null
+          id?: string
+          is_issued?: boolean
+          issued_at?: string | null
+          issued_by?: string | null
+          report_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          version_label?: string | null
+          version_number?: number
+        }
+        Relationships: []
+      }
       ia_audit_checklists: {
         Row: {
           audit_id: string
@@ -77833,6 +77989,92 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_document_artifact: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          artifact_type: string
+          byte_size: number
+          checksum_sha256: string
+          classification: string
+          created_at: string
+          file_name: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          mime_type: string
+          source_entity_id: string
+          source_entity_type: string
+          status: string
+          storage_bucket: string
+          storage_path: string
+          superseded_at: string | null
+          supersedes_artifact_id: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artifact_type: string
+          byte_size: number
+          checksum_sha256: string
+          classification?: string
+          created_at?: string
+          file_name: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          mime_type?: string
+          source_entity_id: string
+          source_entity_type: string
+          status?: string
+          storage_bucket?: string
+          storage_path: string
+          superseded_at?: string | null
+          supersedes_artifact_id?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artifact_type?: string
+          byte_size?: number
+          checksum_sha256?: string
+          classification?: string
+          created_at?: string
+          file_name?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          mime_type?: string
+          source_entity_id?: string
+          source_entity_type?: string
+          status?: string
+          storage_bucket?: string
+          storage_path?: string
+          superseded_at?: string | null
+          supersedes_artifact_id?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_document_artifact_supersedes_artifact_id_fkey"
+            columns: ["supersedes_artifact_id"]
+            isOneToOne: false
+            referencedRelation: "ia_document_artifact"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_document_requests: {
         Row: {
           created_at: string | null
@@ -78495,6 +78737,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ia_finding_theme: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[]
+          sort_order: number
+          theme_code: string
+          theme_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          sort_order?: number
+          theme_code: string
+          theme_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          sort_order?: number
+          theme_code?: string
+          theme_name?: string
+        }
+        Relationships: []
       }
       ia_findings: {
         Row: {
@@ -79195,6 +79467,150 @@ export type Database = {
             columns: ["supersedes_response_id"]
             isOneToOne: false
             referencedRelation: "ia_management_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_management_status_report: {
+        Row: {
+          artifact_id: string | null
+          audience: string
+          comparison: Json | null
+          comparison_report_id: string | null
+          config_provenance: Json | null
+          created_at: string
+          department_id: string | null
+          fiscal_year: string | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          issue_note: string | null
+          issued_at: string | null
+          issued_by: string | null
+          lifecycle_state: string
+          plan_id: string
+          plan_version_number: number | null
+          report_number: string | null
+          reporting_period: string | null
+          snapshot: Json
+          status: string
+          status_as_at: string
+        }
+        Insert: {
+          artifact_id?: string | null
+          audience: string
+          comparison?: Json | null
+          comparison_report_id?: string | null
+          config_provenance?: Json | null
+          created_at?: string
+          department_id?: string | null
+          fiscal_year?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issue_note?: string | null
+          issued_at?: string | null
+          issued_by?: string | null
+          lifecycle_state?: string
+          plan_id: string
+          plan_version_number?: number | null
+          report_number?: string | null
+          reporting_period?: string | null
+          snapshot: Json
+          status?: string
+          status_as_at: string
+        }
+        Update: {
+          artifact_id?: string | null
+          audience?: string
+          comparison?: Json | null
+          comparison_report_id?: string | null
+          config_provenance?: Json | null
+          created_at?: string
+          department_id?: string | null
+          fiscal_year?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          issue_note?: string | null
+          issued_at?: string | null
+          issued_by?: string | null
+          lifecycle_state?: string
+          plan_id?: string
+          plan_version_number?: number | null
+          report_number?: string | null
+          reporting_period?: string | null
+          snapshot?: Json
+          status?: string
+          status_as_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_management_status_report_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "ia_document_artifact"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_management_status_report_comparison_report_id_fkey"
+            columns: ["comparison_report_id"]
+            isOneToOne: false
+            referencedRelation: "ia_management_status_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_management_status_report_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "ia_annual_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_management_status_report_evidence: {
+        Row: {
+          attributes: Json
+          created_at: string
+          department_id: string | null
+          id: string
+          kpi_code: string
+          record_code: string | null
+          record_id: string | null
+          record_label: string | null
+          record_type: string
+          report_id: string
+        }
+        Insert: {
+          attributes?: Json
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          kpi_code: string
+          record_code?: string | null
+          record_id?: string | null
+          record_label?: string | null
+          record_type: string
+          report_id: string
+        }
+        Update: {
+          attributes?: Json
+          created_at?: string
+          department_id?: string | null
+          id?: string
+          kpi_code?: string
+          record_code?: string | null
+          record_id?: string | null
+          record_label?: string | null
+          record_type?: string
+          report_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_management_status_report_evidence_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "ia_management_status_report"
             referencedColumns: ["id"]
           },
         ]
@@ -80989,6 +81405,245 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      ia_report_config_audit: {
+        Row: {
+          action: string
+          actor: string | null
+          after_value: Json | null
+          before_value: Json | null
+          created_at: string
+          entity_key: string | null
+          entity_type: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          entity_key?: string | null
+          entity_type: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          after_value?: Json | null
+          before_value?: Json | null
+          created_at?: string
+          entity_key?: string | null
+          entity_type?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      ia_report_definition: {
+        Row: {
+          audience_code: string
+          comparison_behaviour: string
+          created_at: string
+          display_order: number
+          distribution_policy: string
+          document_classification: string
+          filters: Json
+          id: string
+          is_active: boolean
+          metrics: string[]
+          permitted_scope: string
+          report_code: string
+          report_name: string
+          requires_approval: boolean
+          template_type: string | null
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          audience_code: string
+          comparison_behaviour?: string
+          created_at?: string
+          display_order?: number
+          distribution_policy?: string
+          document_classification?: string
+          filters?: Json
+          id?: string
+          is_active?: boolean
+          metrics?: string[]
+          permitted_scope?: string
+          report_code: string
+          report_name: string
+          requires_approval?: boolean
+          template_type?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Update: {
+          audience_code?: string
+          comparison_behaviour?: string
+          created_at?: string
+          display_order?: number
+          distribution_policy?: string
+          document_classification?: string
+          filters?: Json
+          id?: string
+          is_active?: boolean
+          metrics?: string[]
+          permitted_scope?: string
+          report_code?: string
+          report_name?: string
+          requires_approval?: boolean
+          template_type?: string | null
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      ia_report_definition_section: {
+        Row: {
+          audiences: string[]
+          created_at: string
+          definition_id: string
+          display_mode: string
+          heading: string
+          id: string
+          is_appendix: boolean
+          is_visible: boolean
+          section_key: string
+          sort_order: number
+          start_on_new_page: boolean
+          updated_at: string
+        }
+        Insert: {
+          audiences?: string[]
+          created_at?: string
+          definition_id: string
+          display_mode?: string
+          heading: string
+          id?: string
+          is_appendix?: boolean
+          is_visible?: boolean
+          section_key: string
+          sort_order?: number
+          start_on_new_page?: boolean
+          updated_at?: string
+        }
+        Update: {
+          audiences?: string[]
+          created_at?: string
+          definition_id?: string
+          display_mode?: string
+          heading?: string
+          id?: string
+          is_appendix?: boolean
+          is_visible?: boolean
+          section_key?: string
+          sort_order?: number
+          start_on_new_page?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_report_definition_section_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "ia_report_definition"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_report_methodology: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          config: Json
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          methodology_code: string
+          name: string
+          notes: string | null
+          status: string
+          updated_at: string
+          version_number: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          config: Json
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          methodology_code: string
+          name: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          version_number: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          config?: Json
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          methodology_code?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      ia_report_metric: {
+        Row: {
+          audiences: string[]
+          created_at: string
+          dimensions: string[]
+          display_order: number
+          formatter: string
+          id: string
+          is_enabled: boolean
+          label: string
+          metric_code: string
+          source_path: string
+          updated_at: string
+        }
+        Insert: {
+          audiences?: string[]
+          created_at?: string
+          dimensions?: string[]
+          display_order?: number
+          formatter?: string
+          id?: string
+          is_enabled?: boolean
+          label: string
+          metric_code: string
+          source_path: string
+          updated_at?: string
+        }
+        Update: {
+          audiences?: string[]
+          created_at?: string
+          dimensions?: string[]
+          display_order?: number
+          formatter?: string
+          id?: string
+          is_enabled?: boolean
+          label?: string
+          metric_code?: string
+          source_path?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       ia_report_versions: {
         Row: {
@@ -83426,7 +84081,7 @@ export type Database = {
           deb_crd_amount: number | null
           delivery_zone: string | null
           district: string | null
-          dob: string
+          dob: string | null
           email_addr: string | null
           employer_address: string | null
           employer_name: string | null
@@ -83469,7 +84124,7 @@ export type Database = {
           resident_addr2: string | null
           second_middle_name: string | null
           self_ref_no: string | null
-          sex: string
+          sex: string | null
           signature_location: string | null
           spouse_addr1: string | null
           spouse_addr2: string | null
@@ -83477,7 +84132,7 @@ export type Database = {
           spouse_name: string | null
           spouse_ssn: string | null
           ssn: string | null
-          status: string
+          status: string | null
           submitted_at: string | null
           submitted_by: string | null
           surname: string | null
@@ -83487,7 +84142,7 @@ export type Database = {
           termination_code: string | null
           termination_date: string | null
           tran_code: string | null
-          unique_uuid: string
+          unique_uuid: string | null
           updated_at: string | null
           updated_by: string | null
           userid: string | null
@@ -83538,7 +84193,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83581,7 +84236,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -83589,7 +84244,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -83599,7 +84254,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -83650,7 +84305,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob?: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83693,7 +84348,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex?: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -83701,7 +84356,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -83711,7 +84366,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -83843,7 +84498,7 @@ export type Database = {
           deb_crd_amount: number | null
           delivery_zone: string | null
           district: string | null
-          dob: string
+          dob: string | null
           email_addr: string | null
           employer_address: string | null
           employer_name: string | null
@@ -83886,7 +84541,7 @@ export type Database = {
           resident_addr2: string | null
           second_middle_name: string | null
           self_ref_no: string | null
-          sex: string
+          sex: string | null
           signature_location: string | null
           spouse_addr1: string | null
           spouse_addr2: string | null
@@ -83894,7 +84549,7 @@ export type Database = {
           spouse_name: string | null
           spouse_ssn: string | null
           ssn: string | null
-          status: string
+          status: string | null
           submitted_at: string | null
           submitted_by: string | null
           surname: string | null
@@ -83904,7 +84559,7 @@ export type Database = {
           termination_code: string | null
           termination_date: string | null
           tran_code: string | null
-          unique_uuid: string
+          unique_uuid: string | null
           updated_at: string | null
           updated_by: string | null
           userid: string | null
@@ -83955,7 +84610,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -83998,7 +84653,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -84006,7 +84661,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -84016,7 +84671,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -84067,7 +84722,7 @@ export type Database = {
           deb_crd_amount?: number | null
           delivery_zone?: string | null
           district?: string | null
-          dob?: string
+          dob?: string | null
           email_addr?: string | null
           employer_address?: string | null
           employer_name?: string | null
@@ -84110,7 +84765,7 @@ export type Database = {
           resident_addr2?: string | null
           second_middle_name?: string | null
           self_ref_no?: string | null
-          sex?: string
+          sex?: string | null
           signature_location?: string | null
           spouse_addr1?: string | null
           spouse_addr2?: string | null
@@ -84118,7 +84773,7 @@ export type Database = {
           spouse_name?: string | null
           spouse_ssn?: string | null
           ssn?: string | null
-          status?: string
+          status?: string | null
           submitted_at?: string | null
           submitted_by?: string | null
           surname?: string | null
@@ -84128,7 +84783,7 @@ export type Database = {
           termination_code?: string | null
           termination_date?: string | null
           tran_code?: string | null
-          unique_uuid?: string
+          unique_uuid?: string | null
           updated_at?: string | null
           updated_by?: string | null
           userid?: string | null
@@ -104594,6 +105249,7 @@ export type Database = {
           pinned_file_name: string
           request_id: string
           required_for_delivery: boolean
+          requirement_scope: string
         }
         Insert: {
           attachment_id: string
@@ -104606,6 +105262,7 @@ export type Database = {
           pinned_file_name: string
           request_id: string
           required_for_delivery?: boolean
+          requirement_scope?: string
         }
         Update: {
           attachment_id?: string
@@ -104618,6 +105275,7 @@ export type Database = {
           pinned_file_name?: string
           request_id?: string
           required_for_delivery?: boolean
+          requirement_scope?: string
         }
         Relationships: [
           {
@@ -125363,6 +126021,17 @@ export type Database = {
         Args: { p_claim_id: string }
         Returns: number
       }
+      bn_mature_payment_schedule: {
+        Args: { p_as_of?: string; p_award_id?: string; p_performed_by?: string }
+        Returns: {
+          claim_number: string
+          due_date: string
+          instruction_id: string
+          outcome: string
+          reason: string
+          schedule_id: string
+        }[]
+      }
       bn_means_activation_command_v1: {
         Args: {
           p_actor_user_code: string
@@ -132251,6 +132920,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_attach_management_status_artifact: {
+        Args: { p_artifact_id: string; p_report_id: string }
+        Returns: Json
+      }
       ia_auditor_profile: { Args: { _auditor_id: string }; Returns: string }
       ia_build_followup_carry_forward: {
         Args: {
@@ -132281,7 +132954,16 @@ export type Database = {
         Args: { _creating: boolean }
         Returns: boolean
       }
+      ia_can_generate_management_report: {
+        Args: { p_plan_id: string }
+        Returns: boolean
+      }
+      ia_can_issue_management_report: {
+        Args: { p_plan_id: string }
+        Returns: boolean
+      }
       ia_can_issue_report: { Args: { p_report_id: string }; Returns: Json }
+      ia_can_manage_reporting_config: { Args: never; Returns: boolean }
       ia_can_read_all: { Args: never; Returns: boolean }
       ia_can_start_engagement: {
         Args: { p_engagement_id: string }
@@ -132528,9 +133210,66 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_document_distribution_history: {
+        Args: { p_entity_id: string }
+        Returns: {
+          attachment_outcome: string
+          attachment_outcome_reason: string
+          attachment_required: boolean
+          channel: string
+          completed_at: string
+          document_byte_size: number
+          document_checksum: string
+          document_file_name: string
+          event_code: string
+          failed_at: string
+          message_status: string
+          queued_at: string
+          recipient_email: string
+          recipient_name: string
+          request_id: string
+          request_status: string
+          requested_at: string
+        }[]
+      }
       ia_engagement_progress: {
         Args: { p_engagement_id: string }
         Returns: Json
+      }
+      ia_engagement_status_model: {
+        Args: { p_as_at?: string; p_department_id?: string; p_plan_id: string }
+        Returns: {
+          actual_end: string
+          actual_start: string
+          audit_opinion: string
+          audit_type: string
+          coverage_category: string
+          department_id: string
+          department_name: string
+          engagement_code: string
+          engagement_id: string
+          engagement_name: string
+          findings_critical_high: number
+          findings_total: number
+          forecast_end: string
+          function_id: string
+          key_blocker: string
+          lead_auditor: string
+          lifecycle_status: string
+          next_milestone: string
+          open_actions: number
+          overdue_actions: number
+          planned_end: string
+          planned_start: string
+          progress_components: Json
+          progress_pct: number
+          quarter: string
+          report_number: string
+          risk_rating: string
+          schedule_health: string
+          variance_days: number
+          workflow_stage: string
+        }[]
       }
       ia_escalate_finding_dispute: {
         Args: {
@@ -132611,6 +133350,21 @@ export type Database = {
         Args: { p_fiscal_year?: string; p_plan_id: string }
         Returns: Json
       }
+      ia_generate_management_status_report: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_compare_report_id?: string
+          p_department_id?: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_plan_id: string
+          p_report_mode?: string
+          p_reporting_period?: string
+        }
+        Returns: Json
+      }
       ia_generate_resource_recommendations: {
         Args: { p_candidate_id?: string; p_plan_id: string }
         Returns: Json
@@ -132637,6 +133391,10 @@ export type Database = {
       ia_is_ia_user: { Args: never; Returns: boolean }
       ia_is_quality_reviewer: { Args: never; Returns: boolean }
       ia_is_risk_band_label: { Args: { _value: string }; Returns: boolean }
+      ia_issue_management_status_report: {
+        Args: { p_note?: string; p_report_id: string }
+        Returns: Json
+      }
       ia_issue_report: {
         Args: { p_notes?: string; p_report_id: string }
         Returns: Json
@@ -132673,6 +133431,58 @@ export type Database = {
         }
         Returns: string
       }
+      ia_management_data_quality: {
+        Args: { p_department_id?: string; p_plan_id: string }
+        Returns: Json
+      }
+      ia_management_period_bounds: {
+        Args: {
+          p_as_at?: string
+          p_custom_end?: string
+          p_custom_start?: string
+          p_period_code?: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
+      ia_management_status_drilldown: {
+        Args: {
+          p_as_at?: string
+          p_department_id?: string
+          p_kpi_code: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_plan_id: string
+          p_report_id?: string
+        }
+        Returns: Json
+      }
+      ia_management_status_live: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_department_id?: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
+      ia_management_status_live_v2: {
+        Args: {
+          p_as_at?: string
+          p_audience?: string
+          p_department_id?: string
+          p_period_code?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_plan_id: string
+        }
+        Returns: Json
+      }
+      ia_msr_capture_evidence: {
+        Args: { p_report_id: string }
+        Returns: number
+      }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
         Returns: Json
@@ -132704,6 +133514,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ia_org_country_code: { Args: never; Returns: string }
       ia_permission_reconciliation: {
         Args: { p_expected?: Json }
         Returns: Json
@@ -132732,6 +133543,16 @@ export type Database = {
       }
       ia_prior_audit_history: {
         Args: { p_engagement_id: string; p_same_function_only?: boolean }
+        Returns: Json
+      }
+      ia_progress_corrective_action: {
+        Args: {
+          p_action_id: string
+          p_notes?: string
+          p_responsible_person?: string
+          p_status: string
+          p_target_date?: string
+        }
         Returns: Json
       }
       ia_q_action_centre_counts: { Args: { p_filters?: Json }; Returns: Json }
@@ -132820,6 +133641,21 @@ export type Database = {
         Returns: string
       }
       ia_register_actions: { Args: { p_filters?: Json }; Returns: Json }
+      ia_register_document_artifact: {
+        Args: {
+          p_artifact_type: string
+          p_byte_size: number
+          p_checksum_sha256: string
+          p_classification?: string
+          p_file_name: string
+          p_mime_type?: string
+          p_seal?: boolean
+          p_source_entity_id: string
+          p_source_entity_type: string
+          p_storage_path: string
+        }
+        Returns: Json
+      }
       ia_register_findings: { Args: { p_filters?: Json }; Returns: Json }
       ia_register_management_responses: {
         Args: { p_filters?: Json }
@@ -132836,6 +133672,44 @@ export type Database = {
       }
       ia_reopen_annual_plan: {
         Args: { p_plan_id: string; p_reason: string }
+        Returns: Json
+      }
+      ia_report_activate_methodology: {
+        Args: { p_id: string; p_reason?: string }
+        Returns: Json
+      }
+      ia_report_configure_metric: {
+        Args: {
+          p_display_order?: number
+          p_is_enabled?: boolean
+          p_label?: string
+          p_metric_code: string
+        }
+        Returns: Json
+      }
+      ia_report_configure_section: {
+        Args: {
+          p_display_mode?: string
+          p_heading?: string
+          p_is_visible?: boolean
+          p_section_id: string
+          p_sort_order?: number
+          p_start_on_new_page?: boolean
+        }
+        Returns: Json
+      }
+      ia_report_methodology_active: { Args: { p_code: string }; Returns: Json }
+      ia_report_save_methodology_draft: {
+        Args: {
+          p_code: string
+          p_config: Json
+          p_name?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
+      ia_report_validate_methodology: {
+        Args: { p_code: string; p_config: Json }
         Returns: Json
       }
       ia_reschedule_engagement: {
@@ -132951,6 +133825,7 @@ export type Database = {
         Args: { p_notes?: string; p_plan_id: string }
         Returns: Json
       }
+      ia_test_estate_purge: { Args: { p_confirm: string }; Returns: Json }
       ia_transition_execution_status: {
         Args: {
           p_engagement_id: string

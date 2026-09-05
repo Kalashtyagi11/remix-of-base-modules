@@ -3,12 +3,16 @@
  * Combined EFT-file and Cheque-print controls for a payment batch.
  * Mounted inside BatchDetailDrawer.
  */
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -20,6 +24,7 @@ import {
   assignChequeNumbersForBatch, listChequesForBatch, markPrinted, reprintCheque,
   cancelCheque, correctChequeNumber, markDispatched,
 } from '@/services/bn/payment/chequePrintService';
+import { listChequeStock, type ChequeStock } from '@/services/bn/payment/chequeStockService';
 import { recordReconciliation } from '@/services/bn/payment/paymentReconciliationService';
 import { ChequePrintView } from '@/components/bn/payment/ChequePrintView';
 import { toast } from 'sonner';
@@ -58,8 +63,35 @@ export const PaymentExecutionPanel: React.FC<Props> = ({
     queryFn: () => listChequesForBatch(batchId),
     enabled: !!batchId && isCheque,
   });
+  const stockQ = useQuery({
+    queryKey: ['bn-cheque-stock'],
+    queryFn: () => listChequeStock(),
+    enabled: isCheque,
+  });
+
+  const activeBooks = useMemo(() => {
+    const all = (stockQ.data || []) as ChequeStock[];
+    const seen = new Set<string>();
+    return all.filter((s) => {
+      if (s.status !== 'ACTIVE' || seen.has(s.bank_account_ref)) return false;
+      seen.add(s.bank_account_ref);
+      return true;
+    });
+  }, [stockQ.data]);
+
+  const defaultBook = activeBooks.length === 1
+    ? activeBooks[0].bank_account_ref
+    : (bankAccountRef && activeBooks.some((b) => b.bank_account_ref === bankAccountRef) ? bankAccountRef : '');
+  const [selectedBook, setSelectedBook] = useState<string>(defaultBook);
+  const selectedStock = useMemo(() => activeBooks.find((b) => b.bank_account_ref === selectedBook), [activeBooks, selectedBook]);
+
+  useEffect(() => {
+    if (!selectedBook && defaultBook) setSelectedBook(defaultBook);
+  }, [defaultBook, selectedBook]);
+
   const [chequeDate, setChequeDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [startingNumber, setStartingNumber] = useState<string>('');
+  const [startingNumberError, setStartingNumberError] = useState<string | null>(null);
   const [reprintFor, setReprintFor] = useState<string | null>(null);
   const [reprintReason, setReprintReason] = useState('');
   const [cancelFor, setCancelFor] = useState<string | null>(null);
@@ -76,6 +108,7 @@ export const PaymentExecutionPanel: React.FC<Props> = ({
       setBusy(false);
       qc.invalidateQueries({ queryKey: ['bn-eft-files', batchId] });
       qc.invalidateQueries({ queryKey: ['bn-cheques', batchId] });
+      qc.invalidateQueries({ queryKey: ['bn-cheque-stock'] });
     }
   };
 
@@ -167,32 +200,97 @@ export const PaymentExecutionPanel: React.FC<Props> = ({
           <h3 className="text-sm font-semibold flex items-center gap-1.5">
             <Printer className="h-4 w-4" /> Cheque Print Controls
           </h3>
-          <div className="grid grid-cols-3 gap-2 items-end">
-            <div>
-              <Label className="text-xs">Cheque Date</Label>
-              <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} className="h-8" />
+
+          {activeBooks.length === 0 ? (
+            <div className="p-3 border rounded-md bg-muted/30 text-sm">
+              <p className="font-medium">No active cheque books</p>
+              <p className="text-muted-foreground text-xs mt-1">
+                Register an active cheque stock book before assigning numbers.
+              </p>
+              <Button size="sm" variant="outline" className="mt-2" asChild>
+                <Link to="/bn/cheque-stock">Go to Cheque Stock</Link>
+              </Button>
             </div>
-            <div>
-              <Label className="text-xs">Starting Number (optional)</Label>
-              <Input value={startingNumber} onChange={(e) => setStartingNumber(e.target.value)} placeholder="auto" className="h-8" />
-            </div>
-            <BnBusyButton loading={busy}
-              size="sm"
-              disabled={!canExecute || busy}
-              onClick={() => run(
-                () => assignChequeNumbersForBatch({
-                  batchId,
-                  bankAccountRef,
-                  chequeDate,
-                  startingNumber: startingNumber ? Number(startingNumber) : undefined,
-                  userCode,
-                }).then((r) => { if (!r.assigned) throw new Error('No cheques to assign'); }),
-                'Cheque numbers assigned',
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Cheque Book / Bank Account</Label>
+                <Select value={selectedBook} onValueChange={setSelectedBook}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Select an active cheque book" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeBooks.map((book) => (
+                      <SelectItem key={book.bank_account_ref} value={book.bank_account_ref}>
+                        {book.bank_account_ref} — {book.bank_code || 'Book'} ({book.series_prefix || ''}{book.next_number.toLocaleString()} next)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedStock && (
+                <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                  <span>Prefix: <span className="font-mono">{selectedStock.series_prefix || '—'}</span></span>
+                  <span>Next: <span className="font-mono">{selectedStock.series_prefix || ''}{selectedStock.next_number.toLocaleString()}</span></span>
+                  <span>Range: <span className="font-mono">{selectedStock.series_prefix || ''}{selectedStock.range_start.toLocaleString()}–{selectedStock.series_prefix || ''}{selectedStock.range_end.toLocaleString()}</span></span>
+                  <span>Remaining: <span className="font-mono">{Math.max(0, selectedStock.range_end - selectedStock.next_number + 1).toLocaleString()}</span></span>
+                </div>
               )}
-            >
-              Assign Cheque Numbers
-            </BnBusyButton>
-          </div>
+
+              <div className="grid grid-cols-3 gap-2 items-end">
+                <div>
+                  <Label className="text-xs">Cheque Date</Label>
+                  <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} className="h-8" />
+                </div>
+                <div>
+                  <Label className="text-xs">Starting Number {selectedStock?.series_prefix ? `(${selectedStock.series_prefix}…)` : ''}</Label>
+                  <Input
+                    value={startingNumber}
+                    onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, '');
+                      setStartingNumber(digitsOnly);
+                      if (!digitsOnly) {
+                        setStartingNumberError(null);
+                        return;
+                      }
+                      const n = Number(digitsOnly);
+                      if (!Number.isFinite(n)) {
+                        setStartingNumberError('Enter a numeric value');
+                      } else if (selectedStock && n < selectedStock.next_number) {
+                        setStartingNumberError(`Must be at least ${selectedStock.next_number.toLocaleString()}`);
+                      } else if (selectedStock && (n < selectedStock.range_start || n > selectedStock.range_end)) {
+                        setStartingNumberError(`Outside range ${selectedStock.range_start.toLocaleString()}–${selectedStock.range_end.toLocaleString()}`);
+                      } else {
+                        setStartingNumberError(null);
+                      }
+                    }}
+                    placeholder="auto"
+                    className="h-8"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                  {startingNumberError && <p className="text-[10px] text-destructive mt-1">{startingNumberError}</p>}
+                </div>
+                <BnBusyButton loading={busy}
+                  size="sm"
+                  disabled={!canExecute || busy || !selectedBook || !!startingNumberError}
+                  onClick={() => run(
+                    () => assignChequeNumbersForBatch({
+                      batchId,
+                      bankAccountRef: selectedBook,
+                      chequeDate,
+                      startingNumber: startingNumber ? Number(startingNumber) : undefined,
+                      userCode,
+                    }).then((r) => { if (!r.assigned) throw new Error('No cheques to assign'); }),
+                    'Cheque numbers assigned',
+                  )}
+                >
+                  Assign Cheque Numbers
+                </BnBusyButton>
+              </div>
+            </div>
+          )}
 
           {(chequesQ.data || []).length > 0 && (
             <div className="border rounded-md overflow-hidden max-h-[300px] overflow-y-auto">

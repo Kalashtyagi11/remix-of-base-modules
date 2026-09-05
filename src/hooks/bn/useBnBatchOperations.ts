@@ -35,6 +35,14 @@ export function useBnAvailablePayables(paymentMethod?: string, officeCode?: stri
   });
 }
 
+export function useBnAvailablePayablesDetailed(paymentMethod?: string, officeCode?: string) {
+  return useQuery({
+    queryKey: ['bn', 'available-payables-detailed', paymentMethod, officeCode],
+    queryFn: () => svc.fetchAvailablePayablesDetailed(paymentMethod, officeCode),
+  });
+}
+
+
 export function useBnBatchSummary() {
   return useQuery({
     queryKey: ['bn', 'batch-summary'],

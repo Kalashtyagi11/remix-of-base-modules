@@ -110,6 +110,9 @@ export const BatchDetailDrawer: React.FC<Props> = ({ batchId, open, onClose, onA
                   <div><span className="text-muted-foreground">Date:</span> {formatDateForDisplay(batch.batch_date)}</div>
                   <div><span className="text-muted-foreground">Method:</span> {batch.payment_method}</div>
                   <div><span className="text-muted-foreground">Office:</span> {batch.office_code}</div>
+                  {batch.bank_account_ref && (
+                    <div><span className="text-muted-foreground">Bank Account:</span> {batch.bank_account_ref}</div>
+                  )}
                   <div><span className="text-muted-foreground">Currency:</span> {batch.currency}</div>
                   <div><span className="text-muted-foreground">Created:</span> {batch.created_by}</div>
                   {batch.approved_by && <div><span className="text-muted-foreground">Approved:</span> {batch.approved_by}</div>}
@@ -171,7 +174,15 @@ export const BatchDetailDrawer: React.FC<Props> = ({ batchId, open, onClose, onA
                             <TableCell className="text-right font-mono text-xs">
                               {formatNumber(item.amount, 2)}
                             </TableCell>
-                            <TableCell><BnStatusBadge status={item.item_status} size="sm" /></TableCell>
+                            <TableCell>
+                              <BnStatusBadge status={item.item_status} size="sm" />
+                              {item.item_status === 'ISSUE_FAILED' && (item as any).issue_error && (
+                                <div className="mt-1 text-[10px] leading-tight text-destructive max-w-[220px]">
+                                  {(item as any).issue_error}
+                                </div>
+                              )}
+                            </TableCell>
+
                             {canRemove && (
                               <TableCell>
                                 {!['ISSUED', 'REMOVED'].includes(item.item_status) && (
@@ -219,7 +230,7 @@ export const BatchDetailDrawer: React.FC<Props> = ({ batchId, open, onClose, onA
                       batchId={batch.id}
                       batchType={(batch as any).batch_type || batch.payment_method as any}
                       countryCode={'KN'}
-                      bankAccountRef={(batch as any).bank_account_ref || batch.office_code || 'DEFAULT'}
+                      bankAccountRef={batch.bank_account_ref || batch.office_code || 'DEFAULT'}
                       userCode={batch.created_by || userCode || '—'}
                       canExecute={['APPROVED', 'RELEASED', 'PARTIALLY_ISSUED'].includes(batch.status)}
                     />

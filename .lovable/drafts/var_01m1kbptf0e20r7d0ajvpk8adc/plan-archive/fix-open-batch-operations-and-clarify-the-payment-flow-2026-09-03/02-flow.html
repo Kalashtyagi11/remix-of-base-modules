@@ -1,0 +1,31 @@
+<svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans)">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+    </marker>
+  </defs>
+  <g stroke="hsl(var(--muted-foreground))" fill="none" stroke-width="1">
+    <rect x="8" y="30" width="110" height="44" rx="8"/>
+    <rect x="140" y="30" width="120" height="44" rx="8"/>
+    <rect x="282" y="30" width="120" height="44" rx="8"/>
+    <rect x="424" y="30" width="120" height="44" rx="8" stroke="hsl(var(--accent))"/>
+    <rect x="140" y="140" width="120" height="44" rx="8"/>
+    <rect x="282" y="140" width="120" height="44" rx="8"/>
+  </g>
+  <g fill="hsl(var(--foreground))" style="font-size:13px" text-anchor="middle">
+    <text x="63" y="57">Award</text>
+    <text x="200" y="57">Payment Schedule</text>
+    <text x="342" y="57">Payables Queue</text>
+    <text x="484" y="57" fill="hsl(var(--accent))">Batch Operations</text>
+    <text x="200" y="167">Payment Issue</text>
+    <text x="342" y="167">Post-Issue Review</text>
+  </g>
+  <g stroke="hsl(var(--muted-foreground))" stroke-width="1" marker-end="url(#a)">
+    <line x1="118" y1="52" x2="136" y2="52"/>
+    <line x1="260" y1="52" x2="278" y2="52"/>
+    <line x1="402" y1="52" x2="420" y2="52"/>
+    <path d="M484 74 L484 110 L200 110 L200 136" fill="none"/>
+    <line x1="260" y1="162" x2="278" y2="162"/>
+  </g>
+  <text x="484" y="98" fill="hsl(var(--muted-foreground))" style="font-size:11px" text-anchor="middle">validate → approve → release → prepare issue</text>
+</svg>

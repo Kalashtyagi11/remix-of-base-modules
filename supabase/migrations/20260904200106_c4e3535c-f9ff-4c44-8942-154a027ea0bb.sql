@@ -1,0 +1,2 @@
+ALTER TABLE public.ia_management_status_report DROP CONSTRAINT IF EXISTS ia_msr_status_chk;
+ALTER TABLE public.ia_management_status_report ADD CONSTRAINT ia_msr_status_chk CHECK (status = ANY (ARRAY['Draft'::text,'Sealed'::text,'Withdrawn'::text]));

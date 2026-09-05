@@ -121,6 +121,14 @@ export interface SendCommunicationAttachmentInput {
    * instead of silently delivering an incomplete communication.
    */
   requiredForDelivery?: boolean;
+  /**
+   * Scope of the requirement.
+   * `all_channels` (default) — every requested channel must carry the file.
+   * `attachment_capable_channels` — the file is mandatory wherever files can
+   * be carried (e.g. Email), while channels that legitimately deliver a secure
+   * link instead (In-App, SMS, Push) stay deliverable.
+   */
+  requirementScope?: 'all_channels' | 'attachment_capable_channels';
 }
 
 /** Maximum governed attachments per request. Mirrors the DB bound. */

@@ -1,0 +1,47 @@
+<svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: var(--font-sans); fill: hsl(var(--foreground)); }
+    .lbl { font-size: 14px; font-weight: 480; }
+    .note { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .box { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .wire { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+    .acc { stroke: hsl(var(--accent)); stroke-width: 1; fill: none; }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+    </marker>
+    <marker id="b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--accent))"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="16" y="56" width="130" height="52" rx="8"/>
+  <text class="lbl" x="81" y="80" text-anchor="middle">Issue payment</text>
+  <text class="note" x="81" y="97" text-anchor="middle">batch or single</text>
+
+  <rect class="box" x="186" y="56" width="130" height="52" rx="8"/>
+  <text class="lbl" x="251" y="80" text-anchor="middle">Issue record</text>
+  <text class="note" x="251" y="97" text-anchor="middle">4 rows exist</text>
+
+  <rect class="acc" x="356" y="56" width="140" height="52" rx="8" stroke-dasharray="4 3"/>
+  <text class="lbl" x="426" y="80" text-anchor="middle">Generate tasks</text>
+  <text class="note" x="426" y="97" text-anchor="middle">never called</text>
+
+  <rect class="box" x="536" y="56" width="90" height="52" rx="8"/>
+  <text class="lbl" x="581" y="80" text-anchor="middle">Checklist</text>
+  <text class="note" x="581" y="97" text-anchor="middle">0 rows</text>
+
+  <line class="wire" x1="146" y1="82" x2="180" y2="82" marker-end="url(#a)"/>
+  <line class="acc" x1="316" y1="82" x2="350" y2="82" marker-end="url(#b)" stroke-dasharray="4 3"/>
+  <line class="acc" x1="496" y1="82" x2="530" y2="82" marker-end="url(#b)" stroke-dasharray="4 3"/>
+
+  <circle cx="426" cy="150" r="10" fill="hsl(var(--accent))"/>
+  <text x="426" y="154" text-anchor="middle" font-size="12" fill="hsl(var(--accent-foreground))">1</text>
+  <text class="note" x="452" y="148">The missing link: issue completes, but the follow-up</text>
+  <text class="note" x="452" y="164">checklist is never created, so the screen stays empty.</text>
+  <line class="wire" x1="426" y1="112" x2="426" y2="138"/>
+
+  <text class="note" x="16" y="212">Fix: create the checklist automatically at issue time, add a manual generate/backfill action,</text>
+  <text class="note" x="16" y="228">and backfill the 4 payments already issued.</text>
+</svg>

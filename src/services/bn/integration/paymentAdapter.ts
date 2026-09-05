@@ -25,6 +25,7 @@ export const bnPaymentAdapter: IBnPaymentAdapter = {
         due_date: instruction.dueDate,
         frequency: instruction.frequency,
         description: instruction.description,
+        office_code: (instruction as any).officeCode || 'HQ',
         status: 'queued',
       })
       .select('id')

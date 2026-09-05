@@ -1,0 +1,50 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    text { font-family: var(--font-sans); fill: hsl(var(--foreground)); }
+    .lbl { font-size: 14px; font-weight: 480; }
+    .sm { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .bx { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .zone { fill: none; stroke: hsl(var(--border)); stroke-width: 1; stroke-dasharray: 4 3; }
+    .acc { fill: none; stroke: hsl(var(--accent)); stroke-width: 1; }
+    .accfill { fill: hsl(var(--accent)); }
+  </style>
+
+  <text class="sm" x="16" y="20">Benefit Payments menu — grants per screen</text>
+
+  <rect class="zone" x="12" y="32" width="616" height="150" rx="8"/>
+  <text class="sm" x="24" y="52">module view grants</text>
+
+  <rect class="bx" x="28" y="64" width="132" height="46" rx="8"/>
+  <text class="lbl" x="44" y="86">Payment Schedules</text>
+  <text class="sm" x="44" y="102">Admin · Officer</text>
+
+  <rect class="bx" x="172" y="64" width="132" height="46" rx="8"/>
+  <text class="lbl" x="188" y="86">Payables Queue</text>
+  <text class="sm" x="188" y="102">Admin · Sup · Officer</text>
+
+  <rect class="bx" x="316" y="64" width="132" height="46" rx="8"/>
+  <text class="lbl" x="332" y="86">Batch Operations</text>
+  <text class="sm" x="332" y="102">Admin · Sup · Officer</text>
+
+  <rect class="bx" x="460" y="64" width="132" height="46" rx="8"/>
+  <text class="lbl" x="476" y="86">Payment Issue</text>
+  <text class="sm" x="476" y="102">Admin · Sup · Officer</text>
+
+  <rect class="acc" x="28" y="124" width="200" height="46" rx="8"/>
+  <text class="lbl" x="44" y="146">Post-Issue Review</text>
+  <text class="sm" x="44" y="162">no view action · no grants</text>
+
+  <circle class="accfill" cx="252" cy="147" r="10"/>
+  <text x="248" y="151" style="font-size:12px; fill: hsl(var(--accent-foreground));">1</text>
+  <text class="sm" x="270" y="151">hidden for BN_PAYMENT_OFFICER — this is the fix</text>
+
+  <rect class="zone" x="12" y="198" width="616" height="86" rx="8"/>
+  <text class="sm" x="24" y="218">closure</text>
+  <rect class="bx" x="28" y="228" width="150" height="42" rx="8"/>
+  <text class="lbl" x="44" y="248">Payment Issue basket</text>
+  <text class="sm" x="44" y="264">claim status IN_PAYMENT</text>
+  <rect class="bx" x="206" y="228" width="180" height="42" rx="8"/>
+  <text class="lbl" x="222" y="248">Post-Issue Review screen</text>
+  <text class="sm" x="222" y="264">CLAIM_CLOSURE task</text>
+  <text class="sm" x="404" y="253">no separate Closure basket</text>
+</svg>

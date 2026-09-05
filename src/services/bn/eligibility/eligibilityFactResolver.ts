@@ -346,6 +346,89 @@ async function deceasedWindowOrSnapshot(
   return key ? totals.windowCounts[key] : null;
 }
 
+// ─── Funeral Grant: whose contribution record is tested ────────────────────
+// The grant is payable on the death of an insured person, their spouse, or
+// their dependent child. Only the first of those has a contribution record of
+// their own, so testing the deceased's own record fails every spouse/child
+// claim at 26 weeks regardless of merit. These helpers resolve the *insured
+// member* behind the death via ip_depend, where `ssn` is the insured person
+// and `depend_ssn` is the dependant.
+
+type DependantLink = {
+  insuredSsn: string;
+  relation: string;
+  dob: string | null;
+  dateOfDeath: string | null;
+  schoolChild: boolean;
+  invalid: boolean;
+};
+
+async function loadDependantLinks(dependantSsn: string): Promise<DependantLink[]> {
+  const { data } = await db
+    .from('ip_depend')
+    .select('ssn, depend_ssn, relation, dob, date_of_death, school_child, invalid, status')
+    .eq('depend_ssn', dependantSsn)
+    .limit(50);
+  if (!Array.isArray(data)) return [];
+  return (data as any[])
+    .filter((r) => r.ssn)
+    .map((r) => ({
+      insuredSsn: String(r.ssn),
+      relation: String(r.relation ?? '').trim().toUpperCase(),
+      dob: r.dob ? String(r.dob).slice(0, 10) : null,
+      dateOfDeath: r.date_of_death ? String(r.date_of_death).slice(0, 10) : null,
+      schoolChild: String(r.school_child ?? '').trim().toUpperCase() === 'Y',
+      invalid: String(r.invalid ?? '').trim().toUpperCase() === 'Y',
+    }));
+}
+
+/** Child-type relation codes used by the legacy dependants register. */
+const CHILD_RELATIONS = new Set(['CHI', 'SON', 'DAU', 'CLS', 'CHILD', 'STEPCHILD']);
+
+/**
+ * Lifetime contribution weeks of the insured member whose record governs a
+ * Funeral Grant claim.
+ *
+ * - Deceased is the insured person (has an own contribution record) → own total.
+ * - Deceased is a spouse / dependant → every linked insured person is evaluated
+ *   and the **highest** total is returned, so the claim passes if *any* parent
+ *   qualifies. The statute asks whether the deceased was the dependant of an
+ *   insured member, not of a specific one; picking "the first row" would make
+ *   the outcome depend on arbitrary row order.
+ * - No own record and no ip_depend link → **null (review)**, never 0. An
+ *   unregistered dependency is a records gap, not proof the relationship did
+ *   not exist, and a silent zero would deny a valid claim on data hygiene.
+ */
+async function resolveQualifyingContributionWeeks(
+  ctx: EligibilityContext,
+): Promise<number | null> {
+  const deceasedSsn = await resolveDeceasedSsn(ctx);
+  if (!deceasedSsn) return null;
+  const asOf = ctx.claimDate ?? new Date().toISOString().slice(0, 10);
+  const { computeContributionTotals } = await import('./contributionSnapshotService');
+
+  const own = await computeContributionTotals(deceasedSsn, asOf);
+  if (own && own.total > 0) {
+    if (ctx.extras) ctx.extras['fg_qualifying_insured_ssn'] = deceasedSsn;
+    return own.total;
+  }
+
+  const links = await loadDependantLinks(deceasedSsn);
+  if (links.length === 0) return null; // records gap → unknown, not a failure
+
+  let best: { ssn: string; weeks: number } | null = null;
+  for (const link of links) {
+    const totals = await computeContributionTotals(link.insuredSsn, asOf);
+    const weeks = totals?.total ?? 0;
+    if (!best || weeks > best.weeks) best = { ssn: link.insuredSsn, weeks };
+  }
+  if (!best) return null;
+  if (ctx.extras) {
+    ctx.extras['fg_qualifying_insured_ssn'] = best.ssn;
+    ctx.extras['fg_qualifying_insured_candidates'] = links.length;
+  }
+  return best.weeks;
+}
 
 
 const RESOLVERS: Record<string, ResolverFn> = {
@@ -985,6 +1068,97 @@ const RESOLVERS: Record<string, ResolverFn> = {
     if (relationships.length === 0) return null;
     return relationships.some((r) => QUALIFYING.has(r));
   },
+
+  /**
+   * Funeral Grant — contribution weeks of the insured member whose record
+   * governs the claim (the deceased themselves, or the insured person the
+   * deceased was a dependant of). Replaces the use of
+   * `fg.deceased_contribution_weeks` on FG_MIN_CONTRIBUTION, which tested the
+   * wrong person for spouse and dependent-child deaths. Funeral Grant only —
+   * the deceased-contribution resolvers used by Survivors and Death Benefit
+   * are untouched.
+   */
+  resolveFgQualifyingContributionWeeks: async (ctx) =>
+    resolveQualifyingContributionWeeks(ctx),
+
+  /**
+   * Funeral Grant — is the deceased dependant an eligible dependent child?
+   * Under 16; or under 25 in full-time education; or an invalid. Returns null
+   * (review) when the deceased is not linked as a dependant at all, never a
+   * silent pass. `school_child` and `invalid` are point-in-time flags with no
+   * history, so a stale student flag will read false — a data-quality reality
+   * for the officer, not something code can infer.
+   */
+  resolveFgDependentChildQualifies: async (ctx) => {
+    const deceasedSsn = await resolveDeceasedSsn(ctx);
+    if (!deceasedSsn) return null;
+    const links = await loadDependantLinks(deceasedSsn);
+    const childLinks = links.filter((l) => CHILD_RELATIONS.has(l.relation));
+    if (childLinks.length === 0) return null; // not a dependent-child claim, or records gap
+    const deathDate =
+      childLinks.find((l) => l.dateOfDeath)?.dateOfDeath ??
+      (ctx.claimId
+        ? ((await db.from('bn_claim').select('death_date').eq('id', ctx.claimId).maybeSingle())
+            .data as any)?.death_date ?? null
+        : null);
+    return childLinks.some((l) => {
+      if (l.invalid) return true;
+      if (!l.dob || !deathDate) return false;
+      const age = yearsBetween(l.dob, String(deathDate).slice(0, 10));
+      if (age < 16) return true;
+      return age < 25 && l.schoolChild;
+    });
+  },
+
+  /**
+   * Funeral Grant — the statutory claimant test is financial, not familial:
+   * the grant is payable to whoever met the funeral expenses, or gave the
+   * Director a written undertaking to meet them. Reads the intake declaration
+   * plus the funeral invoice/receipt evidence.
+   *
+   * true  — expenses met (invoice/receipt on the claim) or an undertaking recorded
+   * null  — claimed but neither proof present yet → officer review
+   * false — the claimant explicitly declines both limbs
+   */
+  resolveFgClaimantCostResponsibility: async (ctx) => {
+    if (!ctx.claimId) return null;
+    const { data: application } = await db
+      .from('bn_claim_application')
+      .select('raw_application_json')
+      .eq('claim_id', ctx.claimId)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const payload = ((application as any)?.raw_application_json ?? {}) as Record<string, unknown>;
+    const facts = (payload.benefit_facts ?? {}) as Record<string, unknown>;
+    const basis = String(
+      (payload.funeral_cost_responsibility ?? facts.funeral_cost_responsibility ?? '') as string,
+    )
+      .trim()
+      .toUpperCase();
+    const undertakingRef = String(
+      (payload.funeral_undertaking_reference ?? facts.funeral_undertaking_reference ?? '') as string,
+    ).trim();
+
+    if (basis === 'NONE' || basis === 'DECLINED') return false;
+    if (basis === 'UNDERTAKING_GIVEN') return undertakingRef.length > 0 ? true : null;
+
+    const { data: docs } = await db
+      .from('bn_claim_document')
+      .select('document_type_code')
+      .eq('claim_id', ctx.claimId)
+      .limit(100);
+    const hasInvoice =
+      Array.isArray(docs) &&
+      (docs as any[]).some((d) =>
+        String(d.document_type_code ?? '').toUpperCase().includes('FUNERAL_INVOICE'),
+      );
+    if (basis === 'EXPENSES_MET') return hasInvoice ? true : null;
+    // No declaration captured yet — evidence alone can still satisfy it.
+    return hasInvoice ? true : null;
+  },
+
+
 
   resolveSpouseRelationshipValid: async (ctx) => {
     if (!ctx.claimId) return null;

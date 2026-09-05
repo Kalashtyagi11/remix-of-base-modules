@@ -74,27 +74,56 @@ export async function allocateChequeNumbers(
     .eq('status', 'ACTIVE')
     .order('registered_at', { ascending: true });
   if (error) throw error;
-  const stock = (stocks || []).find((s: ChequeStock) => {
-    const start = startingNumber ?? s.next_number;
-    return start >= s.range_start && start + count - 1 <= s.range_end;
-  });
-  if (!stock) throw new Error('No active cheque stock can satisfy this allocation');
+  if (!stocks || stocks.length === 0) {
+    throw new Error(`No active cheque stock found for bank account "${bankAccountRef}". Register a cheque book first.`);
+  }
 
-  const start = startingNumber ?? stock.next_number;
-  if (start < stock.next_number) {
-    throw new Error(`Starting number ${start} is below next available (${stock.next_number})`);
+  const ranges = stocks.map((s: ChequeStock) =>
+    `${s.series_prefix || ''}${s.range_start}–${s.series_prefix || ''}${s.range_end}`
+  ).join(', ');
+
+  const capacity = (s: ChequeStock) => Math.max(0, s.range_end - s.next_number + 1);
+
+  if (startingNumber !== undefined && !Number.isFinite(startingNumber)) {
+    throw new Error('Starting number must be a numeric value');
+  }
+
+  const matchingStock = startingNumber === undefined
+    ? stocks.find((s: ChequeStock) => capacity(s) >= count)
+    : stocks.find((s: ChequeStock) => {
+        return startingNumber >= s.range_start && startingNumber + count - 1 <= s.range_end;
+      });
+
+  if (startingNumber !== undefined && !matchingStock) {
+    throw new Error(
+      `Starting number ${startingNumber} does not fit any active range for "${bankAccountRef}" (${ranges}).`
+    );
+  }
+
+  if (!matchingStock) {
+    const remaining = stocks.reduce((sum: number, s: ChequeStock) => sum + capacity(s), 0);
+    throw new Error(
+      `Active stock for "${bankAccountRef}" cannot satisfy ${count} cheques (${remaining} remaining; ranges: ${ranges}).`
+    );
+  }
+
+  const start = startingNumber ?? matchingStock.next_number;
+  if (start < matchingStock.next_number) {
+    throw new Error(
+      `Starting number ${start} is below the next available number (${matchingStock.next_number}) for "${bankAccountRef}".`
+    );
   }
   const numbers: string[] = [];
   for (let i = 0; i < count; i++) {
     const n = start + i;
-    numbers.push(stock.series_prefix ? `${stock.series_prefix}${n}` : String(n));
+    numbers.push(matchingStock.series_prefix ? `${matchingStock.series_prefix}${n}` : String(n));
   }
   const newNext = start + count;
-  const newStatus = newNext > stock.range_end ? 'EXHAUSTED' : stock.status;
+  const newStatus = newNext > matchingStock.range_end ? 'EXHAUSTED' : matchingStock.status;
   const { data: updated, error: uErr } = await db
     .from('bn_cheque_stock')
-    .update({ next_number: newNext, used_count: stock.used_count + count, status: newStatus })
-    .eq('id', stock.id)
+    .update({ next_number: newNext, used_count: matchingStock.used_count + count, status: newStatus })
+    .eq('id', matchingStock.id)
     .select()
     .single();
   if (uErr) throw uErr;

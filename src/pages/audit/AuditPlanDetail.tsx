@@ -16,6 +16,7 @@ import { PlanVersionHistory } from '@/components/audit/PlanVersionHistory';
 import { CapacityCalendarPanel } from '@/components/audit/CapacityCalendarPanel';
 import { PlanApprovalHistoryTimeline } from '@/components/audit/PlanApprovalHistoryTimeline';
 import { PlanAmendmentHistory } from '@/components/audit/PlanAmendmentHistory';
+import { ManagementStatusPanel } from '@/components/audit/reports/managementStatus/ManagementStatusPanel';
 import { PlanApprovalBanner } from '@/components/audit/PlanApprovalBanner';
 import { PlanSubmissionReadiness } from '@/components/audit/PlanSubmissionReadiness';
 import { PlanRevisionDialog } from '@/components/audit/PlanRevisionDialog';
@@ -34,7 +35,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, X } from 'lucide-react';
 import { useAuditPlanWorkflow } from '@/hooks/useAuditPlanApproval';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { usePlanWorkflowAccess } from '@/hooks/useAuditPlanWorkflowAccess';
+import { usePlanWorkflowAccess, isEditablePlanStatus } from '@/hooks/useAuditPlanWorkflowAccess';
 import { getAnnualPlanReadinessChecks, summarizeAnnualPlanReadiness, useAnnualPlanReadiness, useSubmitAnnualPlanWorkflow } from '@/hooks/useAuditAnnualPlanFlow';
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -92,6 +93,12 @@ export default function AuditPlanDetail() {
   );
 
   const access = usePlanWorkflowAccess(planStatus, readinessSummary);
+  // Blocked only by readiness (not by permission/status) — let the user open the checklist to see the blockers.
+  const readinessBlockedOnly =
+    access.submit.visible &&
+    !access.submit.enabled &&
+    isEditablePlanStatus(planStatus) &&
+    !readinessSummary?.ready;
 
   // Auto-open submission readiness dialog when navigated with ?action=submit
   useEffect(() => {
@@ -110,7 +117,8 @@ export default function AuditPlanDetail() {
     const ongoing = all.filter((e: any) => ['In Progress', 'Fieldwork', 'Fieldwork Complete', 'Observation', 'Reporting', 'Report Issued'].includes(e.status));
     const planned = all.filter((e: any) => ['Planned', 'Draft', 'Ready', 'In Preparation', 'Approved'].includes(e.status));
     const totalDays = all.reduce((sum: number, e: any) => sum + (Number(e.estimated_days) || 0), 0);
-    const totalWeeks = all.reduce((sum: number, e: any) => sum + (Number(e.estimated_hours) || 0), 0);
+    const totalHours = all.reduce((sum: number, e: any) => sum + (Number(e.estimated_hours) || 0), 0);
+    const totalWeeks = Math.round((totalDays / 5) * 10) / 10;
     const highRisk = all.filter((e: any) => ['High', 'Critical'].includes(e.engagement_risk_rating)).length;
     return { total: all.length, planned: planned.length, ongoing: ongoing.length, completed: closed.length, totalDays, totalWeeks, highRisk };
   }, [engagements]);
@@ -155,17 +163,19 @@ export default function AuditPlanDetail() {
       isLoading={engLoading}
       actions={
         <div className="flex items-center gap-2">
-          {/* Submit button — visible with tooltip when disabled */}
+          {/* Submit button — when readiness fails the user can still open the checklist to see why */}
           {access.submit.visible && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span>
                     <Button
-                      onClick={() => access.submit.enabled ? setShowReadiness(true) : undefined}
-                      disabled={!access.submit.enabled}
+                      variant={readinessBlockedOnly ? 'outline' : 'default'}
+                      onClick={() => (access.submit.enabled || readinessBlockedOnly) ? setShowReadiness(true) : undefined}
+                      disabled={!access.submit.enabled && !readinessBlockedOnly}
                     >
-                      <Send className="h-4 w-4 mr-2" />Submit for Approval
+                      <Send className="h-4 w-4 mr-2" />
+                      {readinessBlockedOnly ? 'Submit for Approval — Review Blockers' : 'Submit for Approval'}
                     </Button>
                   </span>
                 </TooltipTrigger>
@@ -219,10 +229,15 @@ export default function AuditPlanDetail() {
           <TabsTrigger value="capacity">Capacity & Schedule</TabsTrigger>
           <TabsTrigger value="autoplan">Auto Plan</TabsTrigger>
           <TabsTrigger value="approval">Approval & Amendments</TabsTrigger>
+          <TabsTrigger value="status-report">Status & Management Report</TabsTrigger>
           <TabsTrigger value="boardpack">Board Pack</TabsTrigger>
           <TabsTrigger value="distribution">Distribution</TabsTrigger>
           <TabsTrigger value="closure">Closure</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="status-report">
+          <ManagementStatusPanel planId={id!} />
+        </TabsContent>
 
         <TabsContent value="portfolio">
           <PlanPortfolioPanel planId={id!} />

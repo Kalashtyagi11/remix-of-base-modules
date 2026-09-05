@@ -10,7 +10,7 @@ import { BnStatCard, BnEmptyState } from '@/components/bn/shared';
 import { Button } from '@/components/ui/button';
 import {
   CalendarDays, CheckCircle, PauseCircle, AlertTriangle,
-  Clock, Loader2, RotateCcw, Banknote, Plus,
+  Clock, Loader2, RotateCcw, Banknote, Plus, PlayCircle,
 } from 'lucide-react';
 import { useBnScheduleRows } from '@/hooks/bn/useBnSchedule';
 import { ScheduleFiltersBar } from '@/components/bn/schedule/ScheduleFiltersBar';
@@ -18,7 +18,9 @@ import { ScheduleGrid } from '@/components/bn/schedule/ScheduleGrid';
 import { ScheduleRowDrawer } from '@/components/bn/schedule/ScheduleRowDrawer';
 import { ScheduleActionBar } from '@/components/bn/schedule/ScheduleActionBar';
 import { ScheduleGenerationWizard } from '@/components/bn/schedule/ScheduleGenerationWizard';
-import type { ScheduleFilters } from '@/services/bn/scheduleService';
+import type { ScheduleFilters, ScheduleMaturationResultRow } from '@/services/bn/scheduleService';
+import { runScheduleMaturation, summariseMaturation } from '@/services/bn/scheduleService';
+import { toast } from 'sonner';
 
 const formatCurrency = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'XCD' }).format(n);
@@ -28,8 +30,28 @@ export default function PaymentScheduleManagement() {
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showGenWizard, setShowGenWizard] = useState(false);
+  const [maturing, setMaturing] = useState(false);
+  const [lastRun, setLastRun] = useState<ScheduleMaturationResultRow[] | null>(null);
 
   const { data: rows, isLoading, error, refetch } = useBnScheduleRows(filters);
+
+  const handleRunMaturation = async () => {
+    setMaturing(true);
+    try {
+      const result = await runScheduleMaturation({ performedBy: 'MANUAL' });
+      const summary = summariseMaturation(result);
+      setLastRun(result);
+      toast.success(
+        `Maturation complete — ${summary.matured} matured, ${summary.generated} payable(s) generated, ${summary.skipped} skipped`,
+      );
+      refetch();
+    } catch (e: any) {
+      toast.error(e?.message || 'Maturation run failed');
+    } finally {
+      setMaturing(false);
+    }
+  };
+
 
   const stats = useMemo(() => {
     const items = rows ?? [];
@@ -73,10 +95,36 @@ export default function PaymentScheduleManagement() {
             records — issued payments persist in legacy payment tables (cl_cheques).
           </p>
         </div>
-        <Button onClick={() => setShowGenWizard(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Generate Schedule
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleRunMaturation} disabled={maturing} className="gap-2">
+            {maturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Run maturation now
+          </Button>
+          <Button onClick={() => setShowGenWizard(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Generate Schedule
+          </Button>
+        </div>
       </div>
+
+      {lastRun && (
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <div className="mb-1 font-medium">Last maturation run</div>
+          {lastRun.length === 0 ? (
+            <p className="text-muted-foreground">No rows were due — nothing to mature.</p>
+          ) : (
+            <ul className="space-y-0.5 text-muted-foreground">
+              {lastRun.slice(0, 20).map((r, i) => (
+                <li key={`${r.schedule_id ?? 'x'}-${i}`}>
+                  {r.claim_number ?? '—'} · {r.due_date ?? '—'} · <span className="font-medium">{r.outcome}</span>
+                  {r.reason ? ` (${r.reason})` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">

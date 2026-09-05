@@ -110,18 +110,18 @@ const _bnMenuItemsRaw = [
         description: "Manage approved benefit rights and lifecycle",
       },
       {
-        title: "Payables Queue",
-        url: "/bn/payables",
-        icon: CreditCard,
-        requiresPermission: "benefits_management",
-        description: "Manage payable instructions before payment issue",
-      },
-      {
         title: "Payment Schedules",
         url: "/bn/schedules",
         icon: CalendarDays,
         requiresPermission: "benefits_management",
         description: "Plan one-time and recurring benefit disbursements",
+      },
+      {
+        title: "Payables Queue",
+        url: "/bn/payables",
+        icon: CreditCard,
+        requiresPermission: "benefits_management",
+        description: "Manage payable instructions before payment issue",
       },
       {
         title: "Batch Operations",

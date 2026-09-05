@@ -1,0 +1,40 @@
+<svg viewBox="0 0 640 300" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans)">
+  <defs>
+    <marker id="ch" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <rect x="10" y="30" width="150" height="56" rx="8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="85" y="53" text-anchor="middle" font-size="14" font-weight="480" fill="hsl(var(--foreground))">Claim</text>
+  <text x="85" y="71" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">no bank account</text>
+
+  <line x1="160" y1="58" x2="220" y2="58" stroke="hsl(var(--muted-foreground))" marker-end="url(#ch)"/>
+
+  <rect x="222" y="30" width="180" height="56" rx="8" fill="none" stroke="hsl(var(--muted-foreground))"/>
+  <text x="312" y="53" text-anchor="middle" font-size="14" font-weight="480" fill="hsl(var(--foreground))">Payable (READY)</text>
+  <text x="312" y="71" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">CHEQUE · office blank · 255.00</text>
+
+  <line x1="402" y1="58" x2="462" y2="58" stroke="hsl(var(--muted-foreground))" stroke-dasharray="4 3" marker-end="url(#ch)"/>
+
+  <rect x="464" y="30" width="166" height="56" rx="8" fill="none" stroke="hsl(var(--accent))"/>
+  <text x="547" y="53" text-anchor="middle" font-size="14" font-weight="480" fill="hsl(var(--accent-foreground))">Batch picker</text>
+  <text x="547" y="71" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">filtered out</text>
+
+  <rect x="464" y="120" width="166" height="56" rx="8" fill="hsl(var(--muted))" stroke="hsl(var(--muted-foreground))"/>
+  <text x="547" y="143" text-anchor="middle" font-size="14" font-weight="480" fill="hsl(var(--foreground))">Batch BN-HQ-…</text>
+  <text x="547" y="161" text-anchor="middle" font-size="12" fill="hsl(var(--muted-foreground))">DIRECT_DEPOSIT · HQ</text>
+  <line x1="547" y1="120" x2="547" y2="90" stroke="hsl(var(--muted-foreground))" marker-end="url(#ch)"/>
+
+  <circle cx="24" cy="215" r="10" fill="hsl(var(--accent))"/>
+  <text x="24" y="219" text-anchor="middle" font-size="12" fill="hsl(var(--accent-foreground))">1</text>
+  <text x="44" y="219" font-size="12" fill="hsl(var(--muted-foreground))">Method mismatch: CHEQUE payable vs DIRECT_DEPOSIT batch</text>
+
+  <circle cx="24" cy="247" r="10" fill="hsl(var(--accent))"/>
+  <text x="24" y="251" text-anchor="middle" font-size="12" fill="hsl(var(--accent-foreground))">2</text>
+  <text x="44" y="251" font-size="12" fill="hsl(var(--muted-foreground))">Office mismatch: payable has no office, batch is HQ</text>
+
+  <circle cx="24" cy="279" r="10" fill="hsl(var(--accent))"/>
+  <text x="24" y="283" text-anchor="middle" font-size="12" fill="hsl(var(--accent-foreground))">3</text>
+  <text x="44" y="283" font-size="12" fill="hsl(var(--muted-foreground))">Dialog gives no reason — just "no eligible payables"</text>
+</svg>
