@@ -263,10 +263,17 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
                     </p>
                     {it.observation && <p className="text-xs text-muted-foreground">{it.observation}</p>}
                     {it.exception_detail && <p className="text-xs text-destructive">{it.exception_detail}</p>}
+                    {it.result === 'Not Applicable' && it.na_rationale && (
+                      <p className="text-xs text-muted-foreground">Not applicable: {it.na_rationale}</p>
+                    )}
                     {exc && (
                       <p className="mt-1 text-[11px]">
-                        <Badge variant={exc.evaluation_status === 'Open' ? 'destructive' : 'outline'}>
-                          {exc.evaluation_status === 'Open' ? 'Exception — needs evaluation' : exc.disposition}
+                        <Badge variant={exc.evaluation_status === 'Evaluated' ? 'outline' : 'destructive'}>
+                          {exc.evaluation_status === 'Open'
+                            ? 'Exception — needs evaluation'
+                            : exc.evaluation_status === 'Further Work Required'
+                              ? 'More testing required'
+                              : exc.disposition}
                         </Badge>
                       </p>
                     )}
