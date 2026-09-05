@@ -259,3 +259,25 @@ Phases 0–3 of this gate are complete and proven. **Not yet complete:** evidenc
 onto the canonical signed-URL/attachment path with hash population, the Template Library front door,
 the stage-grouped workspace / Continue Audit UX, and the full deterministic + usability + scalability
 test suite. The gate verdict therefore remains **IN PROGRESS — no PASS issued.**
+
+## Phase 3b — Execution-layer semantic closure (authenticated TEST evidence, 2026-09-05)
+
+Scope: create-finding-from-exception, N/A governance, practical dispositions, outcome vs effectiveness labelling.
+No new engine was introduced; the canonical `ia_findings` lifecycle (`useIAFindingMutations`) is reused.
+
+| Requirement | Implementation | Authenticated TEST proof |
+|---|---|---|
+| N/A rationale governance (methodology-driven, server-side) | `na_rationale_requirement` on `ia_audit_procedures` → snapshot step → control test; resolver `ia_na_rationale_requirement`; BEFORE trigger `ia_guard_sample_na_rationale`; conclusion guard | Test `da11ecc3…` (Required): N/A without reason rejected `IA_NA_RATIONALE_REQUIRED`; N/A with reason accepted (201) |
+| Rationale historically reproducible | `ia_control_test_results.na_rationale` persisted per item | Item `NA-OK` retains "Out of scope period" |
+| More Testing Required not treated as closed | `evaluation_status = 'Further Work Required'`, `further_work_required = true`; conclusion blocked | `IA_FURTHER_WORK_PENDING` returned on conclude attempt |
+| Corrected During Fieldwork preserves original exception | original `condition` untouched; `correction_description` / `corrected_at` / `corrected_by` recorded | exception row keeps `condition = "Approval evidence missing"` plus correction text and actor |
+| Exception → Create Finding (explicit, context-carried) | `TestExecutionPanel` "Create finding from this exception": prefilled title/condition/severity, engagement + control test + activity + step carried, then `ia_evaluate_test_exception('Finding Raised', finding_id)` | Finding `6a720b96…` linked; disposition `Finding Raised`, `evaluation_status = Evaluated` |
+| Link to an EXISTING finding retained (systemic findings) | existing-finding selector retained alongside create | selector unchanged; RPC accepts any engagement finding |
+| No automatic finding creation | no trigger/side-effect creates findings; auditor action only | conclude only succeeded after explicit evaluation |
+| Outcome vs effectiveness distinction | sample field relabelled "Sample / test outcome" with helper text; effectiveness stays on test conclusion | conclude recorded `result = Partially Effective` while sample outcomes remain Pass/Exception/N/A |
+
+Derived metrics remained correct: `sample_size = 2`, `exceptions_found = 1`.
+Typecheck `npx tsgo --noEmit -p tsconfig.app.json` clean; build OK.
+
+Gate status: still **IN PROGRESS** — evidence convergence, Template Library, stage-grouped workspace,
+Continue Audit, RBAC/SoD completion, and the full deterministic/usability/scalability/regression suite remain open.
