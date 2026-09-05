@@ -302,23 +302,35 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
           <div className="space-y-3 rounded-md border p-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div><Label>Sample reference</Label><Input value={itemForm.sample_reference} onChange={e => setItemForm(f => ({ ...f, sample_reference: e.target.value }))} placeholder="e.g. PAY-2026-0007" /></div>
-              <div><Label>Result</Label>
+              <div><Label>Sample / test outcome</Label>
                 <Select value={itemForm.result} onValueChange={v => setItemForm(f => ({ ...f, result: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{ITEM_RESULTS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                 </Select>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  This is the outcome for this item only — the overall control effectiveness conclusion is recorded when the test is concluded.
+                </p>
               </div>
             </div>
             <div><Label>Observation</Label><Textarea rows={2} value={itemForm.observation} onChange={e => setItemForm(f => ({ ...f, observation: e.target.value }))} /></div>
             {itemForm.result === 'Exception' && (
               <div><Label>What went wrong</Label><Textarea rows={2} value={itemForm.exception_detail} onChange={e => setItemForm(f => ({ ...f, exception_detail: e.target.value }))} /></div>
             )}
+            {itemForm.result === 'Not Applicable' && (
+              <div>
+                <Label>Why is this item not applicable?{naRationaleRequired ? ' *' : ''}</Label>
+                <Textarea rows={2} value={itemForm.na_rationale} onChange={e => setItemForm(f => ({ ...f, na_rationale: e.target.value }))}
+                  placeholder={naRationaleRequired ? 'This procedure requires a documented reason' : 'Optional for this procedure'} />
+              </div>
+            )}
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => addItem.mutate()} disabled={addItem.isPending}>
+              <Button size="sm" onClick={() => addItem.mutate()}
+                disabled={addItem.isPending || (itemForm.result === 'Not Applicable' && naRationaleRequired && !itemForm.na_rationale.trim())}>
                 {addItem.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}Save item
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowItemForm(false)}>Cancel</Button>
             </div>
+
           </div>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setShowItemForm(true)}><Plus className="h-4 w-4 mr-1" />Add sample item</Button>
