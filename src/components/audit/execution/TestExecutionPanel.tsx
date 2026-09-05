@@ -11,6 +11,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
+import { useIAFindingMutations } from '@/hooks/useAuditDataExtended2';
+import { useAuditFields } from '@/hooks/useAuditFields';
+
 
 const ITEM_RESULTS = ['Pass', 'Exception', 'Not Applicable'];
 const SEVERITIES = ['Low', 'Medium', 'High'];
