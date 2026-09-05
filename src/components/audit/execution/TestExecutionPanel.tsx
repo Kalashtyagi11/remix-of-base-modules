@@ -92,6 +92,16 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
     },
   });
 
+  const { data: naRequirement = 'Not Required' } = useQuery({
+    queryKey: ['ia_na_requirement', test.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).rpc('ia_na_rationale_requirement', { p_test_id: test.id });
+      if (error) throw error;
+      return (data as string) || 'Not Required';
+    },
+  });
+  const naRationaleRequired = naRequirement === 'Required';
+
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['ia_control_test_results', test.id] });
     qc.invalidateQueries({ queryKey: ['ia_test_exceptions', test.id] });
@@ -110,6 +120,7 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
         result: itemForm.result,
         observation: itemForm.observation || null,
         exception_detail: itemForm.result === 'Exception' ? (itemForm.exception_detail || null) : null,
+        na_rationale: itemForm.result === 'Not Applicable' ? (itemForm.na_rationale || null) : null,
         tested_by: userCode || null,
         tested_at: new Date().toISOString(),
       }).select().single();
@@ -118,12 +129,13 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
     },
     onSuccess: () => {
       toast({ title: 'Sample item recorded' });
-      setItemForm({ sample_reference: '', result: 'Pass', observation: '', exception_detail: '' });
+      setItemForm({ sample_reference: '', result: 'Pass', observation: '', exception_detail: '', na_rationale: '' });
       setShowItemForm(false);
       refresh();
     },
     onError: (e: any) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
+
 
   const raiseException = useMutation({
     mutationFn: async (item: any) => {
