@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.ia_bind_programme_to_engagement(uuid, uuid, text) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_approve_engagement_programme(uuid) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_evaluate_test_exception(uuid, text, text, uuid) FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_guard_program_master_immutability() FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_guard_program_procedure_immutability() FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_guard_engagement_programme_immutability() FROM anon, public;
+REVOKE EXECUTE ON FUNCTION public.ia_sync_control_test_sample_metrics() FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.ia_bind_programme_to_engagement(uuid, uuid, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.ia_approve_engagement_programme(uuid) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.ia_evaluate_test_exception(uuid, text, text, uuid) TO authenticated, service_role;

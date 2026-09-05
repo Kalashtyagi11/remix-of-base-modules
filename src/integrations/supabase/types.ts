@@ -75952,41 +75952,71 @@ export type Database = {
         Row: {
           audit_program_id: string | null
           created_at: string | null
+          criteria: string | null
           description: string | null
           evidence_required: string | null
           expected_result: string | null
           id: string
           is_active: boolean | null
+          is_key: boolean
+          na_rationale_requirement: string
+          objective: string | null
+          planned_sample_size: number | null
           procedure_no: string | null
+          rcm_control_id: string | null
+          rcm_risk_id: string | null
+          rcm_test_id: string | null
+          sampling_method: string | null
           sort_order: number | null
           test_type: string | null
           title: string
+          updated_at: string
         }
         Insert: {
           audit_program_id?: string | null
           created_at?: string | null
+          criteria?: string | null
           description?: string | null
           evidence_required?: string | null
           expected_result?: string | null
           id?: string
           is_active?: boolean | null
+          is_key?: boolean
+          na_rationale_requirement?: string
+          objective?: string | null
+          planned_sample_size?: number | null
           procedure_no?: string | null
+          rcm_control_id?: string | null
+          rcm_risk_id?: string | null
+          rcm_test_id?: string | null
+          sampling_method?: string | null
           sort_order?: number | null
           test_type?: string | null
           title: string
+          updated_at?: string
         }
         Update: {
           audit_program_id?: string | null
           created_at?: string | null
+          criteria?: string | null
           description?: string | null
           evidence_required?: string | null
           expected_result?: string | null
           id?: string
           is_active?: boolean | null
+          is_key?: boolean
+          na_rationale_requirement?: string
+          objective?: string | null
+          planned_sample_size?: number | null
           procedure_no?: string | null
+          rcm_control_id?: string | null
+          rcm_risk_id?: string | null
+          rcm_test_id?: string | null
+          sampling_method?: string | null
           sort_order?: number | null
           test_type?: string | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -75996,10 +76026,32 @@ export type Database = {
             referencedRelation: "ia_audit_programs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ia_audit_procedures_rcm_control_id_fkey"
+            columns: ["rcm_control_id"]
+            isOneToOne: false
+            referencedRelation: "ia_rcm_controls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_audit_procedures_rcm_risk_id_fkey"
+            columns: ["rcm_risk_id"]
+            isOneToOne: false
+            referencedRelation: "ia_rcm_risks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_audit_procedures_rcm_test_id_fkey"
+            columns: ["rcm_test_id"]
+            isOneToOne: false
+            referencedRelation: "ia_rcm_tests"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ia_audit_programs: {
         Row: {
+          approved_at: string | null
           approved_by: string | null
           audit_area: string | null
           created_at: string | null
@@ -76011,16 +76063,21 @@ export type Database = {
           linked_risks_json: Json | null
           methodology: string | null
           objective: string | null
+          parent_program_id: string | null
           procedure_steps_json: Json | null
           program_code: string | null
           program_name: string
+          published_at: string | null
+          retired_at: string | null
           scope: string | null
           status: string | null
           updated_at: string | null
           updated_by: string | null
           version: number | null
+          version_notes: string | null
         }
         Insert: {
+          approved_at?: string | null
           approved_by?: string | null
           audit_area?: string | null
           created_at?: string | null
@@ -76032,16 +76089,21 @@ export type Database = {
           linked_risks_json?: Json | null
           methodology?: string | null
           objective?: string | null
+          parent_program_id?: string | null
           procedure_steps_json?: Json | null
           program_code?: string | null
           program_name: string
+          published_at?: string | null
+          retired_at?: string | null
           scope?: string | null
           status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number | null
+          version_notes?: string | null
         }
         Update: {
+          approved_at?: string | null
           approved_by?: string | null
           audit_area?: string | null
           created_at?: string | null
@@ -76053,16 +76115,28 @@ export type Database = {
           linked_risks_json?: Json | null
           methodology?: string | null
           objective?: string | null
+          parent_program_id?: string | null
           procedure_steps_json?: Json | null
           program_code?: string | null
           program_name?: string
+          published_at?: string | null
+          retired_at?: string | null
           scope?: string | null
           status?: string | null
           updated_at?: string | null
           updated_by?: string | null
           version?: number | null
+          version_notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ia_audit_programs_parent_program_id_fkey"
+            columns: ["parent_program_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_programs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ia_audit_queries: {
         Row: {
@@ -77433,34 +77507,61 @@ export type Database = {
       }
       ia_control_test_results: {
         Row: {
+          conclusion: string | null
           control_test_id: string | null
           created_at: string | null
+          engagement_id: string | null
+          engagement_programme_step_id: string | null
+          evidence_id: string | null
           exception_detail: string | null
           id: string
+          na_rationale: string | null
           observation: string | null
           result: string | null
           sample_reference: string | null
           test_item_no: number | null
+          tested_at: string | null
+          tested_by: string | null
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          conclusion?: string | null
           control_test_id?: string | null
           created_at?: string | null
+          engagement_id?: string | null
+          engagement_programme_step_id?: string | null
+          evidence_id?: string | null
           exception_detail?: string | null
           id?: string
+          na_rationale?: string | null
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
           test_item_no?: number | null
+          tested_at?: string | null
+          tested_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          conclusion?: string | null
           control_test_id?: string | null
           created_at?: string | null
+          engagement_id?: string | null
+          engagement_programme_step_id?: string | null
+          evidence_id?: string | null
           exception_detail?: string | null
           id?: string
+          na_rationale?: string | null
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
           test_item_no?: number | null
+          tested_at?: string | null
+          tested_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -77468,6 +77569,27 @@ export type Database = {
             columns: ["control_test_id"]
             isOneToOne: false
             referencedRelation: "ia_control_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_engagement_programme_step_id_fkey"
+            columns: ["engagement_programme_step_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programme_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -77480,10 +77602,12 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           engagement_id: string | null
+          engagement_programme_step_id: string | null
           exceptions_found: number | null
           id: string
           is_active: boolean | null
           linked_evidence_ids: Json | null
+          na_rationale_requirement: string | null
           no_finding_rationale: string | null
           rcm_control_id: string | null
           remarks: string | null
@@ -77504,10 +77628,12 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           engagement_id?: string | null
+          engagement_programme_step_id?: string | null
           exceptions_found?: number | null
           id?: string
           is_active?: boolean | null
           linked_evidence_ids?: Json | null
+          na_rationale_requirement?: string | null
           no_finding_rationale?: string | null
           rcm_control_id?: string | null
           remarks?: string | null
@@ -77528,10 +77654,12 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           engagement_id?: string | null
+          engagement_programme_step_id?: string | null
           exceptions_found?: number | null
           id?: string
           is_active?: boolean | null
           linked_evidence_ids?: Json | null
+          na_rationale_requirement?: string | null
           no_finding_rationale?: string | null
           rcm_control_id?: string | null
           remarks?: string | null
@@ -77551,6 +77679,13 @@ export type Database = {
             columns: ["engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_tests_engagement_programme_step_id_fkey"
+            columns: ["engagement_programme_step_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programme_steps"
             referencedColumns: ["id"]
           },
           {
@@ -78395,6 +78530,202 @@ export type Database = {
           },
         ]
       }
+      ia_engagement_programme_steps: {
+        Row: {
+          control_test_id: string | null
+          created_at: string
+          created_by: string | null
+          criteria: string | null
+          description: string | null
+          engagement_id: string
+          engagement_programme_id: string
+          evidence_required: string | null
+          execution_status: string
+          expected_result: string | null
+          id: string
+          is_key: boolean
+          is_tailored: boolean
+          na_rationale: string | null
+          na_rationale_requirement: string
+          objective: string | null
+          planned_sample_size: number | null
+          rcm_control_id: string | null
+          rcm_risk_id: string | null
+          sampling_method: string | null
+          sort_order: number
+          source_procedure_id: string | null
+          source_rcm_test_id: string | null
+          step_no: string | null
+          tailoring_reason: string | null
+          test_type: string | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          control_test_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          description?: string | null
+          engagement_id: string
+          engagement_programme_id: string
+          evidence_required?: string | null
+          execution_status?: string
+          expected_result?: string | null
+          id?: string
+          is_key?: boolean
+          is_tailored?: boolean
+          na_rationale?: string | null
+          na_rationale_requirement?: string
+          objective?: string | null
+          planned_sample_size?: number | null
+          rcm_control_id?: string | null
+          rcm_risk_id?: string | null
+          sampling_method?: string | null
+          sort_order?: number
+          source_procedure_id?: string | null
+          source_rcm_test_id?: string | null
+          step_no?: string | null
+          tailoring_reason?: string | null
+          test_type?: string | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          control_test_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          description?: string | null
+          engagement_id?: string
+          engagement_programme_id?: string
+          evidence_required?: string | null
+          execution_status?: string
+          expected_result?: string | null
+          id?: string
+          is_key?: boolean
+          is_tailored?: boolean
+          na_rationale?: string | null
+          na_rationale_requirement?: string
+          objective?: string | null
+          planned_sample_size?: number | null
+          rcm_control_id?: string | null
+          rcm_risk_id?: string | null
+          sampling_method?: string | null
+          sort_order?: number
+          source_procedure_id?: string | null
+          source_rcm_test_id?: string | null
+          step_no?: string | null
+          tailoring_reason?: string | null
+          test_type?: string | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_engagement_programme_steps_control_test_id_fkey"
+            columns: ["control_test_id"]
+            isOneToOne: false
+            referencedRelation: "ia_control_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_engagement_programme_steps_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_engagement_programme_steps_engagement_programme_id_fkey"
+            columns: ["engagement_programme_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programmes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_engagement_programmes: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          engagement_id: string
+          id: string
+          methodology: string | null
+          objective: string | null
+          programme_name: string
+          scope: string | null
+          snapshot: Json | null
+          source_program_id: string | null
+          source_program_version: number | null
+          status: string
+          superseded_at: string | null
+          tailoring_notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id: string
+          id?: string
+          methodology?: string | null
+          objective?: string | null
+          programme_name: string
+          scope?: string | null
+          snapshot?: Json | null
+          source_program_id?: string | null
+          source_program_version?: number | null
+          status?: string
+          superseded_at?: string | null
+          tailoring_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string
+          id?: string
+          methodology?: string | null
+          objective?: string | null
+          programme_name?: string
+          scope?: string | null
+          snapshot?: Json | null
+          source_program_id?: string | null
+          source_program_version?: number | null
+          status?: string
+          superseded_at?: string | null
+          tailoring_notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_engagement_programmes_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_engagement_programmes_source_program_id_fkey"
+            columns: ["source_program_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_engagement_risk_overrides: {
         Row: {
           created_at: string
@@ -78567,13 +78898,20 @@ export type Database = {
           file_url: string | null
           finding_id: string | null
           hash: string | null
+          hash_algorithm: string | null
           id: string
           reference_no: string | null
+          storage_bucket: string | null
+          storage_path: string | null
+          superseded_by_evidence_id: string | null
           tags: string[] | null
           updated_at: string | null
           updated_by: string | null
           upload_date: string | null
           uploaded_by: string | null
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+          withdrawn_by: string | null
         }
         Insert: {
           activity_id?: string | null
@@ -78590,13 +78928,20 @@ export type Database = {
           file_url?: string | null
           finding_id?: string | null
           hash?: string | null
+          hash_algorithm?: string | null
           id?: string
           reference_no?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          superseded_by_evidence_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
           upload_date?: string | null
           uploaded_by?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Update: {
           activity_id?: string | null
@@ -78613,13 +78958,20 @@ export type Database = {
           file_url?: string | null
           finding_id?: string | null
           hash?: string | null
+          hash_algorithm?: string | null
           id?: string
           reference_no?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
+          superseded_by_evidence_id?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
           upload_date?: string | null
           uploaded_by?: string | null
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+          withdrawn_by?: string | null
         }
         Relationships: [
           {
@@ -78648,6 +79000,61 @@ export type Database = {
             columns: ["engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_evidence_superseded_by_evidence_id_fkey"
+            columns: ["superseded_by_evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_evidence_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          engagement_id: string
+          evidence_id: string
+          id: string
+          link_role: string | null
+          linked_id: string
+          linked_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          engagement_id: string
+          evidence_id: string
+          id?: string
+          link_role?: string | null
+          linked_id: string
+          linked_type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string
+          evidence_id?: string
+          id?: string
+          link_role?: string | null
+          linked_id?: string
+          linked_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_evidence_links_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_evidence_links_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -81185,32 +81592,53 @@ export type Database = {
         Row: {
           control_id: string | null
           created_at: string | null
+          criteria: string | null
+          default_sample_size: number | null
+          evidence_required: string | null
           expected_result: string | null
           id: string
           is_active: boolean | null
           review_required: boolean | null
+          sampling_method: string | null
+          test_name: string | null
           test_procedure: string | null
+          test_type: string | null
           tester: string | null
+          updated_at: string
         }
         Insert: {
           control_id?: string | null
           created_at?: string | null
+          criteria?: string | null
+          default_sample_size?: number | null
+          evidence_required?: string | null
           expected_result?: string | null
           id?: string
           is_active?: boolean | null
           review_required?: boolean | null
+          sampling_method?: string | null
+          test_name?: string | null
           test_procedure?: string | null
+          test_type?: string | null
           tester?: string | null
+          updated_at?: string
         }
         Update: {
           control_id?: string | null
           created_at?: string | null
+          criteria?: string | null
+          default_sample_size?: number | null
+          evidence_required?: string | null
           expected_result?: string | null
           id?: string
           is_active?: boolean | null
           review_required?: boolean | null
+          sampling_method?: string | null
+          test_name?: string | null
           test_procedure?: string | null
+          test_type?: string | null
           tester?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -82664,6 +83092,120 @@ export type Database = {
           stage_code?: string
         }
         Relationships: []
+      }
+      ia_test_exceptions: {
+        Row: {
+          condition: string
+          control_test_id: string | null
+          corrected_at: string | null
+          corrected_by: string | null
+          correction_description: string | null
+          created_at: string
+          created_by: string | null
+          criteria: string | null
+          disposition: string | null
+          disposition_rationale: string | null
+          engagement_id: string
+          engagement_programme_step_id: string | null
+          evaluated_at: string | null
+          evaluated_by: string | null
+          evaluation_status: string
+          exception_no: string | null
+          finding_id: string | null
+          further_work_required: boolean
+          id: string
+          sample_result_id: string | null
+          severity: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          condition: string
+          control_test_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          correction_description?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          disposition?: string | null
+          disposition_rationale?: string | null
+          engagement_id: string
+          engagement_programme_step_id?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string
+          exception_no?: string | null
+          finding_id?: string | null
+          further_work_required?: boolean
+          id?: string
+          sample_result_id?: string | null
+          severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          condition?: string
+          control_test_id?: string | null
+          corrected_at?: string | null
+          corrected_by?: string | null
+          correction_description?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          disposition?: string | null
+          disposition_rationale?: string | null
+          engagement_id?: string
+          engagement_programme_step_id?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string
+          exception_no?: string | null
+          finding_id?: string | null
+          further_work_required?: boolean
+          id?: string
+          sample_result_id?: string | null
+          severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_test_exceptions_control_test_id_fkey"
+            columns: ["control_test_id"]
+            isOneToOne: false
+            referencedRelation: "ia_control_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_engagement_programme_step_id_fkey"
+            columns: ["engagement_programme_step_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programme_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "ia_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_sample_result_id_fkey"
+            columns: ["sample_result_id"]
+            isOneToOne: false
+            referencedRelation: "ia_control_test_results"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ia_time_logs: {
         Row: {
@@ -128280,7 +128822,7 @@ export type Database = {
       ce_arrangement_facets_v1: { Args: never; Returns: Json }
       ce_arrangement_grace_days:
         | { Args: never; Returns: number }
-        | { Args: { p_scope_key?: string }; Returns: number }
+        | { Args: { p_scope_key: string }; Returns: number }
       ce_arrangement_register_v1: { Args: { p_params?: Json }; Returns: Json }
       ce_arrangement_reject_v1: {
         Args: { p_arrangement_id: string; p_reason: string }
@@ -132911,6 +133453,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_approve_engagement_programme: {
+        Args: { p_engagement_programme_id: string }
+        Returns: Json
+      }
       ia_assign_activity: {
         Args: {
           p_activity_id: string
@@ -132925,6 +133471,14 @@ export type Database = {
         Returns: Json
       }
       ia_auditor_profile: { Args: { _auditor_id: string }; Returns: string }
+      ia_bind_programme_to_engagement: {
+        Args: {
+          p_engagement_id: string
+          p_program_id: string
+          p_tailoring_notes?: string
+        }
+        Returns: Json
+      }
       ia_build_followup_carry_forward: {
         Args: {
           p_carried_by?: string
@@ -133137,9 +133691,9 @@ export type Database = {
       }
       ia_conclude_control_test: {
         Args: {
-          p_conclusion: string
+          p_conclusion?: string
           p_no_finding_rationale?: string
-          p_result: string
+          p_result?: string
           p_test_id: string
         }
         Returns: Json
@@ -133293,6 +133847,19 @@ export type Database = {
         Returns: Json
       }
       ia_evaluate_plan_closure: { Args: { p_plan_id: string }; Returns: Json }
+      ia_evaluate_test_exception: {
+        Args: {
+          p_disposition: string
+          p_exception_id: string
+          p_finding_id?: string
+          p_rationale?: string
+        }
+        Returns: Json
+      }
+      ia_evidence_is_relied_upon: {
+        Args: { p_evidence_id: string }
+        Returns: boolean
+      }
       ia_extend_action_target: {
         Args: {
           p_action_id: string
@@ -133383,6 +133950,10 @@ export type Database = {
         Returns: Json
       }
       ia_has: { Args: { _action: string; _module: string }; Returns: boolean }
+      ia_inherit_exception_evidence: {
+        Args: { p_exception_id: string; p_finding_id: string }
+        Returns: number
+      }
       ia_is_audit_admin: { Args: never; Returns: boolean }
       ia_is_department_respondent: {
         Args: { _department_id: string }
@@ -133406,6 +133977,15 @@ export type Database = {
       ia_link_action_evidence: {
         Args: { p_action_id: string; p_evidence_ids: string[] }
         Returns: Json
+      }
+      ia_link_evidence: {
+        Args: {
+          p_evidence_id: string
+          p_link_role?: string
+          p_linked_id: string
+          p_linked_type: string
+        }
+        Returns: string
       }
       ia_link_prior_action: {
         Args: {
@@ -133482,6 +134062,10 @@ export type Database = {
       ia_msr_capture_evidence: {
         Args: { p_report_id: string }
         Returns: number
+      }
+      ia_na_rationale_requirement: {
+        Args: { p_test_id: string }
+        Returns: string
       }
       ia_office_holder_approve: {
         Args: { p_id: string; p_reason?: string }
@@ -133843,6 +134427,7 @@ export type Database = {
         }
         Returns: Json
       }
+      ia_unlink_evidence: { Args: { p_link_id: string }; Returns: boolean }
       ia_unlink_prior_action: {
         Args: { p_reference_id: string }
         Returns: Json
