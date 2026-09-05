@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { useIAFindingMutations } from '@/hooks/useAuditDataExtended2';
-import { useAuditFields } from '@/hooks/useAuditFields';
+import { useAuditFields } from '@/hooks/useAuditTrail';
 
 
 const ITEM_RESULTS = ['Pass', 'Exception', 'Not Applicable'];
