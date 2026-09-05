@@ -255,7 +255,8 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
             {items.map((it: any) => {
               const exc = exceptionForItem(it.id);
               return (
-                <div key={it.id} className="flex items-start justify-between gap-3 p-3">
+                <div key={it.id} className="p-3">
+                  <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
                       <span className="text-muted-foreground mr-2">#{it.test_item_no}</span>
@@ -291,7 +292,36 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
                       </Button>
                     )}
                   </div>
+                  </div>
+                  <div className="mt-2 pl-6">
+                    <EvidencePanel
+                      engagementId={auditId}
+                      linkedType="sample_item"
+                      linkedId={it.id}
+                      inheritedLinks={[{ linked_type: 'control_test', linked_id: test.id, link_role: 'Test evidence' }]}
+                      title="Evidence for this sample"
+                      readOnly={concluded}
+                      compact
+                    />
+                    {exc && (
+                      <div className="mt-2">
+                        <EvidencePanel
+                          engagementId={auditId}
+                          linkedType="exception"
+                          linkedId={exc.id}
+                          inheritedLinks={[
+                            { linked_type: 'control_test', linked_id: test.id, link_role: 'Test evidence' },
+                            { linked_type: 'sample_item', linked_id: it.id, link_role: 'Sample evidence' },
+                          ]}
+                          title="Exception evidence"
+                          readOnly={!!exc.evaluated_at}
+                          compact
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
+
               );
             })}
             {items.length === 0 && <p className="p-3 text-xs text-muted-foreground">No sample items recorded yet.</p>}
