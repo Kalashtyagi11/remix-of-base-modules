@@ -328,6 +328,21 @@ export function TestExecutionPanel({ auditId, test, departmentId, onClose }: Pro
           </div>
         )}
 
+        <div className="rounded-md border p-3">
+          <EvidencePanel
+            engagementId={auditId}
+            linkedType="control_test"
+            linkedId={test.id}
+            inheritedLinks={test.engagement_programme_step_id
+              ? [{ linked_type: 'programme_step', linked_id: test.engagement_programme_step_id, link_role: 'Procedure evidence' }]
+              : []}
+            title="Test-level evidence"
+            readOnly={concluded}
+          />
+        </div>
+
+
+
         {!concluded && (showItemForm ? (
           <div className="space-y-3 rounded-md border p-3">
             <div className="grid gap-3 md:grid-cols-2">
