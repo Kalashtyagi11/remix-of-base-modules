@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserCode } from '@/hooks/useUserCode';
 import { AuditEmptyState } from '@/components/audit/workspace/AuditEmptyState';
+import { EngagementProgrammePanel } from './EngagementProgrammePanel';
 
 const CONTROL_TYPES = ['Preventive', 'Detective', 'Corrective', 'Directive'];
 const FREQUENCIES = ['Continuous', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annually', 'Ad Hoc'];
