@@ -1,7 +1,7 @@
 # Roadmap — IA Methodology/Programme/Execution/Template/UX Integrity Gate
 
 ## Phase 0 — Rebaseline (read-only, no changes)
-- [ ] Git HEAD + migration baseline
+- [x] Git HEAD cf951c99648ba6accd8a4ed2693809fe4ae5bc91; 1998 migrations; 135 ia_* tables; engagement workspace = 14 tabs (confirms AZ target)
 - [ ] Inventory live/test DB `ia_*` objects
 - [ ] Inspect IA routes/screens, Programme/RCM, control tests, evidence, workpapers, findings, QA/review
 - [ ] Inspect checklist/template structures, plan templates, Action Centre/My Work, dashboard, Workload & Capacity, RBAC
