@@ -77504,34 +77504,58 @@ export type Database = {
       }
       ia_control_test_results: {
         Row: {
+          conclusion: string | null
           control_test_id: string | null
           created_at: string | null
+          engagement_id: string | null
+          engagement_programme_step_id: string | null
+          evidence_id: string | null
           exception_detail: string | null
           id: string
           observation: string | null
           result: string | null
           sample_reference: string | null
           test_item_no: number | null
+          tested_at: string | null
+          tested_by: string | null
+          updated_at: string
+          updated_by: string | null
         }
         Insert: {
+          conclusion?: string | null
           control_test_id?: string | null
           created_at?: string | null
+          engagement_id?: string | null
+          engagement_programme_step_id?: string | null
+          evidence_id?: string | null
           exception_detail?: string | null
           id?: string
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
           test_item_no?: number | null
+          tested_at?: string | null
+          tested_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Update: {
+          conclusion?: string | null
           control_test_id?: string | null
           created_at?: string | null
+          engagement_id?: string | null
+          engagement_programme_step_id?: string | null
+          evidence_id?: string | null
           exception_detail?: string | null
           id?: string
           observation?: string | null
           result?: string | null
           sample_reference?: string | null
           test_item_no?: number | null
+          tested_at?: string | null
+          tested_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
           {
@@ -77539,6 +77563,27 @@ export type Database = {
             columns: ["control_test_id"]
             isOneToOne: false
             referencedRelation: "ia_control_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_engagement_programme_step_id_fkey"
+            columns: ["engagement_programme_step_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programme_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_control_test_results_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -78841,8 +78886,11 @@ export type Database = {
           file_url: string | null
           finding_id: string | null
           hash: string | null
+          hash_algorithm: string | null
           id: string
           reference_no: string | null
+          storage_bucket: string | null
+          storage_path: string | null
           tags: string[] | null
           updated_at: string | null
           updated_by: string | null
@@ -78864,8 +78912,11 @@ export type Database = {
           file_url?: string | null
           finding_id?: string | null
           hash?: string | null
+          hash_algorithm?: string | null
           id?: string
           reference_no?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
@@ -78887,8 +78938,11 @@ export type Database = {
           file_url?: string | null
           finding_id?: string | null
           hash?: string | null
+          hash_algorithm?: string | null
           id?: string
           reference_no?: string | null
+          storage_bucket?: string | null
+          storage_path?: string | null
           tags?: string[] | null
           updated_at?: string | null
           updated_by?: string | null
@@ -78922,6 +78976,54 @@ export type Database = {
             columns: ["engagement_id"]
             isOneToOne: false
             referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ia_evidence_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          engagement_id: string
+          evidence_id: string
+          id: string
+          link_role: string | null
+          linked_id: string
+          linked_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          engagement_id: string
+          evidence_id: string
+          id?: string
+          link_role?: string | null
+          linked_id: string
+          linked_type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          engagement_id?: string
+          evidence_id?: string
+          id?: string
+          link_role?: string | null
+          linked_id?: string
+          linked_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_evidence_links_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_evidence_links_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "ia_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -82959,6 +83061,108 @@ export type Database = {
           stage_code?: string
         }
         Relationships: []
+      }
+      ia_test_exceptions: {
+        Row: {
+          condition: string
+          control_test_id: string | null
+          created_at: string
+          created_by: string | null
+          criteria: string | null
+          disposition: string | null
+          disposition_rationale: string | null
+          engagement_id: string
+          engagement_programme_step_id: string | null
+          evaluated_at: string | null
+          evaluated_by: string | null
+          evaluation_status: string
+          exception_no: string | null
+          finding_id: string | null
+          id: string
+          sample_result_id: string | null
+          severity: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          condition: string
+          control_test_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          disposition?: string | null
+          disposition_rationale?: string | null
+          engagement_id: string
+          engagement_programme_step_id?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string
+          exception_no?: string | null
+          finding_id?: string | null
+          id?: string
+          sample_result_id?: string | null
+          severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          condition?: string
+          control_test_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: string | null
+          disposition?: string | null
+          disposition_rationale?: string | null
+          engagement_id?: string
+          engagement_programme_step_id?: string | null
+          evaluated_at?: string | null
+          evaluated_by?: string | null
+          evaluation_status?: string
+          exception_no?: string | null
+          finding_id?: string | null
+          id?: string
+          sample_result_id?: string | null
+          severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_test_exceptions_control_test_id_fkey"
+            columns: ["control_test_id"]
+            isOneToOne: false
+            referencedRelation: "ia_control_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "ia_audit_engagements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_engagement_programme_step_id_fkey"
+            columns: ["engagement_programme_step_id"]
+            isOneToOne: false
+            referencedRelation: "ia_engagement_programme_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "ia_findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ia_test_exceptions_sample_result_id_fkey"
+            columns: ["sample_result_id"]
+            isOneToOne: false
+            referencedRelation: "ia_control_test_results"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ia_time_logs: {
         Row: {
@@ -133444,9 +133648,9 @@ export type Database = {
       }
       ia_conclude_control_test: {
         Args: {
-          p_conclusion: string
+          p_conclusion?: string
           p_no_finding_rationale?: string
-          p_result: string
+          p_result?: string
           p_test_id: string
         }
         Returns: Json
@@ -133600,6 +133804,15 @@ export type Database = {
         Returns: Json
       }
       ia_evaluate_plan_closure: { Args: { p_plan_id: string }; Returns: Json }
+      ia_evaluate_test_exception: {
+        Args: {
+          p_disposition: string
+          p_exception_id: string
+          p_finding_id?: string
+          p_rationale?: string
+        }
+        Returns: Json
+      }
       ia_extend_action_target: {
         Args: {
           p_action_id: string
